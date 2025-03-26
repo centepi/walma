@@ -1,0 +1,136 @@
+/* ✅ Account Settings Page */
+.account-settings-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+}
+
+/* ✅ Title */
+.account-settings-title {
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* ✅ Account Info Box */
+.account-settings-box {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0px 0px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 300px;
+}
+
+/* ✅ Input Fields */
+.account-settings-box input {
+    width: 250px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* ✅ Buttons - Default Styling */
+.edit-button,
+.save-button,
+.signout-button {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, background 0.3s ease-in-out;
+}
+
+/* ✅ Button Default Colors */
+.edit-button {
+    background: #007BFF;
+    color: white;
+}
+
+.save-button {
+    background: #28a745;
+    color: white;
+}
+
+.signout-button {
+    background: #dc3545;
+    color: white;
+}
+
+/* ✅ Buttons - Brighter on Hover */
+.edit-button:hover {
+    background: #3399FF; /* Brighter Blue */
+    transform: scale(1.05);
+}
+
+.save-button:hover {
+    background: #38c960; /* Brighter Green */
+    transform: scale(1.05);
+}
+
+.signout-button:hover {
+    background: #ff4d5a; /* Brighter Red */
+    transform: scale(1.05);
+}
+
+/* ✅ Buttons - Pressed State */
+.edit-button:active {
+    background: #66b3ff; /* Even Brighter Blue */
+    transform: scale(0.97);
+}
+
+.save-button:active {
+    background: #4ddb75; /* Even Brighter Green */
+    transform: scale(0.97);
+}
+
+.signout-button:active {
+    background: #ff666e; /* Even Brighter Red */
+    transform: scale(0.97);
+}
+
+/* ✅ Feedback Box - Now Properly Positioned */
+.feedback-box {
+    background: rgba(255, 255, 255, 0.15); /* Slightly more visible */
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0px 0px 15px rgba(0, 120, 255, 0.5); /* ✅ Subtle blue glow */
+    max-width: 500px;
+    text-align: center;
+    margin-top: 30px; /* ✅ More spacing from the settings box */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: glowEffect 1.5s infinite alternate ease-in-out; /* ✅ Smooth glowing effect */
+}
+
+/* ✅ Feedback Text Styling */
+.feedback-text {
+    font-size: 1.2rem; /* ✅ Slightly Bigger Font */
+    color: white;
+    font-weight: bold;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+    line-height: 1.5; /* ✅ Better spacing between lines */
+    padding: 10px;
+}
+
+/* ✅ Glowing Animation */
+@keyframes glowEffect {
+    0% { box-shadow: 0px 0px 15px rgba(0, 120, 255, 0.5); }
+    100% { box-shadow: 0px 0px 25px rgba(0, 180, 255, 0.8); }
+}

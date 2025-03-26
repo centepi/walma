@@ -1,0 +1,62 @@
+{
+  "levelId": "calc2_week1_review",
+  "type": "review",
+  "slides": [
+    {
+      "title": "What is a Parametric Curve?",
+      "contentBeforeEquation": "A parametric curve is expressed as",
+      "inlineEquation": "r(t) = (x(t), y(t))",
+      "contentAfterEquation": "in 2D, or",
+      "inlineEquation2": "r(t) = (x(t), y(t), z(t))",
+      "contentEnd": "in 3D. This describes motion or geometry along a path.",
+      "diagram": "diagrams/final_vector_valued_function_clean.png"
+    },
+    {
+      "title": "Worked Example: Parametric Curve",
+      "contentBeforeEquation": "Consider the curve",
+      "inlineEquation": "r(t) = (t, e^t)",
+      "contentAfterEquation": "for t from 0 to 1. It traces from (0,1) to (1,e).",
+      "equation": "r(0) = (0,1), r(1) = (1,e)",
+      "diagram": "diagrams/final_parametric_curves_clean.png"
+    },
+    {
+      "title": "Curve Orientation",
+      "contentBeforeEquation": "Orientation determines direction along the curve. For",
+      "inlineEquation": "r(t) = (t, e^t)",
+      "contentAfterEquation": "the forward direction is from (0,1) to (1,e). The opposite direction uses",
+      "inlineEquation2": "c(s) = (1 - s, e^{1 - s})",
+      "contentEnd": "going from (1,e) back to (0,1).",
+      "diagram": "diagrams/final_parametric_curves_clean.png"
+    },
+    {
+      "title": "Derivatives of Parametric Curves",
+      "contentBeforeEquation": "The derivative gives the tangent vector direction and speed. For",
+      "inlineEquation": "r(t) = (x(t), y(t), z(t))",
+      "contentAfterEquation": ", the derivative is",
+      "inlineEquation2": "r'(t) = (dx/dt, dy/dt, dz/dt)",
+      "diagram": "diagrams/final_velocity_vector.png"
+    },
+    {
+      "title": "Worked Example: Tangent Vector",
+      "contentBeforeEquation": "Let",
+      "inlineEquation": "r(t) = (t^2, \\sin t, e^t)",
+      "contentAfterEquation": ". Then",
+      "inlineEquation2": "r'(t) = (2t, \\cos t, e^t)",
+      "contentEnd": ". At t=1, tangent vector: (2, cos(1), e).",
+      "diagram": "diagrams/final_tangent_line.png"
+    },
+    {
+      "title": "Common Curve Types",
+      "contentBeforeEquation": "Hyperbolic shapes use",
+      "inlineEquation": "r(t) = (\\sinh t, \\cosh t)",
+      "contentAfterEquation": "; circles use",
+      "inlineEquation2": "r(t) = (\\cos t, \\sin t)",
+      "contentEnd": ".",
+      "diagram": "diagrams/final_hyperbolic_and_trig_fixed.png"
+    },
+    {
+      "title": "Recap",
+      "content": "Key skills: 1) Identify curves. 2) Understand orientation. 3) Differentiate. 4) Draw tangent lines. 5) Recognize standard forms."
+    }
+  ]
+}

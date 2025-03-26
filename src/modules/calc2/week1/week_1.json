@@ -1,0 +1,28 @@
+{
+    "weekId": "calc2_week_1",
+    "title": "Week 1",
+    "description": "Parametric Curves",
+    "levels": [
+      {
+        "id": "calc2_week1_review",
+        "type": "review",
+        "title": "Parametric Curves Review"
+      },
+      {
+        "id": "calc2_week1_level1",
+        "type": "question",
+        "title": "Tangent Lines & Curves"
+      },
+      {
+        "id": "calc2_week1_level2",
+        "type": "question",
+        "title": "Vector-Valued Functions & Parametric Curves"
+      },
+      {
+        "id": "calc2_week1_level3",
+        "type": "question",
+        "title": "Complex Parametric Geometry & Tangent Lines"
+      }
+    ]
+  }
+  
