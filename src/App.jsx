@@ -1,8 +1,10 @@
 import "./App.css";
 import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { auth } from "./firebaseConfig.js";
+import { auth, db } from "./firebaseConfig";
 import { signOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
 import FloatingButton from "./FloatingButton";
 import MapPage from "./MapPage";
 import LevelPage from "./LevelPage";
@@ -24,12 +26,21 @@ function HomePage() {
       setIsAuthChecked(true);
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setIsAuthChecked(true);
 
       if (currentUser) {
         localStorage.setItem("user", JSON.stringify(currentUser));
+
+        // ✅ Check if user doc exists and create if missing
+        const userRef = doc(db, "Users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          console.warn("👻 No user doc yet — creating it...");
+          await setDoc(userRef, { completedLevels: [] });
+        }
       } else {
         localStorage.removeItem("user");
       }
@@ -47,10 +58,10 @@ function HomePage() {
 
   return (
     <div className="container">
-      {/* Three-bars menu icon */}
+      {/* ☰ Menu */}
       <button onClick={toggleHomeSettings} className="home-menu-button">☰</button>
 
-      {/* Home Settings Sidebar */}
+      {/* Settings Sidebar */}
       <div className={`home-settings-sidebar ${isHomeSettingsOpen ? "open" : ""}`}>
         <h2 className="home-settings-title">
           Hi, {user && user.displayName ? user.displayName : "Guest"}
@@ -71,22 +82,17 @@ function HomePage() {
         </button>
       </div>
 
-      {/* ✅ Whale + WALMA Title together */}
+      {/* Whale + WALMA Title */}
       <div className="hero-container">
         <img src={whaleAnimation} alt="Whale" className="whale" />
         <h1 className="title">
-          <span>W</span>
-          <span>A</span>
-          <span>L</span>
-          <span>M</span>
-          <span>A</span>
+          <span>W</span><span>A</span><span>L</span><span>M</span><span>A</span>
         </h1>
       </div>
 
-      {/* Course Buttons */}
+      {/* Buttons */}
       <div className="button-container">
         <FloatingButton isComingSoon={true}>Dynamical Systems</FloatingButton>
-
         <FloatingButton
           onClick={() => {
             if (!isAuthChecked) return;
@@ -103,7 +109,7 @@ function HomePage() {
         </FloatingButton>
       </div>
 
-      {/* Bubbles in Background */}
+      {/* Bubbles */}
       <div className="bubbles">
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
@@ -125,7 +131,6 @@ function ProtectedRoute({ children }) {
   }, []);
 
   if (!isAuthChecked) return null;
-
   return user ? children : <Navigate to="/signup" />;
 }
 
