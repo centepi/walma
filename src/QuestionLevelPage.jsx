@@ -16,6 +16,8 @@ function QuestionLevelPage({ levelData, weekId, levelId }) {
   const [showFeedback, setShowFeedback] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [showQuitPopup, setShowQuitPopup] = useState(false);
 
   const handleCheckAnswer = () => {
     const currentQuestion = levelData.questions[currentStepIndex];
@@ -83,7 +85,6 @@ function QuestionLevelPage({ levelData, weekId, levelId }) {
   const renderParts = (partsArray) =>
     partsArray.map((part, index) => {
       if (part.trim() === part.trim().replace(/[a-zA-Z0-9 .,!?]/g, "").length > 2) {
-        // If mostly symbols and math, show block
         return <BlockMath key={index} math={part.trim()} />;
       } else if (part.toLowerCase().includes(".png") || part.toLowerCase().includes(".jpg")) {
         return (
@@ -102,6 +103,52 @@ function QuestionLevelPage({ levelData, weekId, levelId }) {
 
   return (
     <div className="level-container-page">
+      <div className="settings-button" onClick={() => setShowSettingsPopup(true)}>☰</div>
+
+      {showSettingsPopup && (
+        <>
+          <div className="popup-backdrop" />
+          <div className="settings-popup">
+            <div className="settings-title">Settings</div>
+            <div className="settings-buttons">
+              <button className="done-button" onClick={() => setShowSettingsPopup(false)}>
+                Done
+              </button>
+              <button
+                className="end-session-button"
+                onClick={() => {
+                  setShowSettingsPopup(false);
+                  if (currentStepIndex === 0) {
+                    navigate("/map");
+                  } else {
+                    setShowQuitPopup(true);
+                  }
+                }}
+              >
+                End Session
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {showQuitPopup && (
+        <>
+          <div className="popup-backdrop" />
+          <div className="quit-popup">
+            <div className="quit-message">
+              You’ve already made progress. If you quit now, your progress will be lost. Are you sure?
+            </div>
+            <div className="quit-buttons">
+              <button className="keep-learning-button" onClick={() => setShowQuitPopup(false)}>
+                Keep Learning
+              </button>
+              <button className="quit-button" onClick={() => navigate("/map")}>Quit</button>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="progress-bar">
         <div
           className="progress-fill"
@@ -117,7 +164,9 @@ function QuestionLevelPage({ levelData, weekId, levelId }) {
             alt="Congratulations"
             className="completion-gif"
           />
-          <button className="finish-button" onClick={() => navigate("/map")}>FINISH</button>
+          <button className="finish-button" onClick={() => navigate("/map")}>
+            FINISH
+          </button>
         </div>
       ) : (
         <div className="question-explanation-wrapper">
@@ -155,8 +204,7 @@ function QuestionLevelPage({ levelData, weekId, levelId }) {
 
               <button
                 className={`check-button ${selectedAnswer ? "enabled" : ""} ${isAnswerChecked ? "continue-mode" : ""}`}
-                onClick={isAnswerChecked ? handleContinue : handleCheckAnswer}
-                disabled={!selectedAnswer}
+                onClick={selectedAnswer ? (isAnswerChecked ? handleContinue : handleCheckAnswer) : undefined}
               >
                 {isAnswerChecked ? (showFeedback.isCorrect ? "Continue" : "Got It") : "Check"}
               </button>

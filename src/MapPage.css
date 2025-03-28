@@ -227,3 +227,54 @@
     transform: scale(1.05);
     background: linear-gradient(90deg, #0056b3, #0080ff, #0056b3);
 }
+
+
+/* ✅ Responsive Adjustments for Smaller Screens */
+@media (max-width: 768px) {
+    .weeks-wrapper {
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      padding-top: 30px;
+    }
+  
+    .week-container {
+      width: 90%;
+    }
+  
+    .week-tab {
+      width: 100%;
+      font-size: 14px;
+      padding: 10px;
+    }
+  
+    .levels-wrapper {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+  
+    .level-button {
+      width: 70px;
+      height: 70px;
+    }
+  
+    .top-right-controls {
+      flex-direction: column;
+      top: 10px;
+      right: 10px;
+      gap: 8px;
+    }
+  
+    .level-info-box {
+      width: 85%;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      top: auto !important;
+      bottom: 20px;
+      position: fixed;
+      z-index: 1000;
+    }
+  }
+  

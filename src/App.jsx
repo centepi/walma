@@ -18,14 +18,12 @@ function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ✅ Check Local Storage First
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
       setIsAuthChecked(true);
     }
 
-    // ✅ Firebase Auth Listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthChecked(true);
@@ -58,25 +56,24 @@ function HomePage() {
           Hi, {user && user.displayName ? user.displayName : "Guest"}
         </h2>
 
-        {/* Sign In / Sign Out Button */}
         <button onClick={user ? handleSignOut : goToSignUp} className="home-settings-button">
           {user ? "Sign Out" : "Sign In"}
         </button>
 
-        {/* Log In Button */}
         {!user && (
           <button onClick={() => navigate("/login")} className="home-settings-button">
             Log In
           </button>
         )}
 
-        {/* Account Settings Button */}
         <button className="home-settings-button" onClick={() => navigate("/account-settings")}>
           Account Settings
         </button>
       </div>
 
-      <div className="title-container">
+      {/* ✅ Whale + WALMA Title together */}
+      <div className="hero-container">
+        <img src={whaleAnimation} alt="Whale" className="whale" />
         <h1 className="title">
           <span>W</span>
           <span>A</span>
@@ -84,9 +81,6 @@ function HomePage() {
           <span>M</span>
           <span>A</span>
         </h1>
-
-        {/* Whale Animation */}
-        <img src={whaleAnimation} alt="Whale" className="whale" />
       </div>
 
       {/* Course Buttons */}
@@ -130,7 +124,7 @@ function ProtectedRoute({ children }) {
     return () => unsubscribe();
   }, []);
 
-  if (!isAuthChecked) return null; // ✅ Prevents redirecting before auth check completes
+  if (!isAuthChecked) return null;
 
   return user ? children : <Navigate to="/signup" />;
 }
