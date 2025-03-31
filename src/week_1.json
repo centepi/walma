@@ -1,0 +1,85 @@
+{
+  "weekId": "calc2_week_1",
+  "module": "Calculus II",
+  "topic": "Parametric Curves & Vector Functions",
+  "title": "Parametric Curves & Vector Functions",
+  "description": "Learn how to understand, visualize, and work with parametric curves and their tangent vectors.",
+  "levels": {
+    "calc2_week1_review": {
+      "levelId": "calc2_week1_review",
+      "type": "review",
+      "description": "A detailed review of parametric curves, opposite directions, derivatives, tangent lines, and worked examples.",
+      "slides": [
+        {
+          "title": "What is a Parametric Curve?",
+          "content": "A parametric curve expresses coordinates as functions of a parameter t. This allows us to describe motion along a curve in space.",
+          "equation": "r(t) = (x(t), y(t)) \\\\text{ or } r(t) = (x(t), y(t), z(t))",
+          "diagram": "final_vector_valued_function_clean.png"
+        },
+        {
+          "title": "Worked Example: Parametric Curve",
+          "content": "Example: r(t) = (t, e^t) describes an exponential curve. At t = 0, point is (0,1). At t = 1, point is (1, e). This shows exponential growth.",
+          "equation": "r(t) = (t, e^t), r(0) = (0, 1), r(1) = (1, e)",
+          "diagram": "final_parametric_curves_clean.png"
+        },
+        {
+          "title": "Opposite Directions on the Same Curve",
+          "content": "Two parameterizations can define the same curve in opposite directions. Example: r(t) = (t, e^t) moves forward; c(s) = (1 - s, e^(1 - s)) moves backward.",
+          "equation": "r(t) = (t, e^t), c(s) = (1 - s, e^{1 - s})",
+          "diagram": "final_parametric_curves_clean.png"
+        },
+        {
+          "title": "Finding Derivatives of Parametric Curves",
+          "content": "The derivative r'(t) shows the direction and speed of movement at each point — also called the velocity vector.",
+          "equation": "r'(t) = (dx/dt, dy/dt, dz/dt)",
+          "diagram": "final_velocity_vector.png"
+        },
+        {
+          "title": "Worked Example: Derivative and Tangent Vector",
+          "content": "Example: r(t) = (t^2, sin t, e^t). Then r'(t) = (2t, cos t, e^t). At t = 1: r'(1) = (2, cos(1), e). Draw this tangent vector at point r(1).",
+          "equation": "r'(t) = (2t, cos t, e^t), r'(1) = (2, cos(1), e)",
+          "diagram": "final_tangent_line.png"
+        },
+        {
+          "title": "Recognizing Common Curve Types",
+          "content": "Hyperbolic functions (sinh, cosh) create hyperbolic shapes; trigonometric functions (sin, cos) form circles and spirals.",
+          "equation": "r(t) = (\\\\sinh t, \\\\cosh t) \\\\text{ or } r(t) = (\\\\cos t, \\\\sin t)",
+          "diagram": "final_hyperbolic_and_trig_fixed.png"
+        },
+        {
+          "title": "Quick Recap",
+          "content": "Remember: 1) Identify the curve type. 2) Compute derivatives. 3) Draw tangent vectors. 4) Recognize opposite directions. 5) Label clearly.",
+          "equation": "",
+          "diagram": ""
+        }
+      ]
+    },
+    "calc2_week1_level1": {
+      "levelId": "calc2_week1_level1",
+      "type": "question",
+      "description": "Test your understanding of parametric curves and tangent vectors.",
+      "questions": [
+        {
+          "question": "What is the derivative of r(t) = (t², sin t, e^t)?",
+          "options": [
+            "(2t, cos t, e^t)",
+            "(t, sin t, e^t)",
+            "(2t, -sin t, e^t)",
+            "(t², cos t, e^t)"
+          ],
+          "correctAnswer": "(2t, cos t, e^t)"
+        },
+        {
+          "question": "At t = 1, what does the tangent vector to r(t) = (t, e^t) represent?",
+          "options": [
+            "The direction and speed of motion at that point",
+            "The curve's curvature at t = 1",
+            "The point where the curve crosses the x-axis",
+            "The second derivative of the function"
+          ],
+          "correctAnswer": "The direction and speed of motion at that point"
+        }
+      ]
+    }
+  }
+}

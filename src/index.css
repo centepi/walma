@@ -1,0 +1,31 @@
+/* Global Styles */
+html, body, #root {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  text-align: center;
+  color: white;
+  height: 100vh;
+}
+
+/* Button Styles */
+button {
+  background-color: #333;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 8px;
+}
+
+button:hover {
+  background-color: #555;
+}
+
+/* Disable button styling */
+button:disabled {
+  background-color: #444;
+  color: #bbb;
+  cursor: not-allowed;
+}
