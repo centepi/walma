@@ -3,56 +3,137 @@
   "type": "review",
   "slides": [
     {
-      "title": "First-Order ODEs: Core Concepts",
-      "contentBeforeEquation": "A first-order ODE relates a function",
-      "inlineEquation": "y(x)",
-      "contentAfterEquation": "to its derivative",
-      "inlineEquation2": "y'(x)",
-      "contentEnd": "through various solution methods."
-    },
-    {
-      "title": "Explicit ODEs",
-      "contentBeforeEquation": "For equations of the form",
+      "contentBeforeEquation": "An explicit first-order ODE has the form",
       "inlineEquation": "\\frac{dy}{dx} = f(x)",
-      "contentAfterEquation": "simply integrate both sides:",
-      "equation": "y = \\int f(x) dx + C",
-      "contentEnd": "Example: \\frac{dy}{dx} = 5x^4 \u2192 y = x^5 + C"
+      "contentAfterEquation": ", which can be solved by direct integration."
     },
     {
-      "title": "Separable ODEs",
-      "contentBeforeEquation": "Equations where",
-      "inlineEquation": "\\frac{dy}{dx} = g(y)f(x)",
-      "contentAfterEquation": "can be separated and integrated:",
-      "equation": "\\int \\frac{dy}{g(y)} = \\int f(x) dx",
-      "contentEnd": "Example: \\frac{dy}{dx} = \\frac{y}{x} \u2192 y = Cx"
+      "contentBeforeEquation": "Integrating both sides gives",
+      "inlineEquation": "y = \\int f(x)\\,dx = F(x) + C"
     },
     {
-      "title": "Homogeneous ODEs",
-      "contentBeforeEquation": "Equations where all terms have the same degree. Use substitution",
+      "contentBeforeEquation": "Example: solving",
+      "inlineEquation": "\\frac{dy}{dx} = 5x^4",
+      "contentAfterEquation": "leads to",
+      "inlineEquation2": "y = x^5 + C"
+    },
+    {
+      "contentBeforeEquation": "A separable equation takes the form",
+      "inlineEquation": "\\frac{dy}{dx} = f(x)g(y)",
+      "contentAfterEquation": ". The variables can be separated:"
+    },
+    {
+      "inlineEquation": "\\frac{1}{g(y)}\\,dy = f(x)\\,dx"
+    },
+    {
+      "contentBeforeEquation": "Integrating both sides:",
+      "inlineEquation": "\\int \\frac{1}{g(y)}\\,dy = \\int f(x)\\,dx"
+    },
+    {
+      "contentBeforeEquation": "Example: if",
+      "inlineEquation": "\\frac{dy}{dx} = \\frac{y}{x}",
+      "contentAfterEquation": ", then",
+      "inlineEquation2": "\\frac{dy}{y} = \\frac{dx}{x}"
+    },
+    {
+      "contentBeforeEquation": "Integration gives",
+      "inlineEquation": "\\ln|y| = \\ln|x| + C",
+      "contentAfterEquation": ", hence",
+      "inlineEquation2": "y = Cx"
+    },
+    {
+      "contentBeforeEquation": "A differential equation is homogeneous if it can be written as",
+      "inlineEquation": "\\frac{dy}{dx} = H\\left(\\frac{y}{x}\\right)"
+    },
+    {
+      "contentBeforeEquation": "Use the substitution",
       "inlineEquation": "v = \\frac{y}{x}",
-      "contentAfterEquation": "to make separable:",
-      "equation": "y = vx \\implies y' = v + xv'",
-      "contentEnd": "Example: y' = \\frac{y^2 + xy}{x^2} \u2192 y = \\frac{x}{C - \\ln|x|}"
+      "contentAfterEquation": "so that",
+      "inlineEquation2": "y = vx"
     },
     {
-      "title": "Linear ODEs",
-      "contentBeforeEquation": "Equations of the form",
-      "inlineEquation": "y' + P(x)y = Q(x)",
-      "contentAfterEquation": "require an integrating factor:",
-      "equation": "\\mu(x) = e^{\\int P(x)dx}",
-      "contentEnd": "Example: y' + 2y = 4 \u2192 y = 2 + Ce^{-2x}"
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "y' = v + x\\frac{dv}{dx}",
+      "contentAfterEquation": ", and the equation becomes separable in",
+      "inlineEquation2": "v"
     },
     {
-      "title": "Common Pitfalls",
-      "content": "1) Forgetting +C in integration\n2) Misapplying substitution in homogeneous ODEs\n3) Incorrect integrating factor calculation\n4) Algebraic errors when separating variables"
+      "contentBeforeEquation": "Example: with",
+      "inlineEquation": "\\frac{dy}{dx} = \\frac{y^2 + xy}{x^2}",
+      "contentAfterEquation": "we substitute",
+      "inlineEquation2": "y = vx"
     },
     {
-      "title": "Method Selection Guide",
-      "contentBeforeEquation": "1) Is y' = f(x)? \u2192 Explicit\n2) Can you write as f(x)g(y)? \u2192 Separable\n3) All terms same degree? \u2192 Homogeneous\n4) Linear in y and y'? \u2192 Integrating factor"
+      "contentBeforeEquation": "This gives",
+      "inlineEquation": "\\frac{dy}{dx} = v + x\\frac{dv}{dx} = v^2 + v",
+      "contentAfterEquation": ", hence",
+      "inlineEquation2": "x\\frac{dv}{dx} = v^2"
     },
     {
-      "title": "Recap",
-      "content": "Key skills:\n1) Recognize ODE types\n2) Apply appropriate solution methods\n3) Verify solutions by differentiation\n4) Handle initial conditions"
+      "contentBeforeEquation": "Separating variables:",
+      "inlineEquation": "\\int \\frac{dv}{v^2} = \\int \\frac{dx}{x}"
+    },
+    {
+      "contentBeforeEquation": "Solving gives",
+      "inlineEquation": "-\\frac{1}{v} = \\ln|x| + C",
+      "contentAfterEquation": ", so",
+      "inlineEquation2": "y = \\frac{x}{C - \\ln|x|}"
+    },
+    {
+      "contentBeforeEquation": "A linear first-order ODE has the form",
+      "inlineEquation": "\\frac{dy}{dx} + P(x)y = Q(x)"
+    },
+    {
+      "contentBeforeEquation": "Define the integrating factor",
+      "inlineEquation": "\\mu(x) = e^{\\int P(x) dx}"
+    },
+    {
+      "contentBeforeEquation": "Multiplying through gives",
+      "inlineEquation": "\\mu(x)\\frac{dy}{dx} + \\mu(x)P(x)y = \\mu(x)Q(x)",
+      "contentAfterEquation": ", which simplifies to",
+      "inlineEquation2": "\\frac{d}{dx}[\\mu(x)y] = \\mu(x)Q(x)"
+    },
+    {
+      "contentBeforeEquation": "Example: solving",
+      "inlineEquation": "y' + 2y = 4",
+      "contentAfterEquation": "uses",
+      "inlineEquation2": "\\mu(x) = e^{2x}"
+    },
+    {
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "\\frac{d}{dx}(e^{2x}y) = 4e^{2x}",
+      "contentAfterEquation": "so integrating gives",
+      "inlineEquation2": "y = 2 + Ce^{-2x}"
+    },
+    {
+      "contentBeforeEquation": "If the coefficient is variable, as in",
+      "inlineEquation": "y' + \\frac{1}{x}y = \\cos(x)",
+      "contentAfterEquation": "for",
+      "inlineEquation2": "x > 0"
+    },
+    {
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "\\mu(x) = e^{\\int \\frac{1}{x} dx} = x",
+      "contentAfterEquation": ", and the equation becomes",
+      "inlineEquation2": "\\frac{d}{dx}(xy) = x\\cos(x)"
+    },
+    {
+      "contentBeforeEquation": "Integrate by parts to find",
+      "inlineEquation": "xy = x\\sin(x) + \\cos(x) + C",
+      "contentAfterEquation": ", and divide through:",
+      "inlineEquation2": "y = \\frac{\\sin(x)}{x} + \\frac{C - \\cos(x)}{x}"
+    },
+    {
+      "contentBeforeEquation": "In the case of",
+      "inlineEquation": "y' + \\tan x \\cdot y = \\sec x",
+      "contentAfterEquation": ", compute",
+      "inlineEquation2": "\\mu(x) = e^{\\int \\tan x dx} = \\sec x"
+    },
+    {
+      "contentBeforeEquation": "Multiplying gives",
+      "inlineEquation": "\\frac{d}{dx}(y \\sec x) = \\sec^2 x",
+      "contentAfterEquation": ", so integrate to find",
+      "inlineEquation2": "y = \\tan x + C\\cos x"
     }
   ]
 }

@@ -33,12 +33,11 @@ function HomePage() {
       if (currentUser) {
         localStorage.setItem("user", JSON.stringify(currentUser));
 
-        // ✅ Check if user doc exists and create if missing
         const userRef = doc(db, "Users", currentUser.uid);
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          console.warn("👻 No user doc yet — creating it...");
+          console.warn("\uD83D\uDC7B No user doc yet — creating it...");
           await setDoc(userRef, { completedLevels: [] });
         }
       } else {
@@ -153,6 +152,9 @@ function App() {
       <Route path="/map/:moduleName" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/level/:weekId/:levelId" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
       <Route path="/account-settings" element={<AccountSettingsPage />} />
+
+      {/* Optional fallback if someone navigates to /map directly */}
+      <Route path="/map" element={<Navigate to="/map/ds" />} />
     </Routes>
   );
 }

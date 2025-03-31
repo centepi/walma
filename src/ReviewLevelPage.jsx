@@ -22,7 +22,6 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
     }
   };
 
-  // Save to Firestore when level is marked complete
   useEffect(() => {
     const markComplete = async () => {
       if (!isLevelComplete) return;
@@ -43,7 +42,7 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
     markComplete();
   }, [isLevelComplete, levelId]);
 
-  const currentSlide = levelData.slides[currentStepIndex];
+  const visibleSlides = levelData.slides.slice(0, currentStepIndex + 1);
 
   const resolveDiagramPath = (path) => {
     if (!path) return null;
@@ -52,10 +51,8 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
 
   return (
     <div className="level-container-page">
-      {/* ☰ Settings Button */}
       <div className="settings-button" onClick={() => setShowSettingsPopup(true)}>☰</div>
 
-      {/* Settings Popup */}
       {showSettingsPopup && (
         <>
           <div className="popup-backdrop" />
@@ -83,7 +80,6 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
         </>
       )}
 
-      {/* Quit Confirmation Popup */}
       {showQuitPopup && (
         <>
           <div className="popup-backdrop" />
@@ -101,7 +97,6 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
         </>
       )}
 
-      {/* Progress Bar */}
       <div className="progress-bar">
         <div
           className="progress-fill"
@@ -109,7 +104,6 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
         />
       </div>
 
-      {/* Content */}
       {isLevelComplete ? (
         <div className="level-complete">
           <h2>LEVEL COMPLETE!</h2>
@@ -124,28 +118,30 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
         </div>
       ) : (
         <div className="review-box">
-          <h2>{currentSlide.title}</h2>
-          <p>
-            {currentSlide.contentBeforeEquation && currentSlide.contentBeforeEquation + " "}
-            {currentSlide.inlineEquation && <InlineMath math={currentSlide.inlineEquation} />}
-            {currentSlide.contentAfterEquation && " " + currentSlide.contentAfterEquation + " "}
-            {currentSlide.inlineEquation2 && <InlineMath math={currentSlide.inlineEquation2} />}
-            {currentSlide.contentEnd && " " + currentSlide.contentEnd}
-            {currentSlide.content && currentSlide.content}
-          </p>
-
-          {currentSlide.equation && <BlockMath math={currentSlide.equation} />}
-
-          {currentSlide.diagram && (
-            <img
-              src={resolveDiagramPath(currentSlide.diagram)}
-              alt="Diagram"
-              className="diagram"
-              onError={() =>
-                console.error(`Image not found: ${resolveDiagramPath(currentSlide.diagram)}`)
-              }
-            />
-          )}
+          {visibleSlides.map((slide, index) => (
+            <div key={index} className="review-slide">
+              {slide.title && <h2>{slide.title}</h2>}
+              <p>
+                {slide.contentBeforeEquation && slide.contentBeforeEquation + " "}
+                {slide.inlineEquation && <InlineMath math={slide.inlineEquation} />}
+                {slide.contentAfterEquation && " " + slide.contentAfterEquation + " "}
+                {slide.inlineEquation2 && <InlineMath math={slide.inlineEquation2} />}
+                {slide.contentEnd && " " + slide.contentEnd}
+                {slide.content && slide.content}
+              </p>
+              {slide.equation && <BlockMath math={slide.equation} />}
+              {slide.diagram && (
+                <img
+                  src={resolveDiagramPath(slide.diagram)}
+                  alt="Diagram"
+                  className="diagram"
+                  onError={() =>
+                    console.error(`Image not found: ${resolveDiagramPath(slide.diagram)}`)
+                  }
+                />
+              )}
+            </div>
+          ))}
 
           <button className="continue-button" onClick={handleContinue}>
             Continue
