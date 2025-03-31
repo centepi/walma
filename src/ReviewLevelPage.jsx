@@ -11,6 +11,8 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
   const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [showQuitPopup, setShowQuitPopup] = useState(false);
 
   const handleContinue = () => {
     if (currentStepIndex < levelData.slides.length - 1) {
@@ -50,6 +52,56 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
 
   return (
     <div className="level-container-page">
+      {/* ☰ Settings Button */}
+      <div className="settings-button" onClick={() => setShowSettingsPopup(true)}>☰</div>
+
+      {/* Settings Popup */}
+      {showSettingsPopup && (
+        <>
+          <div className="popup-backdrop" />
+          <div className="settings-popup">
+            <div className="settings-title">Settings</div>
+            <div className="settings-buttons">
+              <button className="done-button" onClick={() => setShowSettingsPopup(false)}>
+                Done
+              </button>
+              <button
+                className="end-session-button"
+                onClick={() => {
+                  setShowSettingsPopup(false);
+                  if (currentStepIndex === 0) {
+                    navigate("/map");
+                  } else {
+                    setShowQuitPopup(true);
+                  }
+                }}
+              >
+                End Session
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Quit Confirmation Popup */}
+      {showQuitPopup && (
+        <>
+          <div className="popup-backdrop" />
+          <div className="quit-popup">
+            <div className="quit-message">
+              You’ve already made progress. If you quit now, your progress will be lost. Are you sure?
+            </div>
+            <div className="quit-buttons">
+              <button className="keep-learning-button" onClick={() => setShowQuitPopup(false)}>
+                Keep Learning
+              </button>
+              <button className="quit-button" onClick={() => navigate("/map")}>Quit</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Progress Bar */}
       <div className="progress-bar">
         <div
           className="progress-fill"
@@ -57,6 +109,7 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
         />
       </div>
 
+      {/* Content */}
       {isLevelComplete ? (
         <div className="level-complete">
           <h2>LEVEL COMPLETE!</h2>
