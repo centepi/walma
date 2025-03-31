@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { InlineMath, BlockMath } from "react-katex";
+import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { auth, db } from "./firebaseConfig";
 import "katex/dist/katex.css";
 import "./LevelPage.css";
 import completionGifs from "./loadGifs";
 
-function ReviewLevelPage({ levelData, weekId, levelId }) {
+function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
   const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
@@ -18,14 +20,32 @@ function ReviewLevelPage({ levelData, weekId, levelId }) {
     }
   };
 
+  // Save to Firestore when level is marked complete
+  useEffect(() => {
+    const markComplete = async () => {
+      if (!isLevelComplete) return;
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const userRef = doc(db, "Users", user.uid);
+        await updateDoc(userRef, {
+          completedLevels: arrayUnion(levelId),
+        });
+        console.log("✅ Review level saved:", levelId);
+      } catch (error) {
+        console.error("❌ Failed to save review level:", error);
+      }
+    };
+
+    markComplete();
+  }, [isLevelComplete, levelId]);
+
   const currentSlide = levelData.slides[currentStepIndex];
 
   const resolveDiagramPath = (path) => {
     if (!path) return null;
-    // If it starts with http, it's already a hosted Firebase URL
-    if (path.startsWith("http")) return path;
-    // Otherwise, load from public diagrams folder
-    return `/diagrams/${path}`;
+    return path.startsWith("http") ? path : `/diagrams/${path}`;
   };
 
   return (
@@ -34,7 +54,7 @@ function ReviewLevelPage({ levelData, weekId, levelId }) {
         <div
           className="progress-fill"
           style={{ width: `${((currentStepIndex + 1) / levelData.slides.length) * 100}%` }}
-        ></div>
+        />
       </div>
 
       {isLevelComplete ? (
@@ -45,7 +65,9 @@ function ReviewLevelPage({ levelData, weekId, levelId }) {
             alt="Congratulations"
             className="completion-gif"
           />
-          <button className="finish-button" onClick={() => navigate("/map")}>FINISH</button>
+          <button className="finish-button" onClick={() => navigate(`/map/${moduleName}`)}>
+            FINISH
+          </button>
         </div>
       ) : (
         <div className="review-box">
@@ -66,14 +88,13 @@ function ReviewLevelPage({ levelData, weekId, levelId }) {
               src={resolveDiagramPath(currentSlide.diagram)}
               alt="Diagram"
               className="diagram"
-              onError={() => console.error(`Image not found: ${resolveDiagramPath(currentSlide.diagram)}`)}
+              onError={() =>
+                console.error(`Image not found: ${resolveDiagramPath(currentSlide.diagram)}`)
+              }
             />
           )}
 
-          <button
-            className="continue-button"
-            onClick={handleContinue}
-          >
+          <button className="continue-button" onClick={handleContinue}>
             Continue
           </button>
         </div>

@@ -92,15 +92,25 @@ function HomePage() {
 
       {/* Buttons */}
       <div className="button-container">
-        <FloatingButton isComingSoon={true}>Dynamical Systems</FloatingButton>
         <FloatingButton
           onClick={() => {
             if (!isAuthChecked) return;
             if (user) {
-              console.log("✅ User found. Navigating to /map...");
-              navigate("/map");
+              navigate("/map/ds");
             } else {
-              console.log("❌ No user found. Navigating to /signup...");
+              navigate("/signup");
+            }
+          }}
+        >
+          Intro to Dynamical Systems
+        </FloatingButton>
+
+        <FloatingButton
+          onClick={() => {
+            if (!isAuthChecked) return;
+            if (user) {
+              navigate("/map/calc2");
+            } else {
               navigate("/signup");
             }
           }}
@@ -140,7 +150,7 @@ function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+      <Route path="/map/:moduleName" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/level/:weekId/:levelId" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
       <Route path="/account-settings" element={<AccountSettingsPage />} />
     </Routes>

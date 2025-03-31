@@ -33,7 +33,7 @@ const loadWeekData = (moduleName, weekFolder) => {
     return JSON.parse(fs.readFileSync(weekDataPath, "utf-8"));
   } catch (error) {
     console.error(`❌ Error loading ${weekFolder}/week_1.json:`, error);
-    process.exit(1);
+    return null;
   }
 };
 
@@ -77,7 +77,6 @@ const uploadWeekAndLevels = async (moduleName, weekFolder, weekData) => {
   try {
     const weekRef = db.collection("Weeks").doc(weekData.weekId);
 
-    // Enrich levels with titles from their JSON files
     const enrichedLevels = await Promise.all(weekData.levels.map(async (level) => {
       const levelPath = path.join(__dirname, `modules/${moduleName}/${weekFolder}/${level.id}.json`);
       let levelData;
@@ -101,7 +100,6 @@ const uploadWeekAndLevels = async (moduleName, weekFolder, weekData) => {
       levels: enrichedLevels,
     });
 
-    // Upload levels and diagrams
     for (const level of weekData.levels) {
       const levelPath = path.join(__dirname, `modules/${moduleName}/${weekFolder}/${level.id}.json`);
       let levelData;
@@ -131,17 +129,25 @@ const uploadWeekAndLevels = async (moduleName, weekFolder, weekData) => {
 };
 
 const setupLevels = async () => {
-  const moduleName = "calc2";
-  const weekFolder = "week1";
+  const modulesPath = path.join(__dirname, "modules");
+  const moduleNames = fs.readdirSync(modulesPath).filter(f => fs.statSync(path.join(modulesPath, f)).isDirectory());
 
-  console.log(`⏳ Setting up levels for ${moduleName} / ${weekFolder}...`);
+  for (const moduleName of moduleNames) {
+    const modulePath = path.join(modulesPath, moduleName);
+    const weekFolders = fs.readdirSync(modulePath).filter(f => fs.statSync(path.join(modulePath, f)).isDirectory());
 
-  const weekData = loadWeekData(moduleName, weekFolder);
+    for (const weekFolder of weekFolders) {
+      console.log(`⏳ Setting up levels for ${moduleName} / ${weekFolder}...`);
 
-  await deleteExistingWeekData(weekData.weekId);
-  await uploadWeekAndLevels(moduleName, weekFolder, weekData);
+      const weekData = loadWeekData(moduleName, weekFolder);
+      if (!weekData) continue;
 
-  console.log("✅ Setup complete.");
+      await deleteExistingWeekData(weekData.weekId);
+      await uploadWeekAndLevels(moduleName, weekFolder, weekData);
+
+      console.log(`✅ Setup complete for ${moduleName} / ${weekFolder}`);
+    }
+  }
 };
 
 setupLevels();

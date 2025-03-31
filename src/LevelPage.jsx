@@ -1,4 +1,3 @@
-// ✅ LevelPage.jsx — delegator
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "./firebaseConfig";
@@ -9,6 +8,9 @@ import QuestionLevelPage from "./QuestionLevelPage";
 function LevelPage() {
   const { weekId, levelId } = useParams();
   const [selectedLevel, setSelectedLevel] = useState(null);
+
+  // 🧠 Extract module name from weekId like "calc2_week1" → "calc2"
+  const moduleName = weekId.split("_")[0];
 
   useEffect(() => {
     const fetchLevelData = async () => {
@@ -34,9 +36,19 @@ function LevelPage() {
   if (!selectedLevel) return <div className="loading">Loading level...</div>;
 
   return selectedLevel.type === "review" ? (
-    <ReviewLevelPage levelData={selectedLevel} weekId={weekId} levelId={levelId} />
+    <ReviewLevelPage
+      levelData={selectedLevel}
+      weekId={weekId}
+      levelId={levelId}
+      moduleName={moduleName} // ✅ Pass this to child component
+    />
   ) : (
-    <QuestionLevelPage levelData={selectedLevel} weekId={weekId} levelId={levelId} />
+    <QuestionLevelPage
+      levelData={selectedLevel}
+      weekId={weekId}
+      levelId={levelId}
+      moduleName={moduleName} // ✅ Pass this to child component
+    />
   );
 }
 
