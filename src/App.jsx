@@ -37,7 +37,7 @@ function HomePage() {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          console.warn("\uD83D\uDC7B No user doc yet — creating it...");
+          console.warn("👻 No user doc yet — creating it...");
           await setDoc(userRef, { completedLevels: [] });
         }
       } else {
@@ -149,12 +149,16 @@ function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/map/:moduleName" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
-      <Route path="/level/:weekId/:levelId" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
       <Route path="/account-settings" element={<AccountSettingsPage />} />
 
-      {/* Optional fallback if someone navigates to /map directly */}
+      {/* ✅ Handles /map/calc2, /map/ds, etc. */}
+      <Route path="/map/:moduleName" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+
+      {/* ✅ Handles just /map */}
       <Route path="/map" element={<Navigate to="/map/ds" />} />
+
+      {/* ✅ Level pages */}
+      <Route path="/level/:weekId/:levelId" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
     </Routes>
   );
 }

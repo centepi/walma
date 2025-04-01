@@ -452,7 +452,6 @@
     outline: none !important;
 }
 
-
 /* ===================== REVIEW PAGE STYLES ===================== */
 
 .review-box {
@@ -470,6 +469,12 @@
     gap: 20px;
     font-size: 18px;
     line-height: 1.6;
+    position: relative; /* 🔁 Ensure child positioning behaves as expected */
+}
+
+/* ✅ Add breathing room at the bottom */
+.review-slide:last-child {
+    margin-bottom: 80px;
 }
 
 .review-box h2 {
@@ -507,7 +512,6 @@
 }
 
 
-
 /* ✅ Ensure the entire container can scroll if explanation box overflows */
 .level-container-page {
     display: flex;
@@ -521,4 +525,3 @@
     box-sizing: border-box;
     position: relative;
 }
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { InlineMath, BlockMath } from "react-katex";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
@@ -13,10 +13,18 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
   const [isLevelComplete, setIsLevelComplete] = useState(false);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
   const [showQuitPopup, setShowQuitPopup] = useState(false);
+  const slideRefs = useRef([]);
+  const reviewBoxRef = useRef(null);
 
   const handleContinue = () => {
     if (currentStepIndex < levelData.slides.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
+      const nextIndex = currentStepIndex + 1;
+      setCurrentStepIndex(nextIndex);
+      setTimeout(() => {
+        if (reviewBoxRef.current) {
+          reviewBoxRef.current.scrollTop = reviewBoxRef.current.scrollHeight;
+        }
+      }, 100);
     } else {
       setIsLevelComplete(true);
     }
@@ -112,14 +120,21 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
             alt="Congratulations"
             className="completion-gif"
           />
-          <button className="finish-button" onClick={() => navigate(`/map/${moduleName}`)}>
+          <button
+            className="finish-button"
+            onClick={() => {
+              const destination = moduleName ? `/map/${moduleName}` : "/map";
+              console.log("Navigating to:", destination);
+              navigate(destination);
+            }}
+          >
             FINISH
           </button>
         </div>
       ) : (
-        <div className="review-box">
+        <div className="review-box" ref={reviewBoxRef}>
           {visibleSlides.map((slide, index) => (
-            <div key={index} className="review-slide">
+            <div key={index} className="review-slide" ref={el => slideRefs.current[index] = el}>
               {slide.title && <h2>{slide.title}</h2>}
               <p>
                 {slide.contentBeforeEquation && slide.contentBeforeEquation + " "}

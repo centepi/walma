@@ -17,6 +17,14 @@ function MapPage() {
   const levelRefs = useRef({});
   const auth = getAuth();
 
+  // 🔁 Redirect if moduleName is missing or invalid
+  useEffect(() => {
+    if (!moduleName || moduleName === "undefined") {
+      console.warn("Invalid module name — redirecting to default module.");
+      navigate("/map/ds", { replace: true });
+    }
+  }, [moduleName, navigate]);
+
   // 🔐 Load completedLevels from Firestore
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -79,6 +87,8 @@ function MapPage() {
         fetchedWeeks.push(weekData);
       }
 
+      // Log fetched weeks data
+      console.log("Fetched weeks data:", fetchedWeeks);
       setWeeks(fetchedWeeks);
     };
 
@@ -112,6 +122,10 @@ function MapPage() {
 
     setSelectedLevel(selected);
   };
+
+  // Log the moduleName and weeks data before rendering
+  console.log("Module Name:", moduleName);
+  console.log("Weeks Data:", weeks);
 
   return (
     <div className="map-container">
