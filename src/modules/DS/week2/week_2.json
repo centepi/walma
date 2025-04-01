@@ -1,6 +1,6 @@
 {
-  "weekId": "ds_week1",
-  "title": "Week 1",
+  "weekId": "ds_week2",
+  "title": "Week 2",
   "description": "Differential Equations",
   "levels": [
     {
@@ -11,17 +11,17 @@
     {
       "id": "ds_week1_level1",
       "type": "question",
-      "title": "Explicit&Separable Differential Equations"
+      "title": "Nonlinear Strategies and Analysis-easy"
     },
     {
       "id": "ds_week1_level2",
       "type": "question",
-      "title": "Homogeneous Differential Equations"
+      "title": "Nonlinear Strategies and Analysis-medium"
     },
     {
       "id": "ds_week1_level3",
       "type": "question",
-      "title": "Linear Differential Equations"
+      "title": "Nonlinear Strategies and Analysis-hard"
     }
   ]
 }
