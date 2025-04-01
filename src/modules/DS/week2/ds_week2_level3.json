@@ -1,5 +1,5 @@
 {
-  "levelId": "ds_week2_leve3",
+  "levelId": "ds_week2_level3",
   "type": "question",
   "questions": [
     {
@@ -18,9 +18,9 @@
         "Step 1: Substitute u = 1/y to linearize:",
         "u' + u = -1",
         "Step 2: Solve with integrating factor e^x:",
-        "e^x u = -e^x + C ⇒ u = -1 + Ce^{-x}",
+        "e^x u = -e^x + C \u21d2 u = -1 + Ce^{-x}",
         "Step 3: Revert to y and apply initial condition:",
-        "y(0) = 1 ⇒ C = 2"
+        "y(0) = 1 \u21d2 C = 2"
       ]
     },
     {
@@ -41,7 +41,7 @@
         "Step 2: Calculate \\alpha for tripling:",
         "\\alpha = \\frac{1}{200}\\ln 3",
         "Conclusion:",
-        "\\frac{\\ln 2}{100} ≠ \\frac{\\ln 3}{200} (Contradiction)"
+        "\\frac{\\ln 2}{100} \u2260 \\frac{\\ln 3}{200} (Contradiction)"
       ]
     }
   ]

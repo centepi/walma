@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week4",
+  "title": "Advanced Ordinary Differential Equations and Systems",
+  "description": "This week delves into the advanced techniques for solving second-order ordinary differential equations (ODEs), including finding general and particular solutions. We explore methods like variation of constants and how to apply initial conditions to obtain unique solutions. Furthermore, we extend our understanding to systems of linear ODEs, focusing on matrix methods, eigenvalues, and eigenvectors. We also discuss how to diagonalize matrices and solve systems with complex eigenvalues, providing a comprehensive overview of advanced ODE solving strategies.",
+  "levels": [
+    {
+      "id": "ds_week4_review",
+      "type": "review",
+      "title": "Review of First-Order ODE Techniques"
+    },
+    {
+      "id": "ds_week4_level1",
+      "type": "question",
+      "title": "Second-Order ODEs: General and Particular Solutions"
+    },
+    {
+      "id": "ds_week4_level2",
+      "type": "question",
+      "title": "Advanced Second-Order ODEs: Variation of Constants and Initial Conditions"
+    },
+    {
+      "id": "ds_week4_level3",
+      "type": "question",
+      "title": "Systems of Linear ODEs: Eigenvalues and Diagonalization"
+    }
+  ]
+}

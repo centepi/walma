@@ -1,0 +1,40 @@
+{
+  "levelId": "ds_week4_level2",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Which method is used to solve:",
+        "x'' + 3x' + 2x = 1 + t using x(t) = F(t)e^{-t}?"
+      ],
+      "options": [
+        "Undetermined coefficients",
+        "Operator factorization",
+        "Variation of constants",
+        "Laplace transform"
+      ],
+      "correctAnswer": "Variation of constants",
+      "explanationParts": [
+        "We assume x(t) = F(t)e^{-t}, leading to a first-order ODE for F'.",
+        "This method is called variation of constants."
+      ]
+    },
+    {
+      "questionParts": [
+        "What is the solution to:",
+        "x'' + 3x' + 2x = 1 + t,  x(0)=0, x'(0)=0"
+      ],
+      "options": [
+        "x(t) = (t/2 - 1/4) + (1/4)e^{-2t}",
+        "x(t) = e^{2t} + t",
+        "x(t) = 1 - e^{-t} + t^2",
+        "x(t) = (1/2)t^2 - e^{-2t}"
+      ],
+      "correctAnswer": "x(t) = (t/2 - 1/4) + (1/4)e^{-2t}",
+      "explanationParts": [
+        "Both F(t)e^{-t} and F(t)e^{-2t} methods give the same result.",
+        "After applying initial conditions, constants simplify to final solution."
+      ]
+    }
+  ]
+}

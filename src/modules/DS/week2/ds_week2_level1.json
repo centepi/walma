@@ -18,7 +18,7 @@
         "Step 1: Integrate both sides directly:",
         "\\int dy = \\int (3x + 5)dx",
         "Step 2: Compute the integral and apply the initial condition:",
-        "y = \\frac{3}{2}x^2 + 5x + C ⇒ C = 2"
+        "y = \\frac{3}{2}x^2 + 5x + C \u21d2 C = 2"
       ]
     },
     {
@@ -37,7 +37,7 @@
         "Step 1: Separate variables:",
         "\\int \\frac{dp}{p} = \\int \\alpha dt",
         "Step 2: Integrate and exponentiate:",
-        "\\ln|p| = \\alpha t + C ⇒ p(t) = p(0)e^{\\alpha t}"
+        "\\ln|p| = \\alpha t + C \u21d2 p(t) = p(0)e^{\\alpha t}"
       ]
     }
   ]

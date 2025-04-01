@@ -4,22 +4,22 @@
   "description": "Differential Equations",
   "levels": [
     {
-      "id": "ds_week1_review",
+      "id": "ds_week2_review",
       "type": "review",
       "title": "First Order Differential Equations review"
     },
     {
-      "id": "ds_week1_level1",
+      "id": "ds_week2_level1",
       "type": "question",
       "title": "Nonlinear Strategies and Analysis-easy"
     },
     {
-      "id": "ds_week1_level2",
+      "id": "ds_week2_level2",
       "type": "question",
       "title": "Nonlinear Strategies and Analysis-medium"
     },
     {
-      "id": "ds_week1_level3",
+      "id": "ds_week2_level3",
       "type": "question",
       "title": "Nonlinear Strategies and Analysis-hard"
     }

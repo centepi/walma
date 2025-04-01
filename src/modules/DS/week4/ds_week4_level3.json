@@ -1,0 +1,40 @@
+{
+  "levelId": "ds_week4_level3",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Find the general solution of the system:",
+        "ẋ = Mx, where M = [[1, 2], [0, -1]]"
+      ],
+      "options": [
+        "x(t) = A e^{t} [1, 0]^T + B e^{-t} [1, -1]^T",
+        "x(t) = A cos(t) + B sin(t)",
+        "x(t) = A e^{2t} + B e^{-2t}",
+        "x(t) = A t e^{t} + B e^{t}"
+      ],
+      "correctAnswer": "x(t) = A e^{t} [1, 0]^T + B e^{-t} [1, -1]^T",
+      "explanationParts": [
+        "Eigenvalues: λ = 1 and λ = -1 with eigenvectors [1, 0] and [1, -1].",
+        "Solution: x(t) = A e^{t} v₁ + B e^{-t} v₂."
+      ]
+    },
+    {
+      "questionParts": [
+        "Diagonalize M = [[0, 2], [-1, 2]] over ℝ and describe the general form of the solution."
+      ],
+      "options": [
+        "x(t) = e^{2t} (α cos(t) v₁ + β sin(t) v₂)",
+        "x(t) = α e^{3t} + β e^{t}",
+        "x(t) = A t v + B w",
+        "x(t) = C e^{-t} [1, 1]^T"
+      ],
+      "correctAnswer": "x(t) = e^{2t} (α cos(t) v₁ + β sin(t) v₂)",
+      "explanationParts": [
+        "Matrix M has complex eigenvalues 1 ± i.",
+        "The real solution is formed by exponentials multiplied by sine and cosine.",
+        "This is the canonical form for complex eigenvalue systems."
+      ]
+    }
+  ]
+}

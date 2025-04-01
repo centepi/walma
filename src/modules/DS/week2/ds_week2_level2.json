@@ -37,7 +37,7 @@
         "Step 1: Let u = x + t, then \\frac{du}{dt} = u^2 + 1:",
         "\\int \\frac{du}{u^2 + 1} = \\int dt",
         "Step 2: Solve and back-substitute:",
-        "\\arctan(u) = t + C ⇒ x = \\tan(t + C) - t"
+        "\\arctan(u) = t + C \u21d2 x = \\tan(t + C) - t"
       ]
     }
   ]

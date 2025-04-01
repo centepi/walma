@@ -27,12 +27,15 @@ if (!admin.apps.length) {
 const db = getFirestore();
 const bucket = admin.storage().bucket();
 
+// ✅ Properly loads "week_1.json", "week_2.json", etc.
 const loadWeekData = (moduleName, weekFolder) => {
-  const weekDataPath = path.join(__dirname, `modules/${moduleName}/${weekFolder}/week_1.json`);
+  const weekNumber = weekFolder.replace("week", ""); // "week1" → "1"
+  const expectedJsonFile = `week_${weekNumber}.json`; // → "week_1.json"
+  const weekDataPath = path.join(__dirname, `modules/${moduleName}/${weekFolder}/${expectedJsonFile}`);
   try {
     return JSON.parse(fs.readFileSync(weekDataPath, "utf-8"));
   } catch (error) {
-    console.error(`❌ Error loading ${weekFolder}/week_1.json:`, error);
+    console.error(`❌ Error loading ${weekFolder}/${expectedJsonFile}:`, error);
     return null;
   }
 };
