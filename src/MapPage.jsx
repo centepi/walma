@@ -17,7 +17,6 @@ function MapPage() {
   const levelRefs = useRef({});
   const auth = getAuth();
 
-  // 🔁 Redirect if moduleName is missing or invalid
   useEffect(() => {
     if (!moduleName || moduleName === "undefined") {
       console.warn("Invalid module name — redirecting to default module.");
@@ -25,7 +24,6 @@ function MapPage() {
     }
   }, [moduleName, navigate]);
 
-  // 🔐 Load completedLevels from Firestore
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -44,58 +42,73 @@ function MapPage() {
     return () => unsubscribe();
   }, []);
 
-  // 🧠 Fetch weeks & levels for this module
   useEffect(() => {
     const fetchWeeksAndLevels = async () => {
+      console.log("🔥 moduleName from URL:", moduleName);
       const weeksCollection = collection(db, "Weeks");
       const weeksSnapshot = await getDocs(weeksCollection);
-      if (weeksSnapshot.empty) return;
+
+      if (weeksSnapshot.empty) {
+        console.warn("⚠️ No Week documents found in Firestore.");
+        return;
+      }
 
       const fetchedWeeks = [];
+
       for (const weekDoc of weeksSnapshot.docs) {
         const weekDocData = weekDoc.data();
-        if (weekDocData.module !== moduleName) continue;
+        console.log(`📦 WEEK DOC: ${weekDoc.id}`, weekDocData);
 
-        const weekData = { id: weekDoc.id, ...weekDocData, levels: [] };
+        if (weekDocData.module !== moduleName) {
+          console.log(`⛔️ SKIPPING week ${weekDoc.id} (module mismatch: ${weekDocData.module})`);
+          continue;
+        }
 
         const levelsCollection = collection(db, `Weeks/${weekDoc.id}/Levels`);
         const levelsSnapshot = await getDocs(levelsCollection);
 
+        if (levelsSnapshot.empty) {
+          console.log(`⚠️ No levels found in week ${weekDoc.id}`);
+          continue;
+        }
+
+        console.log(`✅ Found ${levelsSnapshot.size} levels in ${weekDoc.id}`);
+
         let sortedLevels = levelsSnapshot.docs.map((doc) => {
-          const firestoreLevel = { id: doc.id, weekId: weekDoc.id, ...doc.data() };
-          const weekLevelMeta = weekDocData.levels.find((l) => l.id === doc.id);
+          const levelData = doc.data();
+          console.log(`   ➕ Level ${doc.id}:`, levelData);
+
+          const levelList = Array.isArray(weekDocData.levels) ? weekDocData.levels : [];
+          const weekLevelMeta = levelList.find((l) => l.id === doc.id);
+
           return {
-            ...firestoreLevel,
-            title: firestoreLevel.title || weekLevelMeta?.title || "Level",
+            id: doc.id,
+            weekId: weekDoc.id,
+            ...levelData,
+            title: levelData.title || weekLevelMeta?.title || "Level",
+            isUnlocked: true,
           };
         });
 
-        // Sort: review first, then by level number
         sortedLevels.sort((a, b) => {
           if (a.type === "review") return -1;
           if (b.type === "review") return 1;
           return (a.levelNumber || 0) - (b.levelNumber || 0);
         });
 
-        // No locking – all levels are shown
-        sortedLevels = sortedLevels.map((level) => ({
-          ...level,
-          isUnlocked: true,
-        }));
-
-        weekData.levels = sortedLevels;
-        fetchedWeeks.push(weekData);
+        fetchedWeeks.push({
+          id: weekDoc.id,
+          ...weekDocData,
+          levels: sortedLevels,
+        });
       }
 
-      // Log fetched weeks data
-      console.log("Fetched weeks data:", fetchedWeeks);
       setWeeks(fetchedWeeks);
     };
 
     fetchWeeksAndLevels();
   }, [completedLevels, moduleName]);
 
-  // 📍 Level click logic
   const handleLevelClick = (levelId) => {
     if (selectedLevel?.id === levelId) {
       setSelectedLevel(null);
@@ -122,10 +135,6 @@ function MapPage() {
 
     setSelectedLevel(selected);
   };
-
-  // Log the moduleName and weeks data before rendering
-  console.log("Module Name:", moduleName);
-  console.log("Weeks Data:", weeks);
 
   return (
     <div className="map-container">
