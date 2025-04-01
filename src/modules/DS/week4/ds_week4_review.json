@@ -10,10 +10,10 @@
     {
       "contentBeforeEquation": "The characteristic equation is",
       "inlineEquation": "\\lambda^2 - 2\\lambda + 1 = 0",
-      "contentAfterEquation": ", which has a repeated root \\( \\lambda = 1 \\)."
+      "contentAfterEquation": ", which has a repeated root  \\lambda = 1 ."
     },
     {
-      "content": "In such cases, the complementary function takes the form y_c = C₁e^x + C₂xe^x."
+      "content": "In such cases, the complementary function takes the form y_c = C\u2081e^x + C\u2082xe^x."
     },
     {
       "content": "For the particular integral, when the non-homogeneous term is a polynomial like x, we guess a polynomial of the same degree (e.g., Ax + B)."
@@ -38,7 +38,7 @@
     {
       "contentBeforeEquation": "We also studied systems of equations of the form",
       "inlineEquation": "\\dot{x} = Mx",
-      "contentAfterEquation": ", where x is a vector and M is a 2×2 matrix."
+      "contentAfterEquation": ", where x is a vector and M is a 2\u00d72 matrix."
     },
     {
       "content": "To solve such systems, we find the eigenvalues and eigenvectors of M, which let us diagonalize or transform it into Jordan normal form."

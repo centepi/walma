@@ -15,15 +15,15 @@
       ],
       "correctAnswer": "y = e^{-x}(cos(x) + sin(x))",
       "explanationParts": [
-        "Step 1: Characteristic equation: \\lambda^2 + 2\\lambda + 2 = 0  ⇒  \\lambda = -1 ± i.",
+        "Step 1: Characteristic equation: \\lambda^2 + 2\\lambda + 2 = 0  \u21d2  \\lambda = -1 \u00b1 i.",
         "Step 2: General solution: y = e^{-x}(C_1 cos(x) + C_2 sin(x)).",
-        "Step 3: Apply initial conditions: y(0) = 1  ⇒  C_1 = 1;    y'(0) = 0  ⇒  C_2 = 1."
+        "Step 3: Apply initial conditions: y(0) = 1  \u21d2  C_1 = 1;    y'(0) = 0  \u21d2  C_2 = 1."
       ]
     },
     {
       "questionParts": [
         "Solve using operator factorization:",
-        "(D^2 + 1)y = e^x   where D ≡ d/dx"
+        "(D^2 + 1)y = e^x   where D \u2261 d/dx"
       ],
       "options": [
         "y = e^x + C_1 e^{-x}",

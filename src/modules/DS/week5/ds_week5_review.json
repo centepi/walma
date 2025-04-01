@@ -58,7 +58,7 @@
       "content": "We compared how different velocity functions affect whether a particle reaches its target in finite time."
     },
     {
-      "content": "In phase spaces like \\( \\Gamma = \\{x \\in \\mathbb{R} \\mid x \\geq 0\\} \\), it's also important to ask: does motion **terminate** in finite time?"
+      "content": "In phase spaces like  \\Gamma = \\{x \\in \\mathbb{R} \\mid x \\geq 0\\} , it's also important to ask: does motion **terminate** in finite time?"
     },
     {
       "contentBeforeEquation": "For example, with",

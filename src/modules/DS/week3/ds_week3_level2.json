@@ -16,7 +16,7 @@
       "correctAnswer": "y_p = (1/2) e^x",
       "explanationParts": [
         "Step 1: Guess form y_p = A e^x (since e^x is not in the complementary solution).",
-        "Step 2: Substitute into ODE: (A + A) e^x = e^x  ⇒  A = 1/2."
+        "Step 2: Substitute into ODE: (A + A) e^x = e^x  \u21d2  A = 1/2."
       ]
     },
     {

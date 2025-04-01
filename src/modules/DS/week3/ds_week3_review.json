@@ -20,13 +20,13 @@
       "content": "The nature of the roots of the characteristic equation determines the form of the solution:"
     },
     {
-      "content": "- **Two distinct real roots**: solution involves exponentials like C₁e^{\\lambda_1 x} + C₂e^{\\lambda_2 x}."
+      "content": "- **Two distinct real roots**: solution involves exponentials like C\u2081e^{\\lambda_1 x} + C\u2082e^{\\lambda_2 x}."
     },
     {
-      "content": "- **Repeated real root**: solution takes the form C₁e^{\\lambda x} + C₂xe^{\\lambda x}."
+      "content": "- **Repeated real root**: solution takes the form C\u2081e^{\\lambda x} + C\u2082xe^{\\lambda x}."
     },
     {
-      "content": "- **Complex roots**: solution is C₁e^{\\alpha x} cos(\\beta x) + C₂e^{\\alpha x} sin(\\beta x)."
+      "content": "- **Complex roots**: solution is C\u2081e^{\\alpha x} cos(\\beta x) + C\u2082e^{\\alpha x} sin(\\beta x)."
     },
     {
       "content": "After finding the complementary function, we solve for a particular integral depending on the form of the inhomogeneous term f(x):"
@@ -54,7 +54,7 @@
     {
       "contentBeforeEquation": "Example: Given",
       "inlineEquation": "y'' + 2y' + 2y = 0,\\ y(0) = 1,\\ y'(0) = 0",
-      "contentAfterEquation": ", the roots are complex: \\( -1 \\pm i \\)."
+      "contentAfterEquation": ", the roots are complex:  -1 \\pm i ."
     },
     {
       "content": "So the solution is y = e^{-x}(cos(x) + sin(x))."

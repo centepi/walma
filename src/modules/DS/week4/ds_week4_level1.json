@@ -5,18 +5,18 @@
     {
       "questionParts": [
         "What is the general solution of:",
-        "y'' − 2y' + y = 0"
+        "y'' \u2212 2y' + y = 0"
       ],
       "options": [
-        "y = C₁ e^{x} + C₂ x e^{x}",
-        "y = C₁ e^{x} + C₂ e^{-x}",
-        "y = C₁ cos(x) + C₂ sin(x)",
-        "y = C₁ x^2 + C₂ x"
+        "y = C\u2081 e^{x} + C\u2082 x e^{x}",
+        "y = C\u2081 e^{x} + C\u2082 e^{-x}",
+        "y = C\u2081 cos(x) + C\u2082 sin(x)",
+        "y = C\u2081 x^2 + C\u2082 x"
       ],
-      "correctAnswer": "y = C₁ e^{x} + C₂ x e^{x}",
+      "correctAnswer": "y = C\u2081 e^{x} + C\u2082 x e^{x}",
       "explanationParts": [
-        "The characteristic equation is (λ − 1)^2 = 0, giving a repeated root λ = 1.",
-        "So the general solution is y = C₁ e^{x} + C₂ x e^{x}."
+        "The characteristic equation is (\u03bb \u2212 1)^2 = 0, giving a repeated root \u03bb = 1.",
+        "So the general solution is y = C\u2081 e^{x} + C\u2082 x e^{x}."
       ]
     },
     {
@@ -33,7 +33,7 @@
       "correctAnswer": "y_p = 1/4",
       "explanationParts": [
         "The RHS is constant, so a constant guess y = A works.",
-        "Substitute into the ODE: 4A = 1 → A = 1/4."
+        "Substitute into the ODE: 4A = 1 \u2192 A = 1/4."
       ]
     }
   ]

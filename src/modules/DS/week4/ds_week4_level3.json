@@ -5,7 +5,7 @@
     {
       "questionParts": [
         "Find the general solution of the system:",
-        "ẋ = Mx, where M = [[1, 2], [0, -1]]"
+        "x\u0307 = Mx, where M = [[1, 2], [0, -1]]"
       ],
       "options": [
         "x(t) = A e^{t} [1, 0]^T + B e^{-t} [1, -1]^T",
@@ -15,23 +15,23 @@
       ],
       "correctAnswer": "x(t) = A e^{t} [1, 0]^T + B e^{-t} [1, -1]^T",
       "explanationParts": [
-        "Eigenvalues: λ = 1 and λ = -1 with eigenvectors [1, 0] and [1, -1].",
-        "Solution: x(t) = A e^{t} v₁ + B e^{-t} v₂."
+        "Eigenvalues: \u03bb = 1 and \u03bb = -1 with eigenvectors [1, 0] and [1, -1].",
+        "Solution: x(t) = A e^{t} v\u2081 + B e^{-t} v\u2082."
       ]
     },
     {
       "questionParts": [
-        "Diagonalize M = [[0, 2], [-1, 2]] over ℝ and describe the general form of the solution."
+        "Diagonalize M = [[0, 2], [-1, 2]] over \u211d and describe the general form of the solution."
       ],
       "options": [
-        "x(t) = e^{2t} (α cos(t) v₁ + β sin(t) v₂)",
-        "x(t) = α e^{3t} + β e^{t}",
+        "x(t) = e^{2t} (\u03b1 cos(t) v\u2081 + \u03b2 sin(t) v\u2082)",
+        "x(t) = \u03b1 e^{3t} + \u03b2 e^{t}",
         "x(t) = A t v + B w",
         "x(t) = C e^{-t} [1, 1]^T"
       ],
-      "correctAnswer": "x(t) = e^{2t} (α cos(t) v₁ + β sin(t) v₂)",
+      "correctAnswer": "x(t) = e^{2t} (\u03b1 cos(t) v\u2081 + \u03b2 sin(t) v\u2082)",
       "explanationParts": [
-        "Matrix M has complex eigenvalues 1 ± i.",
+        "Matrix M has complex eigenvalues 1 \u00b1 i.",
         "The real solution is formed by exponentials multiplied by sine and cosine.",
         "This is the canonical form for complex eigenvalue systems."
       ]
