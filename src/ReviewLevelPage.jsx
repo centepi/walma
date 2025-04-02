@@ -136,14 +136,7 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
           {visibleSlides.map((slide, index) => (
             <div key={index} className="review-slide" ref={el => slideRefs.current[index] = el}>
               {slide.title && <h2>{slide.title}</h2>}
-              <p>
-                {slide.contentBeforeEquation && slide.contentBeforeEquation + " "}
-                {slide.inlineEquation && <InlineMath math={slide.inlineEquation} />}
-                {slide.contentAfterEquation && " " + slide.contentAfterEquation + " "}
-                {slide.inlineEquation2 && <InlineMath math={slide.inlineEquation2} />}
-                {slide.contentEnd && " " + slide.contentEnd}
-                {slide.content && slide.content}
-              </p>
+              {slide.content && <p>{slide.content}</p>}
               {slide.equation && <BlockMath math={slide.equation} />}
               {slide.diagram && (
                 <img

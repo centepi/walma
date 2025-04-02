@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { db } from "./firebaseConfig";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
-import { InlineMath, BlockMath } from "react-katex";
+import MathText from "./Mathtext.jsx";
 import "katex/dist/katex.css";
 import "./LevelPage.css";
 import completionGifs from "./loadGifs";
@@ -48,7 +48,6 @@ function QuestionLevelPage({ levelData, weekId, levelId, moduleName }) {
     }
   };
 
-  // ✅ Mark level as complete in Firestore when done
   useEffect(() => {
     const markLevelComplete = async () => {
       if (!isLevelComplete) return;
@@ -72,21 +71,9 @@ function QuestionLevelPage({ levelData, weekId, levelId, moduleName }) {
 
   const currentQuestion = levelData.questions[currentStepIndex];
 
-  const renderInlineMathText = (text) =>
-    text.split("\n").map((line, lineIndex) => (
-      <React.Fragment key={lineIndex}>
-        {line.split(/\{\{(.*?)\}\}/g).map((seg, i) =>
-          i % 2 === 1 ? <InlineMath key={i} math={seg.trim()} /> : seg
-        )}
-        <br />
-      </React.Fragment>
-    ));
-
   const renderParts = (partsArray) =>
     partsArray.map((part, index) => {
-      if (part.trim() === part.trim().replace(/[a-zA-Z0-9 .,!?]/g, "").length > 2) {
-        return <BlockMath key={index} math={part.trim()} />;
-      } else if (/\.(png|jpg|jpeg)/i.test(part)) {
+      if (/\.(png|jpg|jpeg)/i.test(part)) {
         return (
           <img
             key={index}
@@ -97,7 +84,11 @@ function QuestionLevelPage({ levelData, weekId, levelId, moduleName }) {
           />
         );
       } else {
-        return <p key={index}>{renderInlineMathText(part)}</p>;
+        return (
+          <p key={index}>
+            <MathText>{part}</MathText>
+          </p>
+        );
       }
     });
 
@@ -171,7 +162,9 @@ function QuestionLevelPage({ levelData, weekId, levelId, moduleName }) {
       ) : (
         <div className="question-explanation-wrapper">
           <div className="question-card">
-            <div className="question-content">{renderParts(currentQuestion.questionParts)}</div>
+            <div className="question-content">
+              {renderParts(currentQuestion.questionParts)}
+            </div>
 
             <div className="options">
               {currentQuestion.options.map((option, i) => (
@@ -181,14 +174,14 @@ function QuestionLevelPage({ levelData, weekId, levelId, moduleName }) {
                   onClick={() => setSelectedAnswer(option)}
                   disabled={isAnswerChecked}
                 >
-                  {renderInlineMathText(option)}
+                  <MathText>{option}</MathText>
                 </button>
               ))}
             </div>
 
             {isAnswerChecked && (
               <div className={`feedback ${showFeedback.isCorrect ? "correct" : "incorrect"}`}>
-                <p>{renderInlineMathText(showFeedback.text)}</p>
+                <p><MathText>{showFeedback.text}</MathText></p>
               </div>
             )}
 
