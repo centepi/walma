@@ -1,0 +1,40 @@
+{
+  "levelId": "ds_week5_level2",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "For  \\dot{x} = \\frac{1}{x} , how long does it take",
+        "to travel from  x = 1  to  x = 2 ?"
+      ],
+      "options": [
+        " \\frac{1}{2} ",
+        " \\frac{3}{2} ",
+        " \\infty ",
+        " 1 "
+      ],
+      "correctAnswer": " \\frac{3}{2} ",
+      "explanationParts": [
+        "**Step 1:** Compute  \\tau = \\int_{1}^{2} \\frac{dx}{f(x)} = \\int_{1}^{2} x \\, dx .",
+        "**Step 2:** Evaluate:  \\left[ \\frac{1}{2}x^{2} \\right]_{1}^{2} = \\frac{3}{2} ."
+      ]
+    },
+    {
+      "questionParts": [
+        "For  \\dot{x} = (2 - x)^{1/5} , what is the time",
+        "to reach  x = 2  from  x = 1 ?"
+      ],
+      "options": [
+        " \\frac{5}{4} ",
+        " \\infty ",
+        " 1 ",
+        " \\frac{3}{2} "
+      ],
+      "correctAnswer": " \\frac{5}{4} ",
+      "explanationParts": [
+        "**Step 1:** Integrate  \\tau = \\int_{1}^{2} (2 - x)^{-1/5} dx .",
+        "**Step 2:** Result:  -\\frac{5}{4}(2 - x)^{4/5} \\big|_{1}^{2} = \\frac{5}{4} ."
+      ]
+    }
+  ]
+}

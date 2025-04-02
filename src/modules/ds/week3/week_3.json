@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week3",
+  "title": "Week 3",
+  "description": "Initial Value Problems",
+  "levels": [
+    {
+      "id": "ds_week3_review",
+      "type": "review",
+      "title": "First Order Differential Equations review"
+    },
+    {
+      "id": "ds_week3_level1",
+      "type": "question",
+      "title": "Find the general solution of the differential equation"
+    },
+    {
+      "id": "ds_week3_level2",
+      "type": "question",
+      "title": "Find the particular solution of the differential equation"
+    },
+    {
+      "id": "ds_week3_level3",
+      "type": "question",
+      "title": "Solve the initial value problem"
+    }
+  ]
+}

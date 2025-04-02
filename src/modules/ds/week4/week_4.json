@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week4",
+  "title": "Week 4",
+  "description": "Second-order ODEs & linear systems",
+  "levels": [
+    {
+      "id": "ds_week4_review",
+      "type": "review",
+      "title": "Review of First-Order ODE Techniques"
+    },
+    {
+      "id": "ds_week4_level1",
+      "type": "question",
+      "title": "Second-Order ODEs: General and Particular Solutions"
+    },
+    {
+      "id": "ds_week4_level2",
+      "type": "question",
+      "title": "Advanced Second-Order ODEs: Variation of Constants and Initial Conditions"
+    },
+    {
+      "id": "ds_week4_level3",
+      "type": "question",
+      "title": "Systems of Linear ODEs: Eigenvalues and Diagonalization"
+    }
+  ]
+}

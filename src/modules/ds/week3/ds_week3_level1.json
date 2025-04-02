@@ -1,0 +1,47 @@
+{
+  "levelId": "ds_week3_level1",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Find the general solution to:",
+        "y'' + 3y' + 2y = 0"
+      ],
+      "options": [
+        "y = C_1 e^x + C_2 e^{2x}",
+        "y = C_1 e^{-x} + C_2 e^{-2x}",
+        "y = C_1 \\cos(x) + C_2 \\sin(x)",
+        "y = C_1 e^{-x} \\cos(x) + C_2 e^{-x} \\sin(x)"
+      ],
+      "correctAnswer": "y = C_1 e^{-x} + C_2 e^{-2x}",
+      "explanationParts": [
+        "Step 1: Solve the characteristic equation:",
+        "\\lambda^2 + 3\\lambda + 2 = 0  \\Rightarrow  (\\lambda + 1)(\\lambda + 2) = 0  \\Rightarrow  \\lambda = -1, -2",
+        "Step 2: General solution for distinct real roots:",
+        "y = C_1 e^{\\lambda_1 x} + C_2 e^{\\lambda_2 x}"
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve the IVP:",
+        "y'' + y = 0,    y(0) = 1,    y'(0) = 0"
+      ],
+      "options": [
+        "y = \\sin(x)",
+        "y = \\cos(x)",
+        "y = e^{-x}",
+        "y = \\cos(x) + \\sin(x)"
+      ],
+      "correctAnswer": "y = \\cos(x)",
+      "explanationParts": [
+        "Step 1: Characteristic equation:",
+        "\\lambda^2 + 1 = 0  \\Rightarrow  \\lambda = \\pm i",
+        "Step 2: General solution:",
+        "y = C_1 \\cos(x) + C_2 \\sin(x)",
+        "Step 3: Apply initial conditions:",
+        "y(0) = 1  \\Rightarrow  C_1 = 1",
+        "y'(0) = 0  \\Rightarrow  C_2 = 0"
+      ]
+    }
+  ]
+}

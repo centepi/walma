@@ -1,0 +1,44 @@
+{
+  "levelId": "ds_week2_level2",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Solve using an integrating factor:",
+        "\\dot{x} - x = t"
+      ],
+      "options": [
+        "x = -1 - t + Ce^{t}",
+        "x = t^2 + Ce^{-t}",
+        "x = 1 + t + Ce^{t}",
+        "x = -t + Ce^{t}"
+      ],
+      "correctAnswer": "x = -1 - t + Ce^{t}",
+      "explanationParts": [
+        "Step 1: Identify integrating factor \\mu(t) = e^{\\int -1 dt} = e^{-t}:",
+        "\\frac{d}{dt}(xe^{-t}) = te^{-t}",
+        "Step 2: Integrate by parts:",
+        "xe^{-t} = -(1 + t)e^{-t} + C"
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve via substitution u = x + t:",
+        "\\dot{x} = (x + t)^2"
+      ],
+      "options": [
+        "x = \\tan(t + C) - t",
+        "x = \\tan(t^2) + C",
+        "x = t^3 + Ct",
+        "x = \\sin(t + C) - t"
+      ],
+      "correctAnswer": "x = \\tan(t + C) - t",
+      "explanationParts": [
+        "Step 1: Let u = x + t, then \\frac{du}{dt} = u^2 + 1:",
+        "\\int \\frac{du}{u^2 + 1} = \\int dt",
+        "Step 2: Solve and back-substitute:",
+        "\\arctan(u) = t + C \u21d2 x = \\tan(t + C) - t"
+      ]
+    }
+  ]
+}

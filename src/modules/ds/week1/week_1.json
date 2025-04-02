@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week1",
+  "title": "Week 1",
+  "description": "Differential Equations",
+  "levels": [
+    {
+      "id": "ds_week1_review",
+      "type": "review",
+      "title": "First Order Differential Equations review"
+    },
+    {
+      "id": "ds_week1_level1",
+      "type": "question",
+      "title": "Explicit&Separable Differential Equations"
+    },
+    {
+      "id": "ds_week1_level2",
+      "type": "question",
+      "title": "Homogeneous Differential Equations"
+    },
+    {
+      "id": "ds_week1_level3",
+      "type": "question",
+      "title": "Linear Differential Equations"
+    }
+  ]
+}

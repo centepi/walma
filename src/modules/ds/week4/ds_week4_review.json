@@ -1,0 +1,60 @@
+{
+  "levelId": "ds_week4_review",
+  "type": "review",
+  "slides": [
+    {
+      "contentBeforeEquation": "This week focuses on solving both second-order ODEs and systems of first-order equations. For second-order equations like",
+      "inlineEquation": "y'' - 2y' + y = x",
+      "contentAfterEquation": ", the complementary function comes from solving the homogeneous equation."
+    },
+    {
+      "contentBeforeEquation": "The characteristic equation is",
+      "inlineEquation": "\\lambda^2 - 2\\lambda + 1 = 0",
+      "contentAfterEquation": ", which has a repeated root  \\lambda = 1 ."
+    },
+    {
+      "content": "In such cases, the complementary function takes the form y_c = C\u2081e^x + C\u2082xe^x."
+    },
+    {
+      "content": "For the particular integral, when the non-homogeneous term is a polynomial like x, we guess a polynomial of the same degree (e.g., Ax + B)."
+    },
+    {
+      "content": "For constant right-hand sides like y'' + 4y' + 4y = 1, we guess a constant solution y_p = A. Substituting this into the equation helps us solve for A."
+    },
+    {
+      "contentBeforeEquation": "The method of varying constants is useful for equations like",
+      "inlineEquation": "x'' + 3x' + 2x = 1 + t",
+      "contentAfterEquation": "."
+    },
+    {
+      "content": "We write the solution in the form x(t) = F(t)e^{-t} or x(t) = F(t)e^{-2t}, where the exponential matches a homogeneous solution."
+    },
+    {
+      "content": "By substituting and simplifying, we reduce the second-order ODE to a first-order ODE in F', solve it, and integrate to find F."
+    },
+    {
+      "content": "The final solution combines F(t) with the exponential to reconstruct x(t), and both trial functions yield the same result."
+    },
+    {
+      "contentBeforeEquation": "We also studied systems of equations of the form",
+      "inlineEquation": "\\dot{x} = Mx",
+      "contentAfterEquation": ", where x is a vector and M is a 2\u00d72 matrix."
+    },
+    {
+      "content": "To solve such systems, we find the eigenvalues and eigenvectors of M, which let us diagonalize or transform it into Jordan normal form."
+    },
+    {
+      "contentBeforeEquation": "We compute a change-of-basis matrix",
+      "inlineEquation": "P",
+      "contentAfterEquation": "from the eigenvectors, and solve the system using",
+      "inlineEquation2": "x(t) = Pe^{Dt}P^{-1}x(0)",
+      "contentEnd": ", where D is the diagonal or Jordan matrix."
+    },
+    {
+      "content": "This method helps simplify and solve more complex dynamical systems by reducing them to easier-to-integrate forms."
+    },
+    {
+      "content": "In summary, this week expanded your toolbox with methods for solving higher-order equations and matrix systems using eigen-decomposition, variation of constants, and the structure of polynomial and constant forcing terms."
+    }
+  ]
+}

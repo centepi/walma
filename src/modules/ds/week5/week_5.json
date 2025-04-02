@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week5",
+  "title": "Week 5",
+  "description": "Dynamical Systems",
+  "levels": [
+    {
+      "id": "ds_week5_review",
+      "type": "review",
+      "title": "First Order Differential Equations review"
+    },
+    {
+      "id": "ds_week5_level1",
+      "type": "question",
+      "title": "Stability and Simple Solutions"
+    },
+    {
+      "id": "ds_week5_level2",
+      "type": "question",
+      "title": "Time Calculations and Integrals"
+    },
+    {
+      "id": "ds_week5_level3",
+      "type": "question",
+      "title": "Infinite Time and Advanced Stability"
+    }
+  ]
+}
