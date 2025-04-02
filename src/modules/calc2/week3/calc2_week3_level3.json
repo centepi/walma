@@ -5,8 +5,8 @@
       {
         "questionParts": [
           "Consider the function:",
-          "{{f(x, y) = x^2 + y^2}}",
-          "The gradient vector field is given by {{\\nabla f = \\langle 2x, 2y \\rangle}}.",
+          "\\(f(x, y) = x^2 + y^2\\)",
+          "The gradient vector field is given by \\(\\nabla f = \\langle 2x, 2y \\rangle\\).",
           "Refer to the diagram below:",
           "diagrams/week3_q3_gradient_vectors_circle.png",
           "What can you conclude about the direction of the gradient vectors?"
@@ -20,8 +20,8 @@
         "correctAnswer": "They point outward from the origin.",
         "explanationParts": [
           "The gradient vector at any point \\((x, y)\\) is given by \\(\\nabla f = \\langle 2x, 2y \\rangle\\).",
-          "This means the direction of the gradient vector depends on the coordinates \\(x\\) and \\(y\\) themselves.",
-          "So at every point, the gradient points **directly away from the origin**, and the further you are, the longer the vector.",
+          "This means the direction of the gradient vector depends directly on the coordinates \\(x\\) and \\(y\\).",
+          "At every point, the gradient points **directly away from the origin**, and the further you are, the longer the vector.",
           "This is consistent with the fact that the function increases as you move away from the origin, and the gradient always points in the direction of steepest ascent."
         ]
       },

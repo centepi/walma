@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { InlineMath, BlockMath } from "react-katex";
+import { BlockMath } from "react-katex";
+import MathText from "./Mathtext.jsx"; // Custom parser you provided
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
-import "katex/dist/katex.css";
+import "katex/dist/katex.min.css";
 import "./LevelPage.css";
 import completionGifs from "./loadGifs";
 
@@ -136,8 +137,12 @@ function ReviewLevelPage({ levelData, weekId, levelId, moduleName }) {
           {visibleSlides.map((slide, index) => (
             <div key={index} className="review-slide" ref={el => slideRefs.current[index] = el}>
               {slide.title && <h2>{slide.title}</h2>}
-              {slide.content && <p>{slide.content}</p>}
+              {slide.content && <p><MathText>{slide.content}</MathText></p>}
+              {slide.contentBeforeEquation && <p><MathText>{slide.contentBeforeEquation}</MathText></p>}
+              {slide.inlineEquation && <BlockMath math={slide.inlineEquation} />}
               {slide.equation && <BlockMath math={slide.equation} />}
+              {slide.contentAfterEquation && <p><MathText>{slide.contentAfterEquation}</MathText></p>}
+              {slide.contentEnd && <p><MathText>{slide.contentEnd}</MathText></p>}
               {slide.diagram && (
                 <img
                   src={resolveDiagramPath(slide.diagram)}

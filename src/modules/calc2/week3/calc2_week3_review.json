@@ -1,0 +1,34 @@
+{
+    "levelId": "calc2_week3_review",
+    "type": "review",
+    "slides": [
+      {
+        "title": "Functions of Two Variables",
+        "content": "This week we focus on functions of the form \\(f(x, y)\\), which describe surfaces in 3D space. The height of the surface, \\(z = f(x, y)\\), depends on the point \\((x, y)\\) in the plane. Understanding how the surface behaves locally requires tools like gradients, level curves, and directional derivatives."
+      },
+      {
+        "title": "The Gradient Vector",
+        "contentBeforeEquation": "The gradient vector of a function \\(f(x, y)\\) is given by:",
+        "inlineEquation": "\\nabla f(x, y) = \\left\\langle \\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y} \\right\\rangle",
+        "contentAfterEquation": "It captures how \\(f\\) changes at a point, pointing in the direction of greatest increase. Its magnitude gives the maximum rate of change at that point. For example, for \\(f(x, y) = x^2 + y^2\\), the gradient is \\(\\nabla f = \\langle 2x, 2y \\rangle\\)."
+      },
+      {
+        "title": "Level Curves and Orthogonality",
+        "contentBeforeEquation": "A level curve is a set of points where the function has constant value: \\(f(x, y) = C\\). These curves lie flat in the plane. The gradient vector at any point is always orthogonal (perpendicular) to the level curve passing through that point.",
+        "contentEnd": "This geometric relationship helps visualize how functions rise or fall in space. For instance, for \\(f(x, y) = x^2 + y^2\\), the level curves are circles centered at the origin, and the gradient vectors point radially outward."
+      },
+      {
+        "title": "Directional Derivatives",
+        "content": "The directional derivative of \\(f(x, y)\\) in the direction of a unit vector \\(\\mathbf{u}\\) is given by \\(D_\\mathbf{u}f = \\nabla f \\cdot \\mathbf{u}\\). This measures how \\(f\\) changes in that specific direction. It’s largest when \\(\\mathbf{u}\\) points in the direction of the gradient, and zero when \\(\\mathbf{u}\\) is perpendicular to the gradient."
+      },
+      {
+        "title": "Visualizing Gradient Fields",
+        "content": "Gradient fields show how the gradient vector \\(\\nabla f(x, y)\\) changes across the plane. These can be plotted as arrows that vary in direction and magnitude depending on the point. For example, \\(f(x, y) = x^2 + y^2\\) produces a field with arrows pointing directly outward from the origin, growing in length as we move further out."
+      },
+      {
+        "title": "Summary of Week 3 Concepts",
+        "content": "This week, we learned how the gradient captures directional change, how level curves visualize constancy, and how directional derivatives tie the two together. Mastering these allows you to interpret geometric meaning, solve problems involving rates of change, and understand the behavior of multivariable functions."
+      }
+    ]
+  }
+  
