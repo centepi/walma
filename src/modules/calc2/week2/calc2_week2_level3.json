@@ -1,0 +1,98 @@
+{
+    "levelId": "calc2_week2_level3",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(f(x,y) = x^2y + \\cos(x)\\)",
+          "Compute the gradient vector field, \\(\\nabla f(x,y)\\)."
+        ],
+        "options": [
+          "\\(\\nabla f = \\langle 2xy - \\sin(x), x^2 \\rangle\\)",
+          "\\(\\nabla f = \\langle x^2, 2xy - \\sin(x) \\rangle\\)",
+          "\\(\\nabla f = \\langle 2xy, x^2 - \\sin(x) \\rangle\\)",
+          "\\(\\nabla f = \\langle 2xy + \\sin(x), x^2 \\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\nabla f = \\langle 2xy - \\sin(x), x^2 \\rangle\\)",
+        "explanationParts": [
+          "The gradient vector field is given by \\(\\nabla f = \\langle f_x, f_y \\rangle\\).",
+          "First, find the partial derivative with respect to \\(x\\):",
+          "\\(f_x = \\frac{\\partial}{\\partial x}(x^2y + \\cos(x)) = 2xy - \\sin(x)\\).",
+          "Next, find the partial derivative with respect to \\(y\\):",
+          "\\(f_y = \\frac{\\partial}{\\partial y}(x^2y + \\cos(x)) = x^2\\).",
+          "Therefore, \\(\\nabla f(x,y) = \\langle 2xy - \\sin(x), x^2 \\rangle\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(g(x,y) = e^{xy}\\)",
+          "Compute the gradient vector field \\(\\nabla g(x,y)\\) and evaluate it at the point \\((2, 0)\\)."
+        ],
+        "options": [
+          "\\(\\nabla g = \\langle ye^{xy}, xe^{xy} \\rangle\\), \\(\\nabla g(2, 0) = \\langle 0, 2 \\rangle\\)",
+          "\\(\\nabla g = \\langle e^{xy}, e^{xy} \\rangle\\), \\(\\nabla g(2, 0) = \\langle 1, 1 \\rangle\\)",
+          "\\(\\nabla g = \\langle ye^{xy}, xe^{xy} \\rangle\\), \\(\\nabla g(2, 0) = \\langle 0, 0 \\rangle\\)",
+          "\\(\\nabla g = \\langle xe^{xy}, ye^{xy} \\rangle\\), \\(\\nabla g(2, 0) = \\langle 2, 0 \\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\nabla g = \\langle ye^{xy}, xe^{xy} \\rangle\\), \\(\\nabla g(2, 0) = \\langle 0, 2 \\rangle\\)",
+        "explanationParts": [
+          "The gradient vector field is given by \\(\\nabla g = \\langle g_x, g_y \\rangle\\).",
+          "Using the chain rule for partial derivatives:",
+          "\\(g_x = \\frac{\\partial}{\\partial x}(e^{xy}) = e^{xy} \\cdot \\frac{\\partial}{\\partial x}(xy) = ye^{xy}\\)",
+          "\\(g_y = \\frac{\\partial}{\\partial y}(e^{xy}) = e^{xy} \\cdot \\frac{\\partial}{\\partial y}(xy) = xe^{xy}\\)",
+          "So, \\(\\nabla g(x,y) = \\langle ye^{xy}, xe^{xy} \\rangle\\).",
+          "Evaluating at \\((2, 0)\\):",
+          "\\(g_x(2, 0) = 0 \\cdot e^0 = 0\\)",
+          "\\(g_y(2, 0) = 2 \\cdot e^0 = 2\\)",
+          "Therefore, \\(\\nabla g(2, 0) = \\langle 0, 2 \\rangle\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(h(x,y) = \\ln(x^2 + y^2)\\)",
+          "Compute the gradient vector field, \\(\\nabla h(x,y)\\) (assuming \\((x, y) \\neq (0, 0)\\))."
+        ],
+        "options": [
+          "\\(\\nabla h = \\left\\langle \\frac{2x}{x^2 + y^2}, \\frac{2y}{x^2 + y^2} \\right\\rangle\\)",
+          "\\(\\nabla h = \\left\\langle \\frac{1}{x^2 + y^2}, \\frac{1}{x^2 + y^2} \\right\\rangle\\)",
+          "\\(\\nabla h = \\left\\langle \\frac{x}{x^2 + y^2}, \\frac{y}{x^2 + y^2} \\right\\rangle\\)",
+          "\\(\\nabla h = \\left\\langle \\frac{2x}{\\ln(x^2 + y^2)}, \\frac{2y}{\\ln(x^2 + y^2)} \\right\\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\nabla h = \\left\\langle \\frac{2x}{x^2 + y^2}, \\frac{2y}{x^2 + y^2} \\right\\rangle\\)",
+        "explanationParts": [
+          "The gradient vector field is given by \\(\\nabla h = \\langle h_x, h_y \\rangle\\).",
+          "Using the chain rule, let \\(u = x^2 + y^2\\), then \\(h = \\ln(u)\\).",
+          "\\(h_x = \\frac{1}{u} \\cdot \\frac{\\partial u}{\\partial x} = \\frac{1}{x^2 + y^2} \\cdot 2x = \\frac{2x}{x^2 + y^2}\\)",
+          "\\(h_y = \\frac{1}{u} \\cdot \\frac{\\partial u}{\\partial y} = \\frac{1}{x^2 + y^2} \\cdot 2y = \\frac{2y}{x^2 + y^2}\\)",
+          "So, \\(\\nabla h(x,y) = \\left\\langle \\frac{2x}{x^2 + y^2}, \\frac{2y}{x^2 + y^2} \\right\\rangle\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(k(x,y) = x \\sin(y)\\)",
+          "Compute the gradient vector field \\(\\nabla k(x,y)\\) and evaluate it at the point \\((\\pi, \\pi/2)\\)."
+        ],
+        "options": [
+          "\\(\\nabla k = \\langle \\sin(y), x \\cos(y) \\rangle\\), \\(\\nabla k(\\pi, \\pi/2) = \\langle 1, 0 \\rangle\\)",
+          "\\(\\nabla k = \\langle \\cos(y), -x \\sin(y) \\rangle\\), \\(\\nabla k(\\pi, \\pi/2) = \\langle 0, -\\pi \\rangle\\)",
+          "\\(\\nabla k = \\langle \\sin(y), x \\cos(y) \\rangle\\), \\(\\nabla k(\\pi, \\pi/2) = \\langle 0, 1 \\rangle\\)",
+          "\\(\\nabla k = \\langle x \\sin(y), \\cos(y) \\rangle\\), \\(\\nabla k(\\pi, \\pi/2) = \\langle \\pi, 0 \\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\nabla k = \\langle \\sin(y), x \\cos(y) \\rangle\\), \\(\\nabla k(\\pi, \\pi/2) = \\langle 1, 0 \\rangle\\)",
+        "explanationParts": [
+          "The gradient vector field is given by \\(\\nabla k = \\langle k_x, k_y \\rangle\\).",
+          "\\(k_x = \\frac{\\partial}{\\partial x}(x \\sin(y)) = \\sin(y)\\)",
+          "\\(k_y = \\frac{\\partial}{\\partial y}(x \\sin(y)) = x \\cos(y)\\)",
+          "So, \\(\\nabla k(x,y) = \\langle \\sin(y), x \\cos(y) \\rangle\\).",
+          "Evaluating at \\((\\pi, \\pi/2)\\):",
+          "\\(k_x = \\sin(\\pi/2) = 1\\), \\(k_y = \\pi \\cos(\\pi/2) = \\pi \\cdot 0 = 0\\)",
+          "Therefore, \\(\\nabla k(\\pi, \\pi/2) = \\langle 1, 0 \\rangle\\)."
+        ]
+      }
+    ]
+  }
+  

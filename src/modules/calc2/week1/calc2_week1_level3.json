@@ -1,0 +1,49 @@
+{
+    "levelId": "calc2_week1_level3",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the vector function:",
+          "\\(r(t) = (\\sin(t), 5 \\cos(t), \\cos(2t))\\)",
+          "Compute \\(r'(t)\\), evaluate at \\(t = 0\\), find the parametric equation of the tangent line, and verify that \\(r(0)\\) lies on the saddle surface \\(z = \\frac{y^2}{25} - x^2\\)."
+        ],
+        "options": [
+          "\\(r'(t) = (\\cos(t), -5 \\sin(t), -2 \\sin(2t))\\)\n\\(r'(0) = (1, 0, 0)\\)\n\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)",
+          "\\(r'(t) = (\\cos(t), 5 \\sin(t), -2 \\sin(2t))\\)\n\\(r'(0) = (1, 0, 0)\\)\n\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)",
+          "\\(r'(t) = (\\cos(t), -5 \\sin(t), 2 \\sin(2t))\\)\n\\(r'(0) = (1, 0, 0)\\)\n\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)",
+          "\\(r'(t) = (\\cos(t), 5 \\cos(t), 2 \\sin(2t))\\)\n\\(r'(0) = (1, 0, 0)\\)\n\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)"
+        ],
+        "correctAnswer": "\\(r'(t) = (\\cos(t), -5 \\sin(t), -2 \\sin(2t))\\)\n\\(r'(0) = (1, 0, 0)\\)\n\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)",
+        "explanationParts": [
+          "Step 1: Differentiate each component of \\(r(t)\\):",
+          "\\(\\sin(t) \\to \\cos(t)\\), \\(5 \\cos(t) \\to -5 \\sin(t)\\), \\(\\cos(2t) \\to -2 \\sin(2t)\\)",
+          "Step 2: At \\(t = 0\\), we get \\(r'(0) = (1, 0, 0)\\).",
+          "Step 3: The tangent line at \\(r(0) = (0, 5, 1)\\) has parametric form:",
+          "\\(l(\\mu) = (0, 5, 1) + \\mu(1, 0, 0)\\)",
+          "Step 4: Substitute into the saddle surface equation \\(z = \\frac{y^2}{25} - x^2\\) to verify that \\(z = 1\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Given the vector function:",
+          "\\(r(t) = (\\cos(2\\pi t), \\sin(2\\pi t), t)\\)",
+          "Find \\(r'(t)\\), evaluate at \\(t = 1\\), and explain what this tangent vector represents geometrically."
+        ],
+        "options": [
+          "\\(r'(t) = (-2\\pi \\sin(2\\pi t), 2\\pi \\cos(2\\pi t), 1)\\)\n\\(r'(1) = (0, 2\\pi, 1)\\)\nThis is the tangent vector along the helix.",
+          "\\(r'(t) = (-2\\pi \\cos(2\\pi t), -2\\pi \\sin(2\\pi t), 1)\\)\n\\(r'(1) = (0, -2\\pi, 1)\\)\nThis represents a centripetal vector.",
+          "\\(r'(t) = (2\\pi \\sin(2\\pi t), -2\\pi \\cos(2\\pi t), 1)\\)\n\\(r'(1) = (0, -2\\pi, 1)\\)\nThis is perpendicular to the axis.",
+          "\\(r'(t) = (2\\pi \\cos(2\\pi t), 2\\pi \\sin(2\\pi t), 1)\\)\n\\(r'(1) = (2\\pi, 0, 1)\\)\nThis is normal to the helix."
+        ],
+        "correctAnswer": "\\(r'(t) = (-2\\pi \\sin(2\\pi t), 2\\pi \\cos(2\\pi t), 1)\\)\n\\(r'(1) = (0, 2\\pi, 1)\\)\nThis is the tangent vector along the helix.",
+        "explanationParts": [
+          "Step 1: Differentiate each component:",
+          "\\(\\cos(2\\pi t) \\to -2\\pi \\sin(2\\pi t)\\), \\(\\sin(2\\pi t) \\to 2\\pi \\cos(2\\pi t)\\), \\(t \\to 1\\)",
+          "Step 2: At \\(t = 1\\), we have \\(r'(1) = (0, 2\\pi, 1)\\).",
+          "Step 3: The tangent vector represents the direction of motion along the helix at \\(t = 1\\)."
+        ]
+      }
+    ]
+  }
+  

@@ -1,0 +1,54 @@
+{
+  "levelId": "calc2_week3_level1",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Consider the function:",
+        "\\(f(x,y) = x^2 - y^2\\).",
+        "The level curves of \\(f\\) correspond to equations of the form \\(x^2 - y^2 = C\\) for various values of \\(C\\).",
+        "Refer to the diagram below:",
+        "Which of the following correctly describes the shape and orientation of these level curves?"
+      ],
+      "diagram": "week3_q1_level_curves.png",
+      "options": [
+        "Hyperbolas opening left/right for positive \\(C\\) and up/down for negative \\(C\\)",
+        "Ellipses centered at the origin",
+        "Circles centered at the origin",
+        "Parabolas opening upward"
+      ],
+      "correctAnswer": "Hyperbolas opening left/right for positive \\(C\\) and up/down for negative \\(C\\)",
+      "explanationParts": [
+        "Level curves of the function \\(f(x,y) = x^2 - y^2\\) are defined by the equation \\(x^2 - y^2 = C\\).",
+        "This is the general form of a **hyperbola**:",
+        "- If \\(C > 0\\), we have \\(x^2 - y^2 = C\\), which opens **left and right**.",
+        "- If \\(C < 0\\), we can rearrange \\(x^2 - y^2 = C\\) as \\(y^2 - x^2 = -C\\), which opens **up and down**.",
+        "The diagram shows examples of both orientations depending on the sign of \\(C\\)."
+      ]
+    },
+    {
+      "questionParts": [
+        "Again consider the function:",
+        "\\(f(x,y) = x^2 - y^2\\).",
+        "The gradient vector at a point \\((x, y)\\) is given by \\(\\nabla f(x,y) = \\langle 2x, -2y \\rangle\\).",
+        "Refer to the diagram below:",
+        "At the point \\((1, 1)\\), what is the gradient vector and what does it tell us?"
+      ],
+      "diagram": "week3_q2_saddle_with_gradients_fixed_v2.png",
+      "options": [
+        "\\(\\nabla f(1,1) = \\langle 2, -2 \\rangle\\), pointing in the direction of steepest increase.",
+        "\\(\\nabla f(1,1) = \\langle -2, 2 \\rangle\\), pointing toward the origin.",
+        "\\(\\nabla f(1,1) = \\langle 1, 1 \\rangle\\), tangent to the surface.",
+        "\\(\\nabla f(1,1) = \\langle 0, 0 \\rangle\\), indicating a critical point."
+      ],
+      "correctAnswer": "\\(\\nabla f(1,1) = \\langle 2, -2 \\rangle\\), pointing in the direction of steepest increase.",
+      "explanationParts": [
+        "To find the gradient vector, compute partial derivatives:",
+        "\\(f_x = 2x\\), \\(f_y = -2y\\), so \\(\\nabla f = \\langle 2x, -2y \\rangle\\).",
+        "At the point \\((1,1)\\), we get \\(\\nabla f(1,1) = \\langle 2, -2 \\rangle\\).",
+        "The gradient vector points in the direction of steepest ascent of the surface at that point.",
+        "The diagram shows this vector starting at the point \\((1,1,0)\\), rising in the direction that increases \\(f\\) most rapidly on the saddle surface."
+      ]
+    }
+  ]
+}

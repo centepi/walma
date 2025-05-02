@@ -1,0 +1,42 @@
+{
+  "levelId": "ds_week3_level2",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Find a particular integral for:",
+        "y'' + y = e^x"
+      ],
+      "options": [
+        "y_p = e^x",
+        "y_p = (1/2) e^x",
+        "y_p = x e^x",
+        "y_p = 0"
+      ],
+      "correctAnswer": "y_p = (1/2) e^x",
+      "explanationParts": [
+        "Step 1: Guess form y_p = A e^x (since e^x is not in the complementary solution).",
+        "Step 2: Substitute into ODE: (A + A) e^x = e^x  \u21d2  A = 1/2."
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve the IVP:",
+        "y'' + 4y = sin(x),    y(0) = 0,    y'(0) = 0"
+      ],
+      "options": [
+        "y = sin(x) - sin(2x)",
+        "y = (1/3) sin(x) - (1/6) sin(2x)",
+        "y = cos(x) - cos(2x)",
+        "y = (1/3) sin(2x)"
+      ],
+      "correctAnswer": "y = (1/3) sin(x) - (1/6) sin(2x)",
+      "explanationParts": [
+        "Step 1: Complementary solution: y_c = C_1 cos(2x) + C_2 sin(2x).",
+        "Step 2: Guess y_p = A cos(x) + B sin(x), then solve: B = 1/3, A = 0.",
+        "Step 3: Apply initial conditions to full solution y = y_c + y_p."
+      ]
+    }
+  ]
+}
+

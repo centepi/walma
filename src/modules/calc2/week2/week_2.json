@@ -1,0 +1,32 @@
+{
+  "weekId": "calc2_week_2",
+  "title": "Week 2",
+  "description": "Partial Derivatives and Gradients",
+  "levels": [
+    {
+      "id": "calc2_week2_review",
+      "type": "review",
+      "title": "Week 2 Review: Derivatives & Gradients"
+    },
+    {
+      "id": "calc2_week2_level1",
+      "type": "question",
+      "title": "Basic Partial Derivatives"
+    },
+    {
+      "id": "calc2_week2_level2",
+      "type": "question",
+      "title": "Advanced Partial Derivatives & Evaluation"
+    },
+    {
+      "id": "calc2_week2_level3",
+      "type": "question",
+      "title": "Gradient Vector Fields"
+    },
+    {
+      "id": "calc2_week2_level4",
+      "type": "question",
+      "title": "Gradients, Level Curves & Surfaces"
+    }
+  ]
+}

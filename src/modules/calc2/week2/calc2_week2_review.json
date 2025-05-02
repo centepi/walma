@@ -1,0 +1,55 @@
+{
+  "levelId": "calc2_week2_review",
+  "type": "review",
+  "slides": [
+    {
+      "content": "This week, we move from curves in space to functions of multiple variables, typically written as \\(z = f(x,y)\\). These functions define surfaces in 3D space, where the height \\(z\\) depends on the position \\((x,y)\\) in the xy-plane."
+    },
+    {
+      "contentBeforeEquation": "To understand how the surface changes as we move in the x or y direction, we use partial derivatives. The partial derivative of \\(f\\) with respect to \\(x\\), denoted \\(f_x\\) or \\( \\frac{\\partial f}{\\partial x} \\), is found by differentiating \\(f\\) with respect to \\(x\\) while treating \\(y\\) as a constant.",
+      "contentEnd": "Similarly, for \\(f_y\\) or \\( \\frac{\\partial f}{\\partial y} \\), we differentiate with respect to \\(y\\) treating \\(x\\) as a constant."
+    },
+    {
+      "contentBeforeEquation": "Example: If \\(f(x,y) = x^3y^2 + \\sin(y)\\).",
+      "contentAfterEquation": "Then \\( f_x = \\frac{\\partial}{\\partial x}(x^3y^2 + \\sin(y)) = 3x^2y^2 + 0 = 3x^2y^2 \\) (treating \\(y^2\\) and \\(\\sin(y)\\) as constants).",
+      "contentEnd": "And \\( f_y = \\frac{\\partial}{\\partial y}(x^3y^2 + \\sin(y)) = x^3(2y) + \\cos(y) = 2x^3y + \\cos(y) \\) (treating \\(x^3\\) as a constant)."
+    },
+    {
+      "content": "Calculating partial derivatives often requires standard differentiation rules like the product rule, quotient rule, and chain rule, applied while remembering which variable is being treated as constant. For instance, finding \\(f_x\\) for \\(f(x,y) = y e^{x^2y}\\) requires the chain rule with respect to \\(x\\)."
+    },
+    {
+      "contentBeforeEquation": "The gradient vector combines both partial derivatives into a single vector field:",
+      "inlineEquation": "\\nabla f(x,y) = \\langle f_x(x,y), f_y(x,y) \\rangle",
+      "contentAfterEquation": "or sometimes written as a column vector. It provides information about the function's behavior at each point \\((x,y)\\)."
+    },
+    {
+      "contentBeforeEquation": "For \\(f(x,y) = x^3y^2 + \\sin(y)\\), the gradient is",
+      "inlineEquation": "\\nabla f = \\langle 3x^2y^2, 2x^3y + \\cos(y) \\rangle",
+      "contentAfterEquation": ". At the point \\((1, \\pi/2)\\), the gradient vector is",
+      "inlineEquation2": "\\nabla f(1, \\pi/2) = \\langle 3(1)^2(\\pi/2)^2, 2(1)^3(\\pi/2) + \\cos(\\pi/2) \\rangle = \\langle 3\\pi^2/4, \\pi + 0 \\rangle = \\langle 3\\pi^2/4, \\pi \\rangle",
+      "contentEnd": "."
+    },
+    {
+      "contentBeforeEquation": "A level curve of \\(f(x,y)\\) is a curve in the xy-plane where the function has a constant value, i.e., \\(f(x,y) = C\\) for some constant \\(C\\).",
+      "contentEnd": "These are like contour lines on a topographical map and help visualize the shape of the surface \\(z = f(x,y)\\)."
+    },
+    {
+      "contentBeforeEquation": "To find the equation of the level curve passing through a specific point \\((a,b)\\), first calculate the value \\(C = f(a,b)\\).",
+      "contentAfterEquation": "Then, the level curve equation is \\(f(x,y) = C\\). For example, the level curve of \\(f(x,y) = x^2 + y^2\\) through \\((1, 2)\\) is \\(x^2 + y^2 = 1^2 + 2^2 = 5\\)."
+    },
+    {
+      "contentBeforeEquation": "The gradient vector \\(\\nabla f(a,b)\\) has a crucial geometric meaning: it is always orthogonal (perpendicular) to the level curve \\(f(x,y) = C\\) that passes through the point \\((a,b)\\)."
+    },
+    {
+      "contentBeforeEquation": "Furthermore, the direction of the gradient vector \\(\\nabla f(a,b)\\) is the direction in which the function \\(f\\) increases most rapidly at \\((a,b)\\).",
+      "contentAfterEquation": "The magnitude of the gradient, \\(||\\nabla f(a,b)||\\), gives the maximum rate of increase at that point.",
+      "contentEnd": "The direction of steepest descent is opposite to the gradient, \\(-\\nabla f(a,b)\\)."
+    },
+    {
+      "contentBeforeEquation": "Understanding level curves also helps identify standard surfaces. Equations like \\(x^2 - y^2 + z^2 = 1\\) (Hyperboloid of one sheet) or \\(x - y^2 - z^2 = 0\\) (Elliptic Paraboloid) represent quadric surfaces, whose shapes can often be deduced by examining their cross-sections (level curves)."
+    },
+    {
+      "content": "Summary: Week 2 introduced partial derivatives (rate of change holding variables constant), the gradient vector (combining partials), level curves (contours of constant function value), and the geometric relationship between the gradient and level curves (orthogonality, direction of steepest ascent)."
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "levelId": "ds_week5_review",
+  "type": "review",
+  "slides": [
+    {
+      "contentBeforeEquation": "This week introduced autonomous first-order systems of the form",
+      "inlineEquation": "\\dot{x} = f(x)",
+      "contentAfterEquation": ", where the evolution depends only on the current state."
+    },
+    {
+      "content": "A key idea is the **fixed point**, where f(x) = 0. The system does not evolve at these points."
+    },
+    {
+      "contentBeforeEquation": "To analyze such systems, we sketch",
+      "inlineEquation": "f(x)",
+      "contentAfterEquation": "and mark where it crosses the x-axis to find fixed points."
+    },
+    {
+      "content": "**Phase portraits** are then drawn, showing the direction of motion on the x-axis depending on the sign of f(x)."
+    },
+    {
+      "content": "- If f(x) > 0 in an interval, arrows point right (increasing x)."
+    },
+    {
+      "content": "- If f(x) < 0, arrows point left (decreasing x)."
+    },
+    {
+      "content": "**Stability of fixed points** is determined by behavior nearby:"
+    },
+    {
+      "content": "- A fixed point is **stable** if trajectories move toward it."
+    },
+    {
+      "content": "- It is **unstable** if nearby trajectories move away."
+    },
+    {
+      "contentBeforeEquation": "Example: for",
+      "inlineEquation": "f(x) = x - x^{4/3}",
+      "contentAfterEquation": ", the fixed points are at x = 0 and x = 1, and we analyze the sign of f(x) around these values."
+    },
+    {
+      "content": "We also studied **time to reach a point** using separation of variables and integration:"
+    },
+    {
+      "contentBeforeEquation": "Rewriting",
+      "inlineEquation": "\\dot{x} = f(x)",
+      "contentAfterEquation": "as",
+      "inlineEquation2": "dt = dx / f(x)",
+      "contentEnd": "lets us compute how long it takes to move between two states."
+    },
+    {
+      "contentBeforeEquation": "For instance, with",
+      "inlineEquation": "f(x) = 1/x",
+      "contentAfterEquation": ", the time to go from x = 1 to x = 2 is",
+      "inlineEquation2": "\\int_1^2 \\frac{1}{x} dx = \\ln(2)."
+    },
+    {
+      "content": "We compared how different velocity functions affect whether a particle reaches its target in finite time."
+    },
+    {
+      "content": "In phase spaces like  \\Gamma = \\{x \\in \\mathbb{R} \\mid x \\geq 0\\} , it's also important to ask: does motion **terminate** in finite time?"
+    },
+    {
+      "contentBeforeEquation": "For example, with",
+      "inlineEquation": "\\dot{x} = \\sqrt{x}",
+      "contentAfterEquation": ", solving the motion leads to a solution that reaches x = 0 in finite time, then terminates."
+    },
+    {
+      "content": "This shows how dynamics can behave differently when f(x) is nonlinear or singular at boundaries."
+    },
+    {
+      "content": "To summarize: autonomous systems can be analyzed graphically and analytically by examining fixed points, stability, time evolution, and behavior near singularities."
+    }
+  ]
+}

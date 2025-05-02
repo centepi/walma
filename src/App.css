@@ -1,0 +1,371 @@
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+
+/* Ocean-themed deep background */
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(-45deg, #04070d, #0e1440, #1b2e64, #02010a);
+  background-size: 400% 400%;
+  animation: oceanBackground 15s ease infinite;
+  color: white;
+  overflow: hidden;
+}
+
+/* Gradient animation */
+@keyframes oceanBackground {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ✅ Whale + WALMA title container */
+.hero-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0px;
+  margin-top: -90px; /* Pulled even higher */
+  z-index: 2;
+  position: relative;
+}
+
+/* ✅ Whale Animation */
+.whale {
+  width: 200px;
+  margin-bottom: -22px; /* Tighten gap even further */
+  animation: floatWhale 4s infinite ease-in-out;
+  filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+/* Remove default margin from WALMA title */
+.title {
+  margin: 0; /* ✅ Crucial: kills default h1 spacing */
+}
+
+/* Whale Floating Animation */
+@keyframes floatWhale {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+}
+
+/* Ocean Bubbles */
+.bubbles {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubbles span {
+  position: absolute;
+  bottom: -50px;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: rise 10s linear infinite;
+}
+
+.bubbles span:nth-child(2) { width: 15px; height: 15px; left: 10%; animation-duration: 12s; }
+.bubbles span:nth-child(3) { width: 10px; height: 10px; left: 30%; animation-duration: 9s; }
+.bubbles span:nth-child(4) { width: 14px; height: 14px; left: 50%; animation-duration: 14s; }
+.bubbles span:nth-child(5) { width: 13px; height: 13px; left: 70%; animation-duration: 11s; }
+.bubbles span:nth-child(6) { width: 9px; height: 9px; left: 85%; animation-duration: 10s; }
+.bubbles span:nth-child(7) { width: 11px; height: 11px; left: 95%; animation-duration: 13s; }
+
+@keyframes rise {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100vh) scale(1.1); opacity: 0; }
+}
+
+/* Wavy Divider */
+.waves {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  background: url('https://svgshare.com/i/yKp.svg') repeat-x;
+  background-size: contain;
+  animation: waveMove 6s linear infinite;
+}
+
+@keyframes waveMove {
+  0% { background-position: 0 bottom; }
+  100% { background-position: 1000px bottom; }
+}
+
+/* Container for whole page */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
+  position: relative;
+}
+
+/* WALMA Title with shimmer and glow */
+.title {
+  font-size: 5rem;
+  font-weight: bold;
+  font-family: "Varela Round", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  background: linear-gradient(90deg, #a6c6fe, #80aaff, #5c85d6, #a6c6fe);
+  background-size: 100% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: white;
+  animation: titleShimmer 6s ease-in-out infinite alternate, glowShift 7s infinite alternate ease-in-out;
+}
+
+@keyframes titleShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes glowShift {
+  0% { text-shadow: 0px 0px 3px rgba(166, 198, 254, 0.5); }
+  50% { text-shadow: 0px 0px 2px rgba(128, 170, 255, 0.7); }
+  100% { text-shadow: 0px 0px 1px rgba(166, 198, 254, 0.5); }
+}
+
+/* WALMA letter animations */
+.title span {
+  display: inline-block;
+  animation: letterFloat 7s ease-in-out infinite;
+}
+.title span:nth-child(1) { animation-delay: 0s; }
+.title span:nth-child(2) { animation-delay: 0.2s; }
+.title span:nth-child(3) { animation-delay: 0.4s; }
+.title span:nth-child(4) { animation-delay: 0.6s; }
+.title span:nth-child(5) { animation-delay: 0.8s; }
+
+@keyframes letterFloat {
+  0% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(1deg); }
+  50% { transform: translateY(3px) rotate(-1.5deg); }
+  75% { transform: translateY(-3px) rotate(0.8deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+
+/* Base button styling */
+.floating-button {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 50px; /* Rounded pill shape */
+  cursor: pointer;
+  width: 270px;
+  text-align: center;
+  position: relative;
+  z-index: 0;
+  overflow: visible;
+  margin-bottom: 20px; /* Fixes overlapping buttons */
+
+  /* Restores the dynamic blue gradient animation */
+  background: linear-gradient(90deg,
+    rgba(0, 60, 180, 1),
+    rgba(0, 140, 255, 1),
+    rgba(0, 100, 220, 1),
+    rgba(0, 60, 180, 1)
+);
+
+  background-size: 300% 300%;
+  animation: buttonColorShift 3s ease-in-out infinite alternate;
+}
+
+/* Subtle glowing border */
+.floating-button::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: inherit;
+  border: 3px solid transparent;
+  background: linear-gradient(90deg, 
+    rgba(0, 120, 255, 0),  /* Transparent */
+    rgba(255, 255, 255, 0.8), /* Brightest white */
+    rgba(0, 120, 255, 0)  /* Transparent */
+  );
+  background-size: 200% 200%;
+  mask: linear-gradient(white 0 0) padding-box, linear-gradient(white 0 0);
+  -webkit-mask: linear-gradient(white 0 0) padding-box, linear-gradient(white 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  z-index: -1;
+  pointer-events: none;
+  animation: glowingBorder 4s ease-in-out infinite alternate;
+}
+
+/* ✅ Animation for the button's dynamic blue shifting */
+@keyframes buttonColorShift {
+  0% { background-position: 0% 50%; filter: brightness(1); }
+  50% { background-position: 50% 50%; filter: brightness(1.3); }
+  100% { background-position: 100% 50%; filter: brightness(1); }
+}
+
+
+/* ✅ Animation for the glowing border */
+@keyframes glowingBorder {
+  0% { opacity: 0.3; filter: blur(2px); }
+  50% { opacity: 1; filter: blur(5px); }
+  100% { opacity: 0.3; filter: blur(2px); }
+}
+
+
+
+.floating-button:hover {
+  /* background-color: rgba(0, 95, 163, 0.9);  <-- Comment this out too */
+  transform: scale(1.05); /* Slight bounce effect */
+}
+
+
+.floating-button:active {
+  transform: scale(0.9); /* Bubble pop effect */
+  opacity: 0.8;
+}
+
+.floating-button.disabled {
+  background-color: #222;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+/* Home Page Menu Button */
+.home-menu-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 200; /* ✅ Ensure it's above everything */
+  outline: none;
+}
+
+/* ✅ Fully Transparent Sidebar */
+.home-settings-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 100vh;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 80px;
+  z-index: 100;
+  background: none; /* ✅ No background */
+  backdrop-filter: none; /* ✅ No blur effect */
+  box-shadow: none; /* ✅ No shadow */
+}
+
+/* ✅ Open state (Menu slides out) */
+.home-settings-sidebar.open {
+  transform: translateX(0);
+}
+
+/* ✅ Keep menu button clickable */
+.home-menu-button {
+  position: fixed; /* ✅ Fix position so it's always accessible */
+  right: 15px;
+  top: 15px;
+  z-index: 201; /* ✅ Ensure it's above the sidebar */
+}
+
+/* User Greeting */
+.home-settings-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+  margin-bottom: 15px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Sidebar Buttons */
+.home-settings-button {
+  width: 85%;
+  padding: 12px 24px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 25px;
+  color: white;
+  cursor: pointer;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: transform 0.2s ease-in-out;
+
+  /* Gradient background */
+  background: linear-gradient(90deg, 
+    rgba(0, 76, 200, 1), 
+    rgba(0, 120, 255, 1), 
+    rgba(0, 85, 190, 1), 
+    rgba(0, 76, 200, 1)
+  );
+  background-size: 400% 400%;
+  animation: buttonColorShift 2.5s ease-in-out infinite alternate;
+}
+
+/* Sidebar Buttons Hover Effects */
+.home-settings-button:hover {
+  transform: scale(1.05);
+  filter: brightness(1.3);
+}
+
+.home-settings-button:active {
+  transform: scale(0.95);
+  filter: brightness(0.8);
+}
+/* ⚡️ More Intense Gradient Animation */
+@keyframes buttonColorShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+
+/* 🔧 Mobile-specific tweaks */
+@media (max-width: 600px) {
+  .title {
+    font-size: 3rem; /* Smaller WALMA text */
+  }
+
+  .whale {
+    width: 150px;     /* Smaller whale */
+    margin-bottom: -10px; /* Keep it close to the title */
+  }
+
+  .floating-button {
+    width: 90%;       /* Buttons stretch nicely on mobile */
+  }
+}

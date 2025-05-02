@@ -1,0 +1,91 @@
+{
+    "levelId": "calc2_week2_level2",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(f(x,y) = e^{x^2y}\\)",
+          "Compute the partial derivative \\(f_x = \\frac{\\partial f}{\\partial x}\\) and evaluate it at the point \\((1, 2)\\)."
+        ],
+        "options": [
+          "\\(f_x = 2xye^{x^2y}\\), \\(f_x(1, 2) = 4e^2\\)",
+          "\\(f_x = x^2e^{x^2y}\\), \\(f_x(1, 2) = e^2\\)",
+          "\\(f_x = e^{x^2y}\\), \\(f_x(1, 2) = e^2\\)",
+          "\\(f_x = 2xye^{x^2y}\\), \\(f_x(1, 2) = 2e^2\\)"
+        ],
+        "correctAnswer": "\\(f_x = 2xye^{x^2y}\\), \\(f_x(1, 2) = 4e^2\\)",
+        "explanationParts": [
+          "To find \\(f_x\\), treat \\(y\\) as a constant and differentiate with respect to \\(x\\) using the chain rule.",
+          "Let \\(u = x^2y\\). Then \\(f = e^u\\). The chain rule gives \\(\\frac{\\partial f}{\\partial x} = \\frac{df}{du} \\cdot \\frac{\\partial u}{\\partial x}\\).",
+          "\\(\\frac{df}{du} = e^u = e^{x^2y}\\)",
+          "\\(\\frac{\\partial u}{\\partial x} = \\frac{\\partial}{\\partial x}(x^2y) = 2xy\\)",
+          "So, \\(f_x = e^{x^2y} \\cdot 2xy = 2xye^{x^2y}\\).",
+          "Evaluating at \\((1, 2)\\): \\(f_x(1, 2) = 2 \\cdot 1 \\cdot 2 \\cdot e^{(1^2)(2)} = 4e^2\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(g(x,y) = x^3 \\ln(y) + \\sqrt{xy}\\)",
+          "Assuming \\(y > 0\\) and \\(x > 0\\), compute the partial derivative \\(g_y = \\frac{\\partial g}{\\partial y}\\) and evaluate it at the point \\((4, 1)\\)."
+        ],
+        "options": [
+          "\\(g_y = \\frac{x^3}{y} + \\frac{x}{2\\sqrt{xy}}\\), \\(g_y(4, 1) = 66\\)",
+          "\\(g_y = \\frac{x^3}{y} + \\frac{1}{2\\sqrt{xy}}\\), \\(g_y(4, 1) = 64.25\\)",
+          "\\(g_y = 3x^2 \\ln(y) + \\frac{y}{2\\sqrt{xy}}\\), \\(g_y(4, 1) = 0.25\\)",
+          "\\(g_y = \\frac{x^3}{y} + \\frac{x}{2\\sqrt{xy}}\\), \\(g_y(4, 1) = 65\\)"
+        ],
+        "correctAnswer": "\\(g_y = \\frac{x^3}{y} + \\frac{x}{2\\sqrt{xy}}\\), \\(g_y(4, 1) = 66\\)",
+        "explanationParts": [
+          "To find \\(g_y\\), treat \\(x\\) as a constant and differentiate with respect to \\(y\\).",
+          "For the first term: \\(\\frac{\\partial}{\\partial y}(x^3 \\ln(y)) = x^3 \\cdot \\frac{1}{y}\\).",
+          "For the second term, rewrite \\(\\sqrt{xy} = \\sqrt{x} y^{1/2}\\). Then: \\(\\frac{\\partial}{\\partial y}(\\sqrt{x} y^{1/2}) = \\sqrt{x} \\cdot \\frac{1}{2} y^{-1/2} = \\frac{\\sqrt{x}}{2\\sqrt{y}} = \\frac{x}{2\\sqrt{xy}}\\).",
+          "Combining these gives \\(g_y = \\frac{x^3}{y} + \\frac{x}{2\\sqrt{xy}}\\).",
+          "Evaluating at \\((4, 1)\\): \\(g_y(4, 1) = \\frac{64}{1} + \\frac{4}{2 \\cdot 2} = 64 + 1 = 66\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(k(x,y) = y \\cos(x^2)\\)",
+          "Compute the partial derivative \\(k_x = \\frac{\\partial k}{\\partial x}\\)."
+        ],
+        "options": [
+          "\\(k_x = -2xy \\sin(x^2)\\)",
+          "\\(k_x = -y \\sin(x^2)\\)",
+          "\\(k_x = \\cos(x^2)\\)",
+          "\\(k_x = -2y \\sin(x^2)\\)"
+        ],
+        "correctAnswer": "\\(k_x = -2xy \\sin(x^2)\\)",
+        "explanationParts": [
+          "To find \\(k_x\\), treat \\(y\\) as a constant and differentiate with respect to \\(x\\) using the chain rule.",
+          "Let \\(u = x^2\\), so \\(k = y \\cos(u)\\).",
+          "Then \\(\\frac{\\partial k}{\\partial x} = y \\cdot (-\\sin(u)) \\cdot \\frac{du}{dx}\\).",
+          "\\(\\frac{du}{dx} = 2x\\)",
+          "So, \\(k_x = y \\cdot (-\\sin(x^2)) \\cdot 2x = -2xy \\sin(x^2)\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(p(x,y) = \\frac{x^2}{y+1}\\)",
+          "Compute the partial derivative \\(p_y = \\frac{\\partial p}{\\partial y}\\) and evaluate it at the point \\((2, 3)\\)."
+        ],
+        "options": [
+          "\\(p_y = -\\frac{x^2}{(y+1)^2}\\), \\(p_y(2, 3) = -\\frac{1}{4}\\)",
+          "\\(p_y = \\frac{2x}{y+1}\\), \\(p_y(2, 3) = 1\\)",
+          "\\(p_y = -x^2(y+1)^{-2}\\), \\(p_y(2, 3) = -1\\)",
+          "\\(p_y = \\frac{x^2}{(y+1)^2}\\), \\(p_y(2, 3) = \\frac{1}{4}\\)"
+        ],
+        "correctAnswer": "\\(p_y = -\\frac{x^2}{(y+1)^2}\\), \\(p_y(2, 3) = -\\frac{1}{4}\\)",
+        "explanationParts": [
+          "To find \\(p_y\\), treat \\(x\\) as a constant and differentiate with respect to \\(y\\).",
+          "Rewrite the function as \\(p(x,y) = x^2 (y+1)^{-1}\\).",
+          "Then: \\(\\frac{\\partial p}{\\partial y} = x^2 \\cdot (-1)(y+1)^{-2} \\cdot 1 = -x^2 (y+1)^{-2} = -\\frac{x^2}{(y+1)^2}\\).",
+          "Evaluating at \\((2, 3)\\): \\(p_y(2, 3) = -\\frac{2^2}{(3+1)^2} = -\\frac{4}{16} = -\\frac{1}{4}\\)."
+        ]
+      }
+    ]
+  }
+  

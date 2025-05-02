@@ -1,0 +1,27 @@
+{
+  "weekId": "ds_week2",
+  "title": "Week 2",
+  "description": "Differential Equations",
+  "levels": [
+    {
+      "id": "ds_week2_review",
+      "type": "review",
+      "title": "First Order Differential Equations review"
+    },
+    {
+      "id": "ds_week2_level1",
+      "type": "question",
+      "title": "Nonlinear Strategies and Analysis-easy"
+    },
+    {
+      "id": "ds_week2_level2",
+      "type": "question",
+      "title": "Nonlinear Strategies and Analysis-medium"
+    },
+    {
+      "id": "ds_week2_level3",
+      "type": "question",
+      "title": "Nonlinear Strategies and Analysis-hard"
+    }
+  ]
+}

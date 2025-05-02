@@ -1,0 +1,38 @@
+{
+    "weekId": "calc2_week_3",
+    "title": "Week 3",
+    "description": "Gradients, Level Curves, and Directional Derivatives",
+    "levels": [
+      {
+        "id": "calc2_week3_review",
+        "type": "review",
+        "title": "Week 3 Review: Gradients & Directional Derivatives"
+      },
+      {
+        "id": "calc2_week3_level1",
+        "type": "question",
+        "title": "Understanding Gradient Direction"
+      },
+      {
+        "id": "calc2_week3_level2",
+        "type": "question",
+        "title": "Visualizing Gradients & Level Curves"
+      },
+      {
+        "id": "calc2_week3_level3",
+        "type": "question",
+        "title": "Interpreting Gradient Fields"
+      },
+      {
+        "id": "calc2_week3_level4",
+        "type": "question",
+        "title": "Directional Derivatives & Interpretation"
+      },
+      {
+        "id": "calc2_week3_level5",
+        "type": "question",
+        "title": "Applying Gradient Concepts"
+      }
+    ]
+  }
+  

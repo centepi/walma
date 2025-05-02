@@ -1,0 +1,63 @@
+{
+    "levelId": "calc2_week1_level2",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "The curve is given by:",
+          "\\(\\mathbf{r}(t) = (t, e^t)\\)",
+          "What is the relation of this path to the path \\(c(s) = (1 - s, e^{1 - s})\\)?"
+        ],
+        "options": [
+          "They are different curves.",
+          "They are the same curve, but \\(c(s)\\) traverses it in the opposite direction.",
+          "\\(c(s)\\) is the derivative of \\(r(t)\\).",
+          "\\(c(s)\\) only overlaps with part of \\(r(t)\\)."
+        ],
+        "correctAnswer": "They are the same curve, but \\(c(s)\\) traverses it in the opposite direction.",
+        "explanationParts": [
+          "Both \\(r(t)\\) and \\(c(s)\\) trace the same exponential curve \\(y = e^x\\).",
+          "The difference is that \\(c(s)\\) moves along this curve in the opposite direction, from \\((1, e)\\) to \\((0, 1)\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Compute \\(r'(t)\\) for the vector-valued function:",
+          "\\(r(t) = (\\sinh(t), \\cosh(t))\\)",
+          "Then find the tangent vector at \\(t = 0\\) and write its parametric equation."
+        ],
+        "options": [
+          "\\(r'(t) = (\\cosh(t), \\sinh(t))\\)\n\\(r'(0) = (1, 0)\\)\n\\(l(\\mu) = (0, 1) + \\mu(1, 0)\\)",
+          "\\(r'(t) = (\\cosh(t), \\sinh(t))\\)\n\\(r'(0) = (0, 1)\\)\n\\(l(\\mu) = (0, 1) + \\mu(0, 1)\\)",
+          "\\(r'(t) = (\\cosh(t), -\\sinh(t))\\)\n\\(r'(0) = (1, 0)\\)\n\\(l(\\mu) = (0, 1) + \\mu(1, 0)\\)",
+          "\\(r'(t) = (\\cosh(t), -\\sinh(t))\\)\n\\(r'(0) = (0, 1)\\)\n\\(l(\\mu) = (0, 1) + \\mu(0, 1)\\)"
+        ],
+        "correctAnswer": "\\(r'(t) = (\\cosh(t), \\sinh(t))\\)\n\\(r'(0) = (1, 0)\\)\n\\(l(\\mu) = (0, 1) + \\mu(1, 0)\\)",
+        "explanationParts": [
+          "The derivative of \\((\\sinh(t), \\cosh(t))\\) is \\((\\cosh(t), \\sinh(t))\\).",
+          "At \\(t = 0\\), this gives \\((1, 0)\\).",
+          "The tangent line at \\(r(0) = (0, 1)\\) has parametric form \\(l(\\mu) = (0, 1) + \\mu(1, 0)\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Given the vector function:",
+          "\\(r(t) = (t, \\tan(t))\\), with \\(t \\in [-\\pi/4, \\pi/4]\\)",
+          "Compute \\(r'(t)\\) and determine the tangent line at \\(t = 0\\)."
+        ],
+        "options": [
+          "\\(r'(t) = (1, \\sec^2(t))\\)\n\\(r'(0) = (1, 1)\\)\n\\(l(\\mu) = (0, 0) + \\mu(1, 1)\\)",
+          "\\(r'(t) = (0, \\sec^2(t))\\)\n\\(r'(0) = (0, 1)\\)\n\\(l(\\mu) = (0, 0) + \\mu(0, 1)\\)",
+          "\\(r'(t) = (1, \\sec^2(t))\\)\n\\(r'(0) = (0, 1)\\)\n\\(l(\\mu) = (0, 0) + \\mu(1, 0)\\)",
+          "\\(r'(t) = (1, \\sec^2(t))\\)\n\\(r'(0) = (1, 0)\\)\n\\(l(\\mu) = (0, 0) + \\mu(1, 0)\\)"
+        ],
+        "correctAnswer": "\\(r'(t) = (1, \\sec^2(t))\\)\n\\(r'(0) = (1, 1)\\)\n\\(l(\\mu) = (0, 0) + \\mu(1, 1)\\)",
+        "explanationParts": [
+          "The derivative is \\(r'(t) = (1, \\sec^2(t))\\).",
+          "At \\(t = 0\\), we get \\(r'(0) = (1, 1)\\).",
+          "The tangent line at \\((0, 0)\\) is given by \\(l(\\mu) = (0, 0) + \\mu(1, 1)\\)."
+        ]
+      }
+    ]
+  }
+  

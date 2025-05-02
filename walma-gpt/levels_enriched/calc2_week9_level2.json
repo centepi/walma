@@ -1,0 +1,58 @@
+{
+  "questions": [
+    {
+      "questionParts": [
+        "What is the expression for the unit normal vector \\( \\mathbf{n} \\) on the surface of the upper hemisphere defined by \\( x^2 + y^2 + z^2 = 1 \\) and \\( z \\geq 0 \\)?"
+      ],
+      "options": [
+        "\\( \\mathbf{n} = x \\mathbf{i} + y \\mathbf{j} + z \\mathbf{k} \\)",
+        "\\( \\mathbf{n} = -x \\mathbf{i} - y \\mathbf{j} - z \\mathbf{k} \\)",
+        "\\( \\mathbf{n} = \\mathbf{i} + \\mathbf{j} + \\mathbf{k} \\)",
+        "\\( \\mathbf{n} = \\frac{1}{\\sqrt{3}}(x \\mathbf{i} + y \\mathbf{j} + z \\mathbf{k}) \\)"
+      ],
+      "correctAnswer": "\\( \\mathbf{n} = x \\mathbf{i} + y \\mathbf{j} + z \\mathbf{k} \\)",
+      "explanationParts": [
+        "The unit normal vector \\( \\mathbf{n} \\) on the surface of a sphere centered at the origin with radius 1 is simply the position vector normalized to unit length. Since the position vector \\( \\mathbf{r} = x \\mathbf{i} + y \\mathbf{j} + z \\mathbf{k} \\) already has unit length on the surface of the sphere, the unit normal vector is \\( \\mathbf{n} = x \\mathbf{i} + y \\mathbf{j} + z \\mathbf{k} \\)."
+      ]
+    },
+    {
+      "questionParts": [
+        "Convert the Cartesian coordinates \\( x, y, z \\) into spherical coordinates for the vector field \\( \\mathbf{v} = \\mathbf{i} + x \\mathbf{j} + z \\mathbf{k} \\) and express the dot product \\( \\mathbf{v} \\cdot \\mathbf{n} \\) in terms of spherical coordinates."
+      ],
+      "options": [
+        "\\( \\cos \\theta \\sin \\phi + \\cos \\theta \\sin \\theta \\sin^2 \\phi + \\cos^2 \\phi \\)",
+        "\\( \\sin \\theta \\sin \\phi + \\cos \\theta \\sin \\phi + \\cos \\phi \\)",
+        "\\( \\sin \\theta \\sin \\phi + \\cos \\theta \\sin \\theta \\sin^2 \\phi + \\cos \\phi \\)",
+        "\\( \\cos \\theta \\sin \\phi + \\sin \\theta \\sin \\phi + \\cos \\phi \\)"
+      ],
+      "correctAnswer": "\\( \\cos \\theta \\sin \\phi + \\cos \\theta \\sin \\theta \\sin^2 \\phi + \\cos^2 \\phi \\)",
+      "explanationParts": [
+        "In spherical coordinates, the Cartesian coordinates are given by \\( x = \\cos \\theta \\sin \\phi \\), \\( y = \\sin \\theta \\sin \\phi \\), and \\( z = \\cos \\phi \\). Substituting these into the vector field \\( \\mathbf{v} \\), we get \\( \\mathbf{v} = \\mathbf{i} + \\cos \\theta \\sin \\phi \\mathbf{j} + \\cos \\phi \\mathbf{k} \\).",
+        "The unit normal vector in spherical coordinates is \\( \\mathbf{n} = \\cos \\theta \\sin \\phi \\mathbf{i} + \\sin \\theta \\sin \\phi \\mathbf{j} + \\cos \\phi \\mathbf{k} \\).",
+        "The dot product \\( \\mathbf{v} \\cdot \\mathbf{n} \\) is then \\( 1 \\cdot \\cos \\theta \\sin \\phi + \\cos \\theta \\sin \\phi \\cdot \\sin \\theta \\sin \\phi + \\cos \\phi \\cdot \\cos \\phi = \\cos \\theta \\sin \\phi + \\cos \\theta \\sin \\theta \\sin^2 \\phi + \\cos^2 \\phi \\)."
+      ]
+    },
+    {
+      "questionParts": [
+        "Calculate the flux of the vector field \\( \\mathbf{v} = \\mathbf{i} + x \\mathbf{j} + z \\mathbf{k} \\) upwards through the hemisphere defined by \\( x^2 + y^2 + z^2 = 1 \\) and \\( z \\geq 0 \\)."
+      ],
+      "options": [
+        "\\( \\frac{2\\pi}{3} \\)",
+        "\\( \\frac{\\pi}{2} \\)",
+        "\\( \\pi \\)",
+        "\\( \\frac{4\\pi}{3} \\)"
+      ],
+      "correctAnswer": "\\( \\frac{2\\pi}{3} \\)",
+      "explanationParts": [
+        "Using the expression for \\( \\mathbf{v} \\cdot \\mathbf{n} \\) in spherical coordinates, the integral becomes:",
+        "\\[ \\int_{\\theta=0}^{2\\pi} \\int_{\\phi=0}^{\\pi/2} (\\cos \\theta \\sin^2 \\phi + \\cos \\theta \\sin \\theta \\sin^3 \\phi + \\cos^2 \\phi \\sin \\phi) d\\phi d\\theta \\]",
+        "The integral of the first two terms with respect to \\( \\theta \\) over \\( 0 \\) to \\( 2\\pi \\) is zero due to the presence of \\( \\cos \\theta \\) and \\( \\cos \\theta \\sin \\theta \\), which average to zero over a full period.",
+        "The remaining term is integrated as follows:",
+        "\\[ \\int_{\\theta=0}^{2\\pi} d\\theta \\int_{\\phi=0}^{\\pi/2} \\cos^2 \\phi \\sin \\phi d\\phi = 2\\pi \\int_{\\phi=0}^{\\pi/2} \\cos^2 \\phi \\sin \\phi d\\phi \\]",
+        "Using the substitution \\( u = \\cos \\phi \\), \\( du = -\\sin \\phi d\\phi \\), the integral simplifies to:",
+        "\\[ -2\\pi \\int_{1}^{0} u^2 du = 2\\pi \\left[ \\frac{u^3}{3} \\right]_{1}^{0} = \\frac{2\\pi}{3} \\]"
+      ]
+    }
+  ],
+  "diagram_request": "A diagram showing the hemisphere with coordinates labeled in both Cartesian and spherical systems, including the vector field and the normal vector, would help visualize the problem setup and the integration process."
+}

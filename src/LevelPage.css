@@ -1,0 +1,527 @@
+/* ✅ Wrapper for question & explanation */
+.question-explanation-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Center vertically */
+    gap: 25px;
+    width: 90%;
+    max-width: 1300px;
+    margin: 0 auto;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-height: calc(100vh - 60px); /* Full screen with top/bottom padding */
+    padding: 30px 0;
+    box-sizing: border-box;
+  }
+  
+  /* ✅ Question container */
+  .question-card {
+    flex: 1 1 46%;
+    background: rgba(15, 15, 40, 0.95);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* ✅ Question content */
+  .question-content {
+    padding: 40px 30px 20px 30px;
+    overflow-y: auto;
+    flex-grow: 1;
+    scroll-behavior: smooth;
+  }
+  
+  /* ✅ Explanation container */
+  .explanation-card {
+    flex: 1 1 46%;
+    background: rgba(15, 15, 40, 0.95);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 30px;
+    display: none;
+    flex-direction: column;
+  }
+  .explanation-card.show {
+    display: flex;
+    animation: fadeIn 0.4s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .explanation-card h3 {
+    color: #FFD700;
+    margin-bottom: 10px;
+  }
+  
+
+/* ✅ Sticky bottom button bar inside question card */
+.fixed-bottom-buttons {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(15, 15, 40, 1);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    z-index: 5;
+}
+
+/* ✅ Base Style */
+.check-button {
+    max-width: 180px;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+/* ✅ Disabled state (when .enabled is not present) */
+.check-button:not(.enabled) {
+    background: #1a1f3a;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: default;
+    box-shadow: none;
+}
+
+/* ✅ Enabled state */
+.check-button.enabled {
+    background: linear-gradient(90deg, #007BFF, #00A1FF);
+    color: white;
+    cursor: pointer;
+}
+
+/* ✅ Continue mode override */
+.check-button.enabled.continue-mode {
+    background: linear-gradient(90deg, #FF3B77, #FF8C42);
+}
+
+/* ✅ Hover effect for enabled states */
+.check-button.enabled:hover,
+.check-button.enabled.continue-mode:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 160, 255, 0.3);
+}
+
+/* ✅ Press effect */
+.check-button.enabled:active,
+.check-button.enabled.continue-mode:active {
+    transform: scale(0.96);
+    filter: brightness(1);
+}
+
+/* ✅ Why Button (unchanged) */
+.why-button {
+    background: linear-gradient(90deg, #FFD700, #FFC107);
+    color: black;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.why-button:hover {
+    opacity: 0.9;
+}
+
+/* ✅ Options styling - Responsive layout */
+.options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two per row by default */
+    gap: 18px;
+    width: 100%;
+    padding: 0 30px 30px 30px;
+    box-sizing: border-box;
+  }
+  
+  .options button {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    font-family: "Varela Round", sans-serif;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.25s ease;
+    line-height: 1.5;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+  
+  .options button:hover,
+  .options button.selected {
+    background: linear-gradient(90deg, #007BFF, #00A1FF);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 160, 255, 0.3);
+  }
+  
+  .options button.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  
+  /* ✅ On mobile: stack all options vertically */
+  @media (max-width: 600px) {
+    .options {
+      grid-template-columns: 1fr; /* Stack vertically */
+    }
+  }
+  
+
+/* ✅ Diagram scaling */
+.diagram {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    margin: 20px auto;
+}
+
+/* ✅ Mobile stacking */
+@media (max-width: 1000px) {
+    .question-explanation-wrapper {
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      flex-wrap: nowrap;
+      padding: 20px 0;
+    }
+  
+    .question-card,
+    .explanation-card {
+      width: 100%;
+      max-width: 90%;
+      height: auto;
+      max-height: none;
+    }
+  
+    .question-content {
+      padding: 20px;
+    }
+  
+    .fixed-bottom-buttons {
+      position: static;
+      flex-direction: column;
+      gap: 10px;
+      background: none;
+      border-radius: 0;
+      margin-top: 20px;
+    }
+  
+    .check-button,
+    .why-button {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  
+
+
+
+/* ✅ Final Page */
+.level-complete {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 100vh;
+}
+
+.completion-gif {
+    width: 250px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.finish-button {
+    background: linear-gradient(90deg, #2ECC71, #1D9E50);
+}
+
+.finish-button:hover {
+    background: linear-gradient(90deg, #27AE60, #1B8E4A);
+}
+
+/* ✅ Circular Settings Button (Smaller but Visible) */
+.settings-button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 45px; /* ⬅️ Reduced size */
+    height: 45px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    transition: background 0.2s ease-in-out, transform 0.1s ease-in-out;
+    border: none;
+    overflow: visible; /* ✅ Prevents icon clipping */
+}
+
+/* ✅ Settings Icon - Keeps It Proportional */
+.settings-icon {
+    width: 35px !important;  /* ⬅️ Reduced size */
+    height: 35px !important;
+    object-fit: contain; /* ✅ Ensures correct proportions */
+    max-width: 45px; /* ✅ Keeps it within the button */
+    max-height: 45px;
+}
+
+.diagram {
+    width: 100%; 
+    height: auto;
+    max-height: calc(80vh - 250px); /* dynamically adapts to the viewport minus space for text and buttons */
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    margin: 20px auto;
+}
+
+/* ✅ Hover & Click Effects */
+.settings-button:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.settings-button:active {
+    transform: scale(0.9);
+}
+
+/* ✅ Shared Backdrop for Popups */
+.popup-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+/* ✅ Settings Popup */
+.settings-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #0F0F28;
+    padding: 35px;
+    border-radius: 10px;
+    text-align: center;
+    width: 600px;
+    z-index: 1001;
+}
+
+/* ✅ Settings Title */
+.settings-title {
+    font-size: 24px;
+    color: white;
+    font-family: "Varela Round", sans-serif;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+/* ✅ Settings Buttons in Column */
+.settings-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ✅ Done Button */
+.done-button {
+    background: #007BFF;
+    color: white;
+    font-size: 18px;
+    font-family: "Varela Round", sans-serif;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+/* ✅ End Session Button */
+.end-session-button {
+    background: none;
+    border: none;
+    color: red;
+    font-size: 18px;
+    font-family: "Varela Round", sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: block;
+    margin: 10px auto 0 auto;
+}
+.end-session-button:hover,
+.end-session-button:focus,
+.end-session-button:active {
+    background: none !important;
+    color: red !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* ✅ Quit Confirmation Popup */
+.quit-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #0F0F28;
+    padding: 35px;
+    border-radius: 10px;
+    text-align: center;
+    width: 600px;
+    z-index: 1002;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ✅ Quit Message */
+.quit-message {
+    font-size: 20px;
+    color: white;
+    font-family: "Arial", sans-serif;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* ✅ Quit Buttons */
+.quit-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    align-items: center;
+}
+
+.keep-learning-button {
+    background: #007BFF;
+    color: white;
+    font-size: 18px;
+    font-family: "Varela Round", sans-serif;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+}
+
+.quit-button {
+    background: none;
+    border: none;
+    color: red;
+    font-size: 18px;
+    font-family: "Varela Round", sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+}
+.quit-button:hover,
+.quit-button:focus,
+.quit-button:active {
+    background: none !important;
+    color: red !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* ===================== REVIEW PAGE STYLES ===================== */
+
+.review-box {
+    background: rgba(20, 20, 60, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.05);
+    width: 85%;
+    max-width: 700px;
+    max-height: 75vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-size: 18px;
+    line-height: 1.6;
+    position: relative; /* 🔁 Ensure child positioning behaves as expected */
+}
+
+/* ✅ Add breathing room at the bottom */
+.review-slide:last-child {
+    margin-bottom: 80px;
+}
+
+.review-box h2 {
+    font-size: 26px;
+    margin-bottom: 10px;
+    font-family: "Varela Round", sans-serif;
+}
+
+.review-box p {
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.review-box img.diagram {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.continue-button {
+    background: linear-gradient(90deg, #FF3B77, #FF8C42);
+    color: white;
+    padding: 12px 24px;
+    font-size: 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 20px;
+    align-self: center;
+    box-shadow: 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+.continue-button:active {
+    transform: translateY(2px);
+    box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ✅ Ensure the entire container can scroll if explanation box overflows */
+.level-container-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* ← centers .review-box horizontally */
+    justify-content: flex-start;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding: 40px 20px;
+    min-height: 100vh;
+    box-sizing: border-box;
+    position: relative;
+}

@@ -1,0 +1,92 @@
+{
+    "levelId": "calc2_week2_level4",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the function \\(f(x,y) = x^2 + 4y^2\\).",
+          "The gradient vector \\(\\nabla f\\) is orthogonal to the level curves of \\(f\\).",
+          "Find a vector that is tangent to the level curve of \\(f\\) passing through the point \\((2, 1)\\)."
+        ],
+        "options": [
+          "\\(\\langle -8, 4 \\rangle\\)",
+          "\\(\\langle 4, 8 \\rangle\\)",
+          "\\(\\langle 2, 1 \\rangle\\)",
+          "\\(\\langle 4, -8 \\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\langle -8, 4 \\rangle\\)",
+        "explanationParts": [
+          "The gradient vector \\(\\nabla f\\) at a point is orthogonal (perpendicular) to the level curve passing through that point.",
+          "First, compute the gradient vector field: \\(f_x = 2x\\), \\(f_y = 8y\\). So, \\(\\nabla f = \\langle 2x, 8y \\rangle\\).",
+          "Evaluate the gradient at the point \\((2, 1)\\): \\(\\nabla f(2, 1) = \\langle 2(2), 8(1) \\rangle = \\langle 4, 8 \\rangle\\).",
+          "A tangent vector \\( \\mathbf{v} = \\langle a, b \\rangle \\) to the level curve must be orthogonal to \\(\\nabla f(2,1)\\), so their dot product is zero: \\(\\mathbf{v} \\cdot \\nabla f = 0\\).",
+          "We solve: \\(4a + 8b = 0\\).",
+          "Try \\(\\langle -8, 4 \\rangle\\): \\(4(-8) + 8(4) = -32 + 32 = 0\\).",
+          "✅ This vector is tangent to the level curve."
+        ]
+      },
+      {
+        "questionParts": [
+          "Identify the type of quadric surface represented by the equation:",
+          "\\(x^2 - y^2 - z^2 = 1\\)"
+        ],
+        "options": [
+          "Hyperboloid of two sheets",
+          "Hyperboloid of one sheet",
+          "Elliptic Cone",
+          "Elliptic Paraboloid"
+        ],
+        "correctAnswer": "Hyperboloid of two sheets",
+        "explanationParts": [
+          "The general form for a hyperboloid of two sheets is: \\(\\frac{x^2}{a^2} - \\frac{y^2}{b^2} - \\frac{z^2}{c^2} = 1\\).",
+          "This matches our equation: \\(\\frac{x^2}{1^2} - \\frac{y^2}{1^2} - \\frac{z^2}{1^2} = 1\\).",
+          "Level curves parallel to the yz-plane are ellipses when \\(|x| > 1\\), and nonexistent when \\(|x| < 1\\), which implies two separate sheets.",
+          "✅ So this is a hyperboloid of two sheets."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function \\(f(x,y) = e^{x^2 + y^2}\\).",
+          "Find the equation of the level curve for \\(f\\) that passes through the point \\((1, 0)\\)."
+        ],
+        "options": [
+          "\\(x^2 + y^2 = 1\\)",
+          "\\(x^2 + y^2 = e\\)",
+          "\\(e^{x^2 + y^2} = 1\\)",
+          "\\(x^2 + y^2 = 0\\)"
+        ],
+        "correctAnswer": "\\(x^2 + y^2 = 1\\)",
+        "explanationParts": [
+          "A level curve is the set of points where \\(f(x, y)\\) is constant.",
+          "Evaluate \\(f(1, 0) = e^{1^2 + 0^2} = e\\).",
+          "Set the function equal to this value: \\(e^{x^2 + y^2} = e\\).",
+          "Now take natural logs of both sides: \\(x^2 + y^2 = 1\\).",
+          "✅ This is a circle of radius 1 centered at the origin."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function \\(f(x,y) = xy^2\\).",
+          "In which direction does \\(f\\) increase most rapidly at the point \\((2, -1)\\)?",
+          "Give the direction as a unit vector."
+        ],
+        "options": [
+          "\\(\\frac{1}{\\sqrt{17}} \\langle 1, -4 \\rangle\\)",
+          "\\(\\frac{1}{\\sqrt{17}} \\langle -1, 4 \\rangle\\)",
+          "\\(\\frac{1}{\\sqrt{5}} \\langle 1, -2 \\rangle\\)",
+          "\\(\\frac{1}{\\sqrt{5}} \\langle 2, -1 \\rangle\\)"
+        ],
+        "correctAnswer": "\\(\\frac{1}{\\sqrt{17}} \\langle 1, -4 \\rangle\\)",
+        "explanationParts": [
+          "The direction of steepest ascent is given by the gradient vector \\(\\nabla f\\).",
+          "Compute the partials: \\(f_x = y^2\\), \\(f_y = 2xy\\) ⟶ so \\(\\nabla f = \\langle y^2, 2xy \\rangle\\).",
+          "At \\((2, -1)\\): \\(\\nabla f = \\langle 1, -4 \\rangle\\).",
+          "Now convert this to a unit vector.",
+          "Magnitude: \\(\\sqrt{1^2 + (-4)^2} = \\sqrt{17}\\).",
+          "Unit vector: \\(\\frac{1}{\\sqrt{17}} \\langle 1, -4 \\rangle\\).",
+          "✅ This is the direction of greatest increase at \\((2, -1)\\)."
+        ]
+      }
+    ]
+  }
+  

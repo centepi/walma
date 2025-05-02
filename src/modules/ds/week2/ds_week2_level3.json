@@ -1,0 +1,48 @@
+{
+  "levelId": "ds_week2_level3",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Solve using the substitution u = 1/y:",
+        "y' = y + y^2 with y(0) = 1"
+      ],
+      "options": [
+        "y = \\frac{e^x}{2 - e^x}",
+        "y = \\frac{1}{2}e^x - 1",
+        "y = \\frac{2}{1 - e^x}",
+        "y = \\frac{e^x}{1 - e^x}"
+      ],
+      "correctAnswer": "y = \\frac{e^x}{2 - e^x}",
+      "explanationParts": [
+        "Step 1: Substitute u = 1/y to linearize:",
+        "u' + u = -1",
+        "Step 2: Solve with integrating factor e^x:",
+        "e^x u = -e^x + C \u21d2 u = -1 + Ce^{-x}",
+        "Step 3: Revert to y and apply initial condition:",
+        "y(0) = 1 \u21d2 C = 2"
+      ]
+    },
+    {
+      "questionParts": [
+        "Analyze the contradiction in Malthusian growth:",
+        "If a population doubles in 100 years and triples in 200 years, why is this impossible?"
+      ],
+      "options": [
+        "The growth rate \\alpha cannot satisfy both conditions simultaneously",
+        "The model only works for short time periods",
+        "It violates conservation of energy",
+        "The equations become nonlinear at large t"
+      ],
+      "correctAnswer": "The growth rate \\alpha cannot satisfy both conditions simultaneously",
+      "explanationParts": [
+        "Step 1: Calculate \\alpha for doubling:",
+        "\\alpha = \\frac{1}{100}\\ln 2",
+        "Step 2: Calculate \\alpha for tripling:",
+        "\\alpha = \\frac{1}{200}\\ln 3",
+        "Conclusion:",
+        "\\frac{\\ln 2}{100} \u2260 \\frac{\\ln 3}{200} (Contradiction)"
+      ]
+    }
+  ]
+}

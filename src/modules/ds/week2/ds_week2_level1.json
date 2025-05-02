@@ -1,0 +1,44 @@
+{
+  "levelId": "ds_week2_level1",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Solve the explicit ODE with initial condition:",
+        "\\frac{dy}{dx} = 3x + 5 where y(0) = 2"
+      ],
+      "options": [
+        "y = \\frac{3}{2}x^2 + 5x + 2",
+        "y = 3x^2 + 5x + 2",
+        "y = \\frac{5}{2}x^2 + 3x + 2",
+        "y = 3x + 5"
+      ],
+      "correctAnswer": "y = \\frac{3}{2}x^2 + 5x + 2",
+      "explanationParts": [
+        "Step 1: Integrate both sides directly:",
+        "\\int dy = \\int (3x + 5)dx",
+        "Step 2: Compute the integral and apply the initial condition:",
+        "y = \\frac{3}{2}x^2 + 5x + C \u21d2 C = 2"
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve the separable ODE:",
+        "\\frac{dp}{dt} = \\alpha p (Malthusian growth)"
+      ],
+      "options": [
+        "p(t) = p(0)e^{\\alpha t}",
+        "p(t) = p(0) + \\alpha t",
+        "p(t) = \\alpha p(0)t",
+        "p(t) = p(0)\\sin(\\alpha t)"
+      ],
+      "correctAnswer": "p(t) = p(0)e^{\\alpha t}",
+      "explanationParts": [
+        "Step 1: Separate variables:",
+        "\\int \\frac{dp}{p} = \\int \\alpha dt",
+        "Step 2: Integrate and exponentiate:",
+        "\\ln|p| = \\alpha t + C \u21d2 p(t) = p(0)e^{\\alpha t}"
+      ]
+    }
+  ]
+}

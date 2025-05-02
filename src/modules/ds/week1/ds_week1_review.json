@@ -1,0 +1,139 @@
+{
+  "levelId": "ds_week1_review",
+  "type": "review",
+  "slides": [
+    {
+      "contentBeforeEquation": "An explicit first-order ODE has the form",
+      "inlineEquation": "\\frac{dy}{dx} = f(x)",
+      "contentAfterEquation": ", which can be solved by direct integration."
+    },
+    {
+      "contentBeforeEquation": "Integrating both sides gives",
+      "inlineEquation": "y = \\int f(x)\\,dx = F(x) + C"
+    },
+    {
+      "contentBeforeEquation": "Example: solving",
+      "inlineEquation": "\\frac{dy}{dx} = 5x^4",
+      "contentAfterEquation": "leads to",
+      "inlineEquation2": "y = x^5 + C"
+    },
+    {
+      "contentBeforeEquation": "A separable equation takes the form",
+      "inlineEquation": "\\frac{dy}{dx} = f(x)g(y)",
+      "contentAfterEquation": ". The variables can be separated:"
+    },
+    {
+      "inlineEquation": "\\frac{1}{g(y)}\\,dy = f(x)\\,dx"
+    },
+    {
+      "contentBeforeEquation": "Integrating both sides:",
+      "inlineEquation": "\\int \\frac{1}{g(y)}\\,dy = \\int f(x)\\,dx"
+    },
+    {
+      "contentBeforeEquation": "Example: if",
+      "inlineEquation": "\\frac{dy}{dx} = \\frac{y}{x}",
+      "contentAfterEquation": ", then",
+      "inlineEquation2": "\\frac{dy}{y} = \\frac{dx}{x}"
+    },
+    {
+      "contentBeforeEquation": "Integration gives",
+      "inlineEquation": "\\ln|y| = \\ln|x| + C",
+      "contentAfterEquation": ", hence",
+      "inlineEquation2": "y = Cx"
+    },
+    {
+      "contentBeforeEquation": "A differential equation is homogeneous if it can be written as",
+      "inlineEquation": "\\frac{dy}{dx} = H\\left(\\frac{y}{x}\\right)"
+    },
+    {
+      "contentBeforeEquation": "Use the substitution",
+      "inlineEquation": "v = \\frac{y}{x}",
+      "contentAfterEquation": "so that",
+      "inlineEquation2": "y = vx"
+    },
+    {
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "y' = v + x\\frac{dv}{dx}",
+      "contentAfterEquation": ", and the equation becomes separable in",
+      "inlineEquation2": "v"
+    },
+    {
+      "contentBeforeEquation": "Example: with",
+      "inlineEquation": "\\frac{dy}{dx} = \\frac{y^2 + xy}{x^2}",
+      "contentAfterEquation": "we substitute",
+      "inlineEquation2": "y = vx"
+    },
+    {
+      "contentBeforeEquation": "This gives",
+      "inlineEquation": "\\frac{dy}{dx} = v + x\\frac{dv}{dx} = v^2 + v",
+      "contentAfterEquation": ", hence",
+      "inlineEquation2": "x\\frac{dv}{dx} = v^2"
+    },
+    {
+      "contentBeforeEquation": "Separating variables:",
+      "inlineEquation": "\\int \\frac{dv}{v^2} = \\int \\frac{dx}{x}"
+    },
+    {
+      "contentBeforeEquation": "Solving gives",
+      "inlineEquation": "-\\frac{1}{v} = \\ln|x| + C",
+      "contentAfterEquation": ", so",
+      "inlineEquation2": "y = \\frac{x}{C - \\ln|x|}"
+    },
+    {
+      "contentBeforeEquation": "A linear first-order ODE has the form",
+      "inlineEquation": "\\frac{dy}{dx} + P(x)y = Q(x)"
+    },
+    {
+      "contentBeforeEquation": "Define the integrating factor",
+      "inlineEquation": "\\mu(x) = e^{\\int P(x) dx}"
+    },
+    {
+      "contentBeforeEquation": "Multiplying through gives",
+      "inlineEquation": "\\mu(x)\\frac{dy}{dx} + \\mu(x)P(x)y = \\mu(x)Q(x)",
+      "contentAfterEquation": ", which simplifies to",
+      "inlineEquation2": "\\frac{d}{dx}[\\mu(x)y] = \\mu(x)Q(x)"
+    },
+    {
+      "contentBeforeEquation": "Example: solving",
+      "inlineEquation": "y' + 2y = 4",
+      "contentAfterEquation": "uses",
+      "inlineEquation2": "\\mu(x) = e^{2x}"
+    },
+    {
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "\\frac{d}{dx}(e^{2x}y) = 4e^{2x}",
+      "contentAfterEquation": "so integrating gives",
+      "inlineEquation2": "y = 2 + Ce^{-2x}"
+    },
+    {
+      "contentBeforeEquation": "If the coefficient is variable, as in",
+      "inlineEquation": "y' + \\frac{1}{x}y = \\cos(x)",
+      "contentAfterEquation": "for",
+      "inlineEquation2": "x > 0"
+    },
+    {
+      "contentBeforeEquation": "Then",
+      "inlineEquation": "\\mu(x) = e^{\\int \\frac{1}{x} dx} = x",
+      "contentAfterEquation": ", and the equation becomes",
+      "inlineEquation2": "\\frac{d}{dx}(xy) = x\\cos(x)"
+    },
+    {
+      "contentBeforeEquation": "Integrate by parts to find",
+      "inlineEquation": "xy = x\\sin(x) + \\cos(x) + C",
+      "contentAfterEquation": ", and divide through:",
+      "inlineEquation2": "y = \\frac{\\sin(x)}{x} + \\frac{C - \\cos(x)}{x}"
+    },
+    {
+      "contentBeforeEquation": "In the case of",
+      "inlineEquation": "y' + \\tan x \\cdot y = \\sec x",
+      "contentAfterEquation": ", compute",
+      "inlineEquation2": "\\mu(x) = e^{\\int \\tan x dx} = \\sec x"
+    },
+    {
+      "contentBeforeEquation": "Multiplying gives",
+      "inlineEquation": "\\frac{d}{dx}(y \\sec x) = \\sec^2 x",
+      "contentAfterEquation": ", so integrate to find",
+      "inlineEquation2": "y = \\tan x + C\\cos x"
+    }
+  ]
+}

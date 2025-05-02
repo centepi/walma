@@ -1,0 +1,66 @@
+{
+    "levelId": "calc2_week1_review",
+    "type": "review",
+    "slides": [
+      {
+        "contentBeforeEquation": "A parametric curve is a function",
+        "inlineEquation": "\\(r(t) = (x(t), y(t))\\)",
+        "contentAfterEquation": "in 2D, or",
+        "inlineEquation2": "\\(r(t) = (x(t), y(t), z(t))\\)",
+        "contentEnd": "in 3D. Each coordinate is defined in terms of a parameter \\(t\\)."
+      },
+      {
+        "content": "This representation is especially useful for describing motion, where \\(t\\) often represents time. The curve traces out a path in space as \\(t\\) varies."
+      },
+      {
+        "contentBeforeEquation": "Example: let",
+        "inlineEquation": "\\(r(t) = (t, e^t)\\)",
+        "contentAfterEquation": "for",
+        "inlineEquation2": "\\(t \\in [0, 1]\\)",
+        "contentEnd": ". The curve starts at",
+        "inlineEquation3": "\\(r(0) = (0,1)\\)",
+        "contentAfterEquation3": "and ends at",
+        "inlineEquation4": "\\(r(1) = (1,e)\\)",
+        "diagram": "diagrams/final_parametric_curves_clean.png"
+      },
+      {
+        "contentBeforeEquation": "The orientation of the curve follows the increasing direction of",
+        "inlineEquation": "\\(t\\)",
+        "contentAfterEquation": ". If one reverses time with",
+        "inlineEquation2": "\\(s = 1 - t\\)",
+        "contentEnd": ", the path is traced in reverse."
+      },
+      {
+        "contentBeforeEquation": "Rewriting the curve as",
+        "inlineEquation": "\\(c(s) = (1 - s, e^{1 - s})\\)",
+        "contentAfterEquation": "traces the same path from the opposite end."
+      },
+      {
+        "contentBeforeEquation": "The derivative of a parametric curve is the vector",
+        "inlineEquation": "\\(r'(t) = (x'(t), y'(t), z'(t))\\)",
+        "contentAfterEquation": ". It represents both the direction and instantaneous speed of motion."
+      },
+      {
+        "contentBeforeEquation": "For example, if",
+        "inlineEquation": "\\(r(t) = (t^2, \\sin t, e^t)\\)",
+        "contentAfterEquation": "then",
+        "inlineEquation2": "\\(r'(t) = (2t, \\cos t, e^t)\\)"
+      },
+      {
+        "content": "At \\(t = 1\\), the tangent vector becomes \\((2, \\cos(1), e)\\). This vector points in the direction the particle moves through space."
+      },
+      {
+        "contentBeforeEquation": "Some parametric curves describe standard shapes. For example:",
+        "inlineEquation": "\\(r(t) = (\\cos t, \\sin t)\\)",
+        "contentAfterEquation": "describes a circle, and",
+        "inlineEquation2": "\\(r(t) = (\\sinh t, \\cosh t)\\)"
+      },
+      {
+        "content": "describes a hyperbola. Recognizing these standard forms is essential when graphing or analyzing behavior."
+      },
+      {
+        "content": "To summarize: parametric curves define paths in space using a parameter. One can identify the curve, determine its orientation, compute tangent vectors via derivatives, and relate its structure to known geometric forms."
+      }
+    ]
+  }
+  

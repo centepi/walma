@@ -1,0 +1,66 @@
+{
+  "levelId": "ds_week3_review",
+  "type": "review",
+  "slides": [
+    {
+      "contentBeforeEquation": "To solve a second-order linear ODE like",
+      "inlineEquation": "y'' + ay' + by = f(x)",
+      "contentAfterEquation": ", we first solve the associated homogeneous equation",
+      "inlineEquation2": "y'' + ay' + by = 0",
+      "contentEnd": "to find the complementary function."
+    },
+    {
+      "contentBeforeEquation": "The characteristic equation is formed by replacing",
+      "inlineEquation": "y'' \\rightarrow \\lambda^2,\\ y' \\rightarrow \\lambda",
+      "contentAfterEquation": ", giving a quadratic equation in",
+      "inlineEquation2": "\\lambda",
+      "contentEnd": "."
+    },
+    {
+      "content": "The nature of the roots of the characteristic equation determines the form of the solution:"
+    },
+    {
+      "content": "- **Two distinct real roots**: solution involves exponentials like C\u2081e^{\\lambda_1 x} + C\u2082e^{\\lambda_2 x}."
+    },
+    {
+      "content": "- **Repeated real root**: solution takes the form C\u2081e^{\\lambda x} + C\u2082xe^{\\lambda x}."
+    },
+    {
+      "content": "- **Complex roots**: solution is C\u2081e^{\\alpha x} cos(\\beta x) + C\u2082e^{\\alpha x} sin(\\beta x)."
+    },
+    {
+      "content": "After finding the complementary function, we solve for a particular integral depending on the form of the inhomogeneous term f(x):"
+    },
+    {
+      "content": "- For exponentials like e^x, guess A e^x."
+    },
+    {
+      "content": "- For polynomials like x, guess a polynomial such as A + Bx + Cx^2."
+    },
+    {
+      "content": "- For sin(x) or cos(x), guess A cos(x) + B sin(x)."
+    },
+    {
+      "content": "Another powerful method is **operator factorization**, rewriting the ODE using differential operators D (where D = d/dx), e.g., (D - \\lambda_1)(D - \\lambda_2)y = f(x)."
+    },
+    {
+      "contentBeforeEquation": "Initial conditions like",
+      "inlineEquation": "y(0) = a,\\ y'(0) = b",
+      "contentAfterEquation": "allow us to determine the constants in the general solution."
+    },
+    {
+      "content": "Solving IVPs involves substituting these values into the general solution and its derivative."
+    },
+    {
+      "contentBeforeEquation": "Example: Given",
+      "inlineEquation": "y'' + 2y' + 2y = 0,\\ y(0) = 1,\\ y'(0) = 0",
+      "contentAfterEquation": ", the roots are complex:  -1 \\pm i ."
+    },
+    {
+      "content": "So the solution is y = e^{-x}(cos(x) + sin(x))."
+    },
+    {
+      "content": "In summary: solving second-order linear ODEs requires identifying root types, choosing an appropriate particular solution, and applying initial conditions to determine constants."
+    }
+  ]
+}

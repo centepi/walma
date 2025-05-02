@@ -1,0 +1,33 @@
+{
+    "levelId": "calc2_week3_level5",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Suppose the gradient vector of a differentiable function \\( f \\) at the point \\((1,1)\\) is given by:",
+          "\\(\\nabla f(1,1) = \\langle 2, -3 \\rangle\\).",
+          "Which of the following statements about the directional derivative \\( D_{\\mathbf{u}}f(1,1) \\) is true?"
+        ],
+        "options": [
+          "It is maximized when \\( \\mathbf{u} = \\langle 2, -3 \\rangle \\).",
+          "It equals zero when \\( \\mathbf{u} = \\langle 3, 2 \\rangle \\).",
+          "It equals \\( -1 \\) when \\( \\mathbf{u} = \\langle 2, -3 \\rangle \\).",
+          "It is minimized when \\( \\mathbf{u} = -\\frac{1}{\\sqrt{13}} \\langle 2, -3 \\rangle \\)."
+        ],
+        "correctAnswer": "It is minimized when \\( \\mathbf{u} = -\\frac{1}{\\sqrt{13}} \\langle 2, -3 \\rangle \\).",
+        "explanationParts": [
+          "The directional derivative is defined as \\(D_{\\mathbf{u}}f(1,1) = \\nabla f(1,1) \\cdot \\mathbf{u}\\), where \\(\\mathbf{u}\\) is a **unit vector**.",
+          "To **maximize** this dot product, \\(\\mathbf{u}\\) must point in the **same direction** as the gradient vector \\(\\langle 2, -3 \\rangle\\).",
+          "To **minimize** it, \\(\\mathbf{u}\\) must point in the **opposite direction**.",
+          "The unit vector in the direction of the gradient is:",
+          "\\[ \\hat{\\mathbf{u}} = \\frac{1}{\\sqrt{2^2 + (-3)^2}} \\langle 2, -3 \\rangle = \\frac{1}{\\sqrt{13}} \\langle 2, -3 \\rangle \\]",
+          "So the minimum occurs when:",
+          "\\[ \\mathbf{u} = -\\frac{1}{\\sqrt{13}} \\langle 2, -3 \\rangle \\]",
+          "Option A is incorrect because \\(\\langle 2, -3 \\rangle\\) is not a unit vector.",
+          "Option B is incorrect: the dot product \\(\\langle 2, -3 \\rangle \\cdot \\langle 3, 2 \\rangle = 6 - 6 = 0\\), so this vector *is* orthogonal and does give zero directional derivative — but **it is not a unit vector**. The option omits normalization, so it's misleading.",
+          "Option C is unsupported: there's no context for the value \\(-1\\)."
+        ]
+      }
+    ]
+  }
+  

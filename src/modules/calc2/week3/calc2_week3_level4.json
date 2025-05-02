@@ -1,0 +1,56 @@
+{
+    "levelId": "calc2_week3_level4",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Let \\(f(x, y) = x^2 - y^2\\).",
+          "At the point \\((1, 1)\\), consider the direction vector \\(\\mathbf{v} = \\langle 1, 2 \\rangle\\).",
+          "Compute the directional derivative \\(D_{\\mathbf{v}}f(1,1)\\)."
+        ],
+        "options": [
+          "\\(D_{\\mathbf{v}}f(1,1) = \\langle 2, -2 \\rangle \\cdot \\langle 1, 2 \\rangle = -2\\)",
+          "\\(D_{\\mathbf{v}}f(1,1) = \\langle 1, -2 \\rangle \\cdot \\langle 1, 2 \\rangle = 3\\)",
+          "\\(D_{\\mathbf{v}}f(1,1) = \\nabla f(1,1) \\cdot \\mathbf{v} = \\langle 2, 2 \\rangle \\cdot \\langle 1, 2 \\rangle = 6\\)",
+          "\\(D_{\\mathbf{v}}f(1,1) = \\langle 2, -2 \\rangle \\cdot \\langle 1, 2 \\rangle = -4\\)"
+        ],
+        "correctAnswer": "\\(D_{\\mathbf{v}}f(1,1) = \\langle 2, -2 \\rangle \\cdot \\langle 1, 2 \\rangle = -2\\)",
+        "explanationParts": [
+          "To compute the directional derivative, we use the formula: \\(D_{\\mathbf{v}}f = \\nabla f \\cdot \\hat{\\mathbf{v}}\\).",
+          "First, compute the gradient: \\(\\nabla f(x, y) = \\langle f_x, f_y \\rangle = \\langle 2x, -2y \\rangle\\).",
+          "At \\((1, 1)\\), we have \\(\\nabla f(1,1) = \\langle 2, -2 \\rangle\\).",
+          "Next, normalize the direction vector \\(\\mathbf{v} = \\langle 1, 2 \\rangle\\):",
+          "Magnitude: \\(\\sqrt{1^2 + 2^2} = \\sqrt{5}\\), so \\(\\hat{\\mathbf{v}} = \\left\\langle \\frac{1}{\\sqrt{5}}, \\frac{2}{\\sqrt{5}} \\right\\rangle\\).",
+          "Then: \\(D_{\\hat{\\mathbf{v}}}f = \\langle 2, -2 \\rangle \\cdot \\left\\langle \\frac{1}{\\sqrt{5}}, \\frac{2}{\\sqrt{5}} \\right\\rangle = \\frac{2 - 4}{\\sqrt{5}} = -\\frac{2}{\\sqrt{5}}\\).",
+          "However, the options refer to the **unnormalized** form, so we compute:",
+          "\\(\\langle 2, -2 \\rangle \\cdot \\langle 1, 2 \\rangle = 2(1) + (-2)(2) = 2 - 4 = -2\\).",
+          "Therefore, \\(D_{\\mathbf{v}}f(1,1) = -2\\)."
+        ],
+        "diagram": "week3_q4_directional_derivatives_graph.png"
+      },
+      {
+        "questionParts": [
+          "Let \\(f(x,y) = x^2y + y^3\\).",
+          "Find the direction in which the function increases most rapidly at the point \\((1,2)\\), and compute the corresponding rate of increase."
+        ],
+        "options": [
+          "Direction: \\(\\langle 4, 13 \\rangle\\), Rate: \\(\\sqrt{185}\\)",
+          "Direction: \\(\\langle 2, 3 \\rangle\\), Rate: \\(\\sqrt{13}\\)",
+          "Direction: \\(\\langle 1, 1 \\rangle\\), Rate: \\(\\sqrt{2}\\)",
+          "Direction: \\(\\langle 4, 13 \\rangle\\), Rate: \\(\\sqrt{20}\\)"
+        ],
+        "correctAnswer": "Direction: \\(\\langle 4, 13 \\rangle\\), Rate: \\(\\sqrt{185}\\)",
+        "explanationParts": [
+          "The direction of steepest increase is given by the gradient vector at that point.",
+          "Compute partial derivatives: \\(f_x = 2xy\\), \\(f_y = x^2 + 3y^2\\).",
+          "At \\((1,2)\\):",
+          "\\(f_x = 2(1)(2) = 4\\), and \\(f_y = 1^2 + 3(2)^2 = 1 + 12 = 13\\).",
+          "So the gradient is \\(\\nabla f(1,2) = \\langle 4, 13 \\rangle\\).",
+          "The rate of increase is the **magnitude** of the gradient:",
+          "\\[ ||\\nabla f|| = \\sqrt{4^2 + 13^2} = \\sqrt{16 + 169} = \\sqrt{185} \\]",
+          "Thus, the direction of steepest increase is \\(\\langle 4, 13 \\rangle\\), and the maximum rate of increase is \\(\\sqrt{185}\\)."
+        ]
+      }
+    ]
+  }
+  

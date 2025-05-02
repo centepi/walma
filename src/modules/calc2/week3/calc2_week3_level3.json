@@ -1,0 +1,48 @@
+{
+    "levelId": "calc2_week3_level3",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(f(x, y) = x^2 + y^2\\)",
+          "The gradient vector field is given by \\(\\nabla f = \\langle 2x, 2y \\rangle\\).",
+          "Refer to the diagram below:",
+          "diagrams/week3_q3_gradient_vectors_circle.png",
+          "What can you conclude about the direction of the gradient vectors?"
+        ],
+        "options": [
+          "They point toward the origin.",
+          "They point outward from the origin.",
+          "They form circular vectors around the origin.",
+          "They alternate direction across the x-axis."
+        ],
+        "correctAnswer": "They point outward from the origin.",
+        "explanationParts": [
+          "The gradient vector at any point \\((x, y)\\) is given by \\(\\nabla f = \\langle 2x, 2y \\rangle\\).",
+          "This means the direction of the gradient vector depends directly on the coordinates \\(x\\) and \\(y\\).",
+          "At every point, the gradient points **directly away from the origin**, and the further you are, the longer the vector.",
+          "This is consistent with the fact that the function increases as you move away from the origin, and the gradient always points in the direction of steepest ascent."
+        ]
+      },
+      {
+        "questionParts": [
+          "Which of the following best describes how the **magnitude** of the gradient vector \\(\\nabla f = \\langle 2x, 2y \\rangle\\) changes as you move away from the origin?"
+        ],
+        "options": [
+          "It stays constant at all points.",
+          "It increases linearly with distance from the origin.",
+          "It decreases with distance from the origin.",
+          "It oscillates between increasing and decreasing."
+        ],
+        "correctAnswer": "It increases linearly with distance from the origin.",
+        "explanationParts": [
+          "The magnitude of the gradient vector is:",
+          "\\[ ||\\nabla f|| = \\sqrt{(2x)^2 + (2y)^2} = 2\\sqrt{x^2 + y^2} \\]",
+          "This is **twice the distance from the origin**.",
+          "So as you move further from the origin, the magnitude increases linearly — meaning the vectors get longer the further out you go."
+        ]
+      }
+    ]
+  }
+  

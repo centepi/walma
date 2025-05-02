@@ -1,0 +1,71 @@
+{
+  "levelId": "ds_week1_level1",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Solve the explicit first-order ODE:",
+        "\\frac{dy}{dx} = 5x^4 "
+      ],
+      "options": [
+        " y = x^5 + C ",
+        " y = 5x^3 + C ",
+        " y = \\frac{5}{3}x^3 + C ",
+        " y = 20x^3 + C "
+      ],
+      "correctAnswer": " y = x^5 + C ",
+      "explanationParts": [
+        "Step 1: Integrate both sides with respect to  x :",
+        " \\int dy = \\int 5x^4 \\, dx ",
+        "**Step 2:** Compute the integrals:",
+        " y = x^5 + C ",
+        "**Key Idea:** Explicit ODEs of the form  \\\\frac{dy}{dx} = f(x)  are solved by direct integration."
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve the separable first-order ODE:",
+        " \\frac{dy}{dx} = \\frac{y}{x} \\quad (x \\neq 0) "
+      ],
+      "options": [
+        " y = Cx ",
+        " y = C/x ",
+        " y = Ce^x ",
+        " y = Cx^2 "
+      ],
+      "correctAnswer": " y = Cx ",
+      "explanationParts": [
+        "**Step 1:** Separate variables:",
+        " \\frac{dy}{y} = \\frac{dx}{x} ",
+        "**Step 2:** Integrate both sides:",
+        " \\ln|y| = \\ln|x| + C ",
+        "**Step 3:** Exponentiate and simplify:",
+        " y = e^{\\ln|x| + C} = Cx ",
+        "**Note:** The constant  C  absorbs  e^C ."
+      ]
+    },
+    {
+      "questionParts": [
+        "Which of the following ODEs is separable?",
+        "**A)**  y' + xy = x ",
+        "**B)**  y' = x^2 y ",
+        "**C)**  y' = \\\\sin(x + y) ",
+        "**D)**  y' = e^{x + y} "
+      ],
+      "options": [
+        "Only A",
+        "Only B",
+        "B and D",
+        "All of them"
+      ],
+      "correctAnswer": "B and D",
+      "explanationParts": [
+        "**Key Concept:** A separable ODE can be written as  \\\\frac{dy}{dx} = f(x)g(y) .",
+        "- **B)**  y' = x^2 y  \u2192 Separable (divide by  y , multiply by  dx ).",
+        "- **D)**  y' = e^{x + y} = e^x e^y  \u2192 Separable (divide by  e^y ).",
+        "- **A)** Not separable (mixing  x  and  y  additively).",
+        "- **C)** Not separable (due to  \\sin(x + y) )."
+      ]
+    }
+  ]
+}

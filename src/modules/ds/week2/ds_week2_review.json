@@ -1,0 +1,116 @@
+{
+  "levelId": "ds_week2_review",
+  "type": "review",
+  "slides": [
+    {
+      "sectionTitle": "Separable ODEs",
+      "content": [
+        {
+          "method": "Separation of Variables",
+          "form": "\\frac{dy}{dx} = f(x)g(y)",
+          "procedure": [
+            "1. Rewrite as:  \\frac{dy}{g(y)} = f(x)dx ",
+            "2. Integrate both sides",
+            "3. Solve for  y  and apply initial conditions"
+          ],
+          "example": {
+            "problem": "\\frac{dx}{dt} = \\frac{x+1}{t+1}, \\quad x(0)=1",
+            "solution": "x(t) = 2t + 1",
+            "steps": [
+              "\\int \\frac{dx}{x+1} = \\int \\frac{dt}{t+1}",
+              "\\ln|x+1| = \\ln|t+1| + C",
+              "Apply IC:  C = \\ln 2  \u2192  x+1 = 2(t+1) "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sectionTitle": "Linear ODEs: Integrating Factor",
+      "content": [
+        {
+          "standardForm": "\\frac{dy}{dx} + P(x)y = Q(x)",
+          "integratingFactor": "\\mu(x) = e^{\\int P(x)dx}",
+          "solution": "y = \\frac{1}{\\mu(x)} \\left( \\int \\mu(x)Q(x)dx + C \\right)",
+          "examples": [
+            {
+              "problem": "x\\frac{dy}{dx} + y = e^x, \\quad y(1)=0",
+              "solution": "y = \\frac{e^x - e}{x}",
+              "keyStep": "Rewrite as  y' + \\frac{1}{x}y = \\frac{e^x}{x} , then  \\mu(x) = x "
+            },
+            {
+              "problem": "y' + y = e^x, \\quad y(1)=0",
+              "solution": "y = \\frac{1}{2}(e^x - e^{2-x})",
+              "keyStep": "\\mu(x) = e^x \u2192 (e^x y)' = e^{2x}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionTitle": "Substitution Methods",
+      "content": [
+        {
+          "technique": "Change of Variables",
+          "whenToUse": "For ODEs of the form  \\frac{dx}{dt} = f(x + t) ",
+          "example": {
+            "problem": "\\frac{dx}{dt} = x + t",
+            "substitution": "u = x + t \u2192 \\frac{du}{dt} = u + 1",
+            "solution": "x = Ce^t - t - 1",
+            "steps": [
+              "Substitute:  \\frac{du}{dt} = u + 1  (separable)",
+              "Solve:  \\int \\frac{du}{u+1} = \\int dt ",
+              "Exponentiate:  u = Ce^t - 1 ",
+              "Revert:  x = u - t "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sectionTitle": "Malthusian Growth Limitations",
+      "content": [
+        {
+          "problem": "Population doubles in 100y, triples in 200y",
+          "contradiction": [
+            "Solution:  p(t) = p(0)e^{\\alpha t} ",
+            "Condition 1:  2 = e^{100\\alpha} \u2192 \\alpha = \\frac{\\ln 2}{100} ",
+            "Condition 2:  3 = e^{200\\alpha} \u2192 \\alpha = \\frac{\\ln 3}{200} ",
+            "Conclusion:  \\frac{\\ln 2}{100} \\neq \\frac{\\ln 3}{200} \\implies \\text{Model invalid} "
+          ],
+          "takeaway": "Malthusian law assumes constant growth rate  \\alpha ; real populations require more complex models."
+        }
+      ]
+    },
+    {
+      "sectionTitle": "Key Problem-Solving Framework",
+      "content": [
+        {
+          "flowchart": [
+            "1. Identify ODE type:",
+            "   - Separable:  \\frac{dy}{dx} = f(x)g(y) ",
+            "   - Linear:  y' + P(x)y = Q(x)  \u2192 Integrating factor",
+            "   - Reducible: Substitute  u = x + t  or similar",
+            "2. Apply initial conditions",
+            "3. Check for singularities/domain restrictions"
+          ],
+          "validation": "Always verify solutions by differentiation and substitution into the original ODE."
+        }
+      ]
+    },
+    {
+      "sectionTitle": "Key Problem-Solving Framework",
+      "content": [
+        {
+          "flowchart": [
+            "1. Identify ODE type and check for existence/uniqueness:",
+            "   - Picard\u2019s Theorem: Guarantees unique solutions for Lipschitz-continuous  f(x,y) ",
+            "   - Peano\u2019s Theorem: Ensures existence (but not uniqueness) for continuous  f(x,y) ",
+            "2. Apply appropriate method (separable, linear, substitution)",
+            "3. Validate solutions with initial conditions"
+          ]
+        }
+      ]
+    }
+  ]
+}

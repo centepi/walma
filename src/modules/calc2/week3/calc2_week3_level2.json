@@ -1,0 +1,47 @@
+{
+    "levelId": "calc2_week3_level2",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Let \\(f(x, y) = x^2 - y^2\\) and suppose we move from the point \\((1,1)\\) in the direction of the unit vector \\(\\vec{u} = \\left\\langle \\frac{1}{\\sqrt{2}}, \\frac{1}{\\sqrt{2}} \\right\\rangle\\).",
+          "What is the directional derivative \\(D_{\\vec{u}}f(1,1)\\) in that direction?"
+        ],
+        "options": [
+          "\\(D_{\\vec{u}}f(1,1) = 0\\)",
+          "\\(D_{\\vec{u}}f(1,1) = \\frac{1}{\\sqrt{2}}\\)",
+          "\\(D_{\\vec{u}}f(1,1) = \\sqrt{2}\\)",
+          "\\(D_{\\vec{u}}f(1,1) = -\\sqrt{2}\\)"
+        ],
+        "correctAnswer": "\\(D_{\\vec{u}}f(1,1) = 0\\)",
+        "explanationParts": [
+          "First, compute the gradient of \\(f\\): \\(\\nabla f(x, y) = \\langle 2x, -2y \\rangle\\).",
+          "At the point \\((1, 1)\\), we have \\(\\nabla f(1, 1) = \\langle 2, -2 \\rangle\\).",
+          "The directional derivative is the dot product: \\(D_{\\vec{u}}f(1,1) = \\nabla f(1,1) \\cdot \\vec{u}\\).",
+          "So: \\(\\langle 2, -2 \\rangle \\cdot \\left\\langle \\frac{1}{\\sqrt{2}}, \\frac{1}{\\sqrt{2}} \\right\\rangle = 2\\cdot\\frac{1}{\\sqrt{2}} + (-2)\\cdot\\frac{1}{\\sqrt{2}} = 0\\).",
+          "Therefore, \\(D_{\\vec{u}}f(1,1) = 0\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Let \\(f(x, y) = x^2 + y^2\\), and let \\(\\vec{u} = \\left\\langle \\frac{3}{5}, \\frac{4}{5} \\right\\rangle\\).",
+          "Compute the directional derivative \\(D_{\\vec{u}}f(1,2)\\)."
+        ],
+        "options": [
+          "\\(D_{\\vec{u}}f(1,2) = 10\\)",
+          "\\(D_{\\vec{u}}f(1,2) = 6.8\\)",
+          "\\(D_{\\vec{u}}f(1,2) = 1\\)",
+          "\\(D_{\\vec{u}}f(1,2) = 0\\)"
+        ],
+        "correctAnswer": "\\(D_{\\vec{u}}f(1,2) = \\frac{22}{5}\\)",
+        "explanationParts": [
+          "Compute the gradient: \\(\\nabla f(x, y) = \\langle 2x, 2y \\rangle\\).",
+          "At \\((1,2)\\), this becomes \\(\\nabla f(1,2) = \\langle 2, 4 \\rangle\\).",
+          "Now take the dot product with \\(\\vec{u} = \\left\\langle \\frac{3}{5}, \\frac{4}{5} \\right\\rangle\\):",
+          "\\(D_{\\vec{u}}f(1,2) = 2 \\cdot \\frac{3}{5} + 4 \\cdot \\frac{4}{5} = \\frac{6}{5} + \\frac{16}{5} = \\frac{22}{5}\\).",
+          "Therefore, \\(D_{\\vec{u}}f(1,2) = \\frac{22}{5}\\)."
+        ]
+      }
+    ]
+  }
+  

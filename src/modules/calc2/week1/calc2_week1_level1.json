@@ -1,0 +1,70 @@
+{
+    "levelId": "calc2_week1_level1",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "The curve is given by:",
+          "\\(\\mathbf{r}(t) = (2t - 1, t, t + 3)\\)",
+          "Refer to the diagram below:",
+          "diagrams/level1_q1_enhanced_diagram.png",
+          "What does the arrow shown along the line represent?"
+        ],
+        "options": [
+          "A vector perpendicular to the line at that point.",
+          "A constant direction vector representing motion along the line.",
+          "A vector pointing toward the origin from each point.",
+          "A vector indicating where the motion along the line stops."
+        ],
+        "correctAnswer": "A constant direction vector representing motion along the line.",
+        "explanationParts": [
+          "The arrow represents the constant direction of motion along the line.",
+          "This direction is given by the derivative \\(\\mathbf{r}'(t)\\), which is constant.",
+          "It shows that the motion is uniform and straight."
+        ]
+      },
+      {
+        "questionParts": [
+          "The curve is given by:",
+          "\\(\\mathbf{r}(t) = (\\sinh(t), \\cosh(t))\\)",
+          "Refer to the diagram below:",
+          "diagrams/level1_q2_hyperbolic_diagram_clean.png",
+          "Which equation correctly relates the \\(x\\) and \\(y\\) components of this curve?"
+        ],
+        "options": [
+          "\\(x^2 + y^2 = 1\\), the equation of a unit circle.",
+          "\\(y^2 - x^2 = 1\\), the equation of a hyperbola.",
+          "\\(y = x\\), the equation of a straight line.",
+          "\\(y^2 + x^2 = 0\\), a degenerate equation."
+        ],
+        "correctAnswer": "\\(y^2 - x^2 = 1\\), the equation of a hyperbola.",
+        "explanationParts": [
+          "Recall that \\(\\cosh^2(t) - \\sinh^2(t) = 1\\).",
+          "This rearranges to \\(y^2 - x^2 = 1\\).",
+          "This defines the hyperbola shown in the diagram."
+        ]
+      },
+      {
+        "questionParts": [
+          "The helix is given by:",
+          "\\(\\mathbf{r}(t) = (\\cos(t), \\sin(t), t)\\)",
+          "Refer to the diagram below:",
+          "diagrams/level1_helix_tangents.png",
+          "What do the arrows shown on the helix represent?"
+        ],
+        "options": [
+          "The radius of the helix at each point.",
+          "The direction and speed of motion along the helix.",
+          "The distance between consecutive coils of the helix.",
+          "External forces acting on the helix."
+        ],
+        "correctAnswer": "The direction and speed of motion along the helix.",
+        "explanationParts": [
+          "The arrows represent the tangent vectors given by \\(\\mathbf{r}'(t)\\).",
+          "They show the direction of motion and its rate of change along the helix.",
+          "They do not indicate radius, coil spacing, or external forces."
+        ]
+      }
+    ]
+  }
+  

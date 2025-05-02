@@ -1,0 +1,72 @@
+{
+  "levelId": "ds_week1_level2",
+  "type": "question",
+  "questions": [
+    {
+      "questionParts": [
+        "Solve the homogeneous first-order ODE:",
+        " y' = \\frac{y^2 + xy}{x^2} \\quad (x \\neq 0) "
+      ],
+      "options": [
+        " y = \\frac{x}{C - \\ln|x|} ",
+        " y = Cx^2 ",
+        " y = Ce^x ",
+        " y = \\frac{C}{x} "
+      ],
+      "correctAnswer": " y = \\frac{x}{C - \\ln|x|} ",
+      "explanationParts": [
+        "**Step 1:** Recognize homogeneity (all terms same degree). Substitute  v = \\frac{y}{x} :",
+        " y = vx \\implies y' = v + xv' ",
+        "**Step 2:** Rewrite the ODE:",
+        " v + xv' = \\frac{(vx)^2 + x(vx)}{x^2} = v^2 + v ",
+        "**Step 3:** Simplify and separate variables:",
+        " xv' = v^2 \\implies \\int \\frac{dv}{v^2} = \\int \\frac{dx}{x} ",
+        "**Step 4:** Integrate and solve for  y :",
+        " -\\frac{1}{v} = \\ln|x| + C \\implies y = \\frac{x}{C - \\ln|x|} "
+      ]
+    },
+    {
+      "questionParts": [
+        "Which substitution reduces the ODE  y' = \\frac{x + y}{x - y}  to separable form?"
+      ],
+      "options": [
+        " v = x + y ",
+        " v = \\frac{y}{x} ",
+        " v = xy ",
+        " v = x^2 + y^2 "
+      ],
+      "correctAnswer": " v = \\frac{y}{x} ",
+      "explanationParts": [
+        "**Key Concept:** Homogeneous ODEs require  v = \\frac{y}{x}  substitution.",
+        "**Verification:**",
+        "Let  y = vx , then:",
+        " y' = v + xv' = \\frac{1 + v}{1 - v} ",
+        "This becomes separable:",
+        " \\int \\frac{1 - v}{1 + v^2} dv = \\int \\frac{dx}{x} "
+      ]
+    },
+    {
+      "questionParts": [
+        "Solve the homogeneous ODE:",
+        " (x^2 + y^2)dx - 2xy \\, dy = 0 "
+      ],
+      "options": [
+        " y = x \\sqrt{Cx - 1} ",
+        " y = Cx^2 ",
+        " x^2 + y^2 = C ",
+        " y = \\frac{C}{x} "
+      ],
+      "correctAnswer": " y = x \\sqrt{Cx - 1} ",
+      "explanationParts": [
+        "**Step 1:** Check homogeneity (degree 2 in all terms). Substitute  y = vx :",
+        " (x^2 + v^2x^2)dx - 2x(vx)(vdx + xdv) = 0 ",
+        "**Step 2:** Simplify:",
+        " (1 + v^2)dx - 2v(vdx + xdv) = 0 ",
+        "**Step 3:** Separate and integrate:",
+        " \\int \\frac{dx}{x} = \\int \\frac{2v}{1 - v^2} dv ",
+        "**Step 4:** Solve for  y :",
+        " \\ln|x| = -\\ln|1 - v^2| + C \\implies y = x \\sqrt{Cx - 1} "
+      ]
+    }
+  ]
+}

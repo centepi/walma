@@ -1,0 +1,89 @@
+{
+    "levelId": "calc2_week2_level1",
+    "type": "question",
+    "questions": [
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(f(x,y) = 4x^3y - 7x + 2y^6\\)",
+          "Compute the partial derivative with respect to \\(x\\), \\(f_{x} = \\frac{\\partial f}{\\partial x}\\)"
+        ],
+        "options": [
+          "\\(f_{x} = 12x^2y - 7\\)",
+          "\\(f_{x} = 12x^2y\\)",
+          "\\(f_{x} = 4x^3 - 7\\)",
+          "\\(f_{x} = 12x^2y - 7 + 12y^5\\)"
+        ],
+        "correctAnswer": "\\(f_{x} = 12x^2y - 7\\)",
+        "explanationParts": [
+          "To find \\(f_{x}\\), treat \\(y\\) as a constant and differentiate with respect to \\(x\\).",
+          "The derivative of \\(4x^3y\\) with respect to \\(x\\) is \\((3 \\cdot 4x^2)y = 12x^2y\\).",
+          "The derivative of \\(-7x\\) with respect to \\(x\\) is \\(-7\\).",
+          "The derivative of \\(2y^6\\) with respect to \\(x\\) is 0.",
+          "So, \\(f_{x} = 12x^2y - 7\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(f(x,y) = 4x^3y - 7x + 2y^6\\)",
+          "Compute the partial derivative with respect to \\(y\\), \\(f_{y} = \\frac{\\partial f}{\\partial y}\\)"
+        ],
+        "options": [
+          "\\(f_{y} = 4x^3 + 12y^5\\)",
+          "\\(f_{y} = 4x^3\\)",
+          "\\(f_{y} = 12x^2y + 12y^5\\)",
+          "\\(f_{y} = 12y^5\\)"
+        ],
+        "correctAnswer": "\\(f_{y} = 4x^3 + 12y^5\\)",
+        "explanationParts": [
+          "To find \\(f_{y}\\), treat \\(x\\) as a constant and differentiate with respect to \\(y\\).",
+          "The derivative of \\(4x^3y\\) with respect to \\(y\\) is \\(4x^3\\).",
+          "The derivative of \\(-7x\\) with respect to \\(y\\) is 0.",
+          "The derivative of \\(2y^6\\) with respect to \\(y\\) is \\(12y^5\\).",
+          "So, \\(f_{y} = 4x^3 + 12y^5\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(g(x,y) = 3x^2y^3 + \\cos(y)\\)",
+          "Compute the partial derivative with respect to \\(x\\), \\(g_{x} = \\frac{\\partial g}{\\partial x}\\)"
+        ],
+        "options": [
+          "\\(g_{x} = 6xy^3\\)",
+          "\\(g_{x} = 6xy^3 - \\sin(y)\\)",
+          "\\(g_{x} = 3y^3\\)",
+          "\\(g_{x} = 6x\\)"
+        ],
+        "correctAnswer": "\\(g_{x} = 6xy^3\\)",
+        "explanationParts": [
+          "To find \\(g_{x}\\), treat \\(y\\) as a constant and differentiate with respect to \\(x\\).",
+          "The derivative of \\(3x^2y^3\\) with respect to \\(x\\) is \\(6xy^3\\).",
+          "The derivative of \\(\\cos(y)\\) with respect to \\(x\\) is 0.",
+          "So, \\(g_{x} = 6xy^3\\)."
+        ]
+      },
+      {
+        "questionParts": [
+          "Consider the function:",
+          "\\(h(x,y) = 5\\sin(x) + x^4y^2\\)",
+          "Compute the partial derivative with respect to \\(y\\), \\(h_{y} = \\frac{\\partial h}{\\partial y}\\)"
+        ],
+        "options": [
+          "\\(h_{y} = 2x^4y\\)",
+          "\\(h_{y} = 5\\cos(x) + 2x^4y\\)",
+          "\\(h_{y} = 8x^3y\\)",
+          "\\(h_{y} = x^4\\)"
+        ],
+        "correctAnswer": "\\(h_{y} = 2x^4y\\)",
+        "explanationParts": [
+          "To find \\(h_{y}\\), treat \\(x\\) as a constant and differentiate with respect to \\(y\\).",
+          "The derivative of \\(5\\sin(x)\\) with respect to \\(y\\) is 0.",
+          "The derivative of \\(x^4y^2\\) with respect to \\(y\\) is \\(2x^4y\\).",
+          "So, \\(h_{y} = 2x^4y\\)."
+        ]
+      }
+    ]
+  }
+  
