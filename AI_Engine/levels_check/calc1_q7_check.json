@@ -1,0 +1,27 @@
+{
+  "source_file": "calc1_q7.json",
+  "questions_checked": [
+    {
+      "question_index": 1,
+      "question_text": "Let the function be defined as \\( f(x) = 3x + x^3 \\) for \\( x > 0 \\).\n(a) Differentiate the function to find \\( f'(x) \\).\n(b) Given that \\( f'(x) = 15 \\), find the value of \\( x \\).",
+      "difficulty": "easy",
+      "steps_verified": [
+        {
+          "step_type": "differentiation (power rule)",
+          "input_expr": "3x + x^3",
+          "output_expr": "3 + 3x^2",
+          "explanation": "Using the power rule, the derivative of \\(3x\\) is \\(3\\) and the derivative of \\(x^3\\) is \\(3x^2\\). Adding these gives \\(3 + 3x^2\\).",
+          "passed": true
+        },
+        {
+          "step_type": "solve equation",
+          "input_expr": "3 + 3x^2 = 15",
+          "output_expr": "x = 2",
+          "explanation": "To find \\(x\\) when \\(f'(x) = 15\\), set the derivative equal to 15: \\(3 + 3x^2 = 15\\). Solving for \\(x^2\\), we get \\(x^2 = 4\\), so \\(x = 2\\) (since \\(x > 0\\)).",
+          "passed": true
+        }
+      ],
+      "verified": true
+    }
+  ]
+}

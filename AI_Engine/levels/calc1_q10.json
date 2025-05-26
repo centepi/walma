@@ -1,0 +1,65 @@
+[
+  {
+    "question_text": "The curve \\( C \\) has equation\n\\[ y=(x+3)(x-1)^{2} \\]\n(a) Sketch \\( C \\) showing clearly the coordinates of the points where the curve meets the coordinate axes.",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "find x-intercepts",
+        "input_expr": "(x+3)(x-1)^2 = 0",
+        "output_expr": "x = -3, 1",
+        "explanation": "Set the equation equal to zero and solve for x to find the x-intercepts."
+      },
+      {
+        "step_type": "find y-intercept",
+        "input_expr": "y = (0+3)(0-1)^2",
+        "output_expr": "y = 3",
+        "explanation": "Substitute x = 0 into the equation to find the y-intercept."
+      },
+      {
+        "step_type": "sketch",
+        "input_expr": "",
+        "output_expr": "",
+        "explanation": "Sketch the curve using the identified intercepts and the nature of the polynomial (degree and leading coefficient)."
+      }
+    ]
+  },
+  {
+    "question_text": "(b) Show that the equation of \\( C \\) can be written in the form\n\\[ y=x^{3}+x^{2}-5x+k \\]\nwhere \\( k \\) is a positive integer, and state the value of \\( k \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "expand polynomial",
+        "input_expr": "(x+3)(x-1)^2",
+        "output_expr": "x^3 + x^2 - 5x + 3",
+        "explanation": "Expand the given polynomial to show it in the form of a cubic equation."
+      },
+      {
+        "step_type": "identify constant",
+        "input_expr": "x^3 + x^2 - 5x + 3",
+        "output_expr": "k = 3",
+        "explanation": "Identify the constant term in the expanded polynomial as k."
+      }
+    ]
+  },
+  {
+    "question_text": "(c) There are two points on \\( C \\) where the gradient of the tangent to \\( C \\) is equal to 3. Find the \\( x \\)-coordinates of these two points.",
+    "difficulty": "hard",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation",
+        "input_expr": "y = x^3 + x^2 - 5x + 3",
+        "output_expr": "y' = 3x^2 + 2x - 5",
+        "explanation": "Differentiate the equation of the curve to find the expression for the gradient."
+      },
+      {
+        "step_type": "solve equation",
+        "input_expr": "3x^2 + 2x - 5 = 3",
+        "output_expr": "x = -2, x = 4/3",
+        "explanation": "Set the derivative equal to 3 and solve the resulting quadratic equation for x."
+      }
+    ]
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "question_number": "1",
+    "question_text": "Consider the surface \\( S \\) parametrised by\n\\[\n\\mathbf{r}(u, v)=\\left(u^{2} \\cos v, u^{2} \\sin v, u\\right)\n\\]\nwith \\( (u, v) \\in \\mathbb{R}^{2} \\). Compute in the form \\( a x+b y+c z=1 \\) the equation of the tangent plane to \\( S \\) at the point corresponding to \\( u=1, v=0 \\).\n(Optional: Can you deduce what the surface looks like (a sketch)? - and observe why the equation for the tangent plane you have computed appears to be correct?)"
+  },
+  {
+    "question_number": "2",
+    "question_text": "Compute the flux of the vector field \\( \\mathbf{v}=\\mathbf{i}+x \\mathbf{j}+z \\mathbf{k} \\) upwards through the hemisphere \\( x^{2}+y^{2}+z^{2}=1, z \\geq 0 \\)."
+  },
+  {
+    "question_number": "3",
+    "question_text": "Let \\( P \\) be the plane\n\\[\n2 x+2 y+z=6\n\\]\nand let \\( S \\) be the portion of \\( P \\) which lies inside the cylinder \\( x^{2}+y^{2}=4 \\). Let \\( C \\) be the curve which is the intersection of of \\( P \\) with the cylinder \\( x^{2}+y^{2}=4 \\).\n(a) Sketch the surface \\( S \\) and indicate the curve \\( C \\) on your sketch.\n(b) Compute the area of \\( S \\).\n(c) Consider the vector field \\( \\mathbf{v}(x, y, z)=-2 x^{2} y \\mathbf{i}+2 x y^{2} \\mathbf{j}-z^{3} \\mathbf{k} \\). Evaluate directly (as a double integral)\n\\[\n\\iint_{S}(\\nabla \\times \\mathbf{v}) \\cdot \\mathbf{n} d \\sigma\n\\]\nwhere \\( \\mathbf{n} \\) is the upward pointing unit normal to \\( S \\).\n(d) Use Stokes' theorem to evaluate the line integral over \\( C \\) :\n\\[\n\\int_{C}-2 x^{2} y d x+2 x y^{2} d y-z^{3} d z\n\\]\n(e) Does there exist a function \\( f: \\mathbb{R}^{3} \\rightarrow \\mathbb{R}^{1} \\) with \\( \\mathbf{v}=\\nabla f \\) ?"
+  }
+]

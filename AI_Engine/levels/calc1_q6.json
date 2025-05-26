@@ -1,0 +1,46 @@
+[
+  {
+    "question_text": "Given that \\( \\frac{2 x^{2}-x \\frac{3}{2}}{\\sqrt{x}} \\) can be written in the form \\( 2 x^{p}-x^{q} \\), write down the value of \\( p \\) and the value of \\( q \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "algebraic simplification",
+        "input_expr": "\\frac{2 x^{2} - x \\frac{3}{2}}{\\sqrt{x}}",
+        "output_expr": "2 x^{\\frac{3}{2}} - x",
+        "explanation": "Simplify the expression by dividing each term in the numerator by \\( \\sqrt{x} \\), resulting in \\( 2 x^{2 - \\frac{1}{2}} - x^{\\frac{3}{2} - \\frac{1}{2}} \\)."
+      },
+      {
+        "step_type": "identify exponents",
+        "input_expr": "2 x^{\\frac{3}{2}} - x",
+        "output_expr": "p = \\frac{3}{2}, q = 1",
+        "explanation": "Identify the exponents of \\( x \\) in the simplified expression, giving \\( p = \\frac{3}{2} \\) and \\( q = 1 \\)."
+      }
+    ]
+  },
+  {
+    "question_text": "Given that \\( y = 5 x^{2} - 3 + \\frac{2 x^{2} - x^{\\frac{3}{2}}}{\\sqrt{x}} \\), find \\( \\frac{\\mathrm{d} y}{\\mathrm{d} x} \\), simplifying the coefficient of each term.",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "simplify expression",
+        "input_expr": "5 x^{2} - 3 + \\frac{2 x^{2} - x^{\\frac{3}{2}}}{\\sqrt{x}}",
+        "output_expr": "5 x^{2} - 3 + 2 x^{\\frac{3}{2}} - x",
+        "explanation": "Simplify the expression by dividing each term in the fraction by \\( \\sqrt{x} \\) and combining like terms."
+      },
+      {
+        "step_type": "differentiation",
+        "input_expr": "5 x^{2} - 3 + 2 x^{\\frac{3}{2}} - x",
+        "output_expr": "10 x - 0 + 3 x^{\\frac{1}{2}} - 1",
+        "explanation": "Differentiate each term with respect to \\( x \\). The derivative of \\( 5 x^{2} \\) is \\( 10 x \\), the derivative of \\( -3 \\) is \\( 0 \\), the derivative of \\( 2 x^{\\frac{3}{2}} \\) is \\( 3 x^{\\frac{1}{2}} \\), and the derivative of \\( -x \\) is \\( -1 \\)."
+      },
+      {
+        "step_type": "combine like terms",
+        "input_expr": "10 x + 3 x^{\\frac{1}{2}} - 1",
+        "output_expr": "10 x + 3 x^{\\frac{1}{2}} - 1",
+        "explanation": "Combine the differentiated terms, ensuring coefficients are simplified where possible."
+      }
+    ]
+  }
+]

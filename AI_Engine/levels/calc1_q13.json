@@ -1,0 +1,52 @@
+[
+  {
+    "question_text": "Differentiate the function \\( f(x) = x^4 + 6\\sqrt{x} \\) with respect to \\( x \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "x^4",
+        "output_expr": "4x^3",
+        "explanation": "Using the power rule, the derivative of \\(x^4\\) is \\(4x^3\\)."
+      },
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "6\\sqrt{x}",
+        "output_expr": "3x^{-1/2}",
+        "explanation": "Expressing \\(6\\sqrt{x}\\) as \\(6x^{1/2}\\) and differentiating using the power rule gives \\(3x^{-1/2}\\)."
+      },
+      {
+        "step_type": "sum of derivatives",
+        "input_expr": "",
+        "output_expr": "4x^3 + 3x^{-1/2}",
+        "explanation": "The derivative of the function \\(f(x) = x^4 + 6\\sqrt{x}\\) is the sum of the derivatives of its terms, yielding \\(4x^3 + 3x^{-1/2}\\)."
+      }
+    ]
+  },
+  {
+    "question_text": "Simplify the expression \\( \\frac{(x+4)^2}{x} \\) and then find its derivative with respect to \\( x \\).",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "algebraic expansion",
+        "input_expr": "(x+4)^2",
+        "output_expr": "x^2 + 8x + 16",
+        "explanation": "Expanding the square, \\((x+4)^2\\) becomes \\(x^2 + 8x + 16\\)."
+      },
+      {
+        "step_type": "division by x",
+        "input_expr": "x^2 + 8x + 16",
+        "output_expr": "x + 8 + 16/x",
+        "explanation": "Dividing each term by \\(x\\) simplifies the expression to \\(x + 8 + \\frac{16}{x}\\)."
+      },
+      {
+        "step_type": "differentiation (sum rule)",
+        "input_expr": "x + 8 + 16/x",
+        "output_expr": "1 - 16x^{-2}",
+        "explanation": "Differentiating each term separately, the derivative of \\(x\\) is 1, the derivative of 8 is 0, and the derivative of \\(\\frac{16}{x}\\) is \\(-16x^{-2}\\), summing them gives \\(1 - 16x^{-2}\\)."
+      }
+    ]
+  }
+]

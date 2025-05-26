@@ -1,0 +1,83 @@
+[
+  {
+    "question_text": "(a) Show that \\( f(x)=\\frac{(3-4 \\sqrt{x})^{2}}{\\sqrt{x}}, x>0 \\) can be expressed as \\( f(x)=9 x^{-\\frac{1}{2}}+A x^{\\frac{1}{2}}+B \\), where \\( A \\) and \\( B \\) are constants to be found.",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "expansion",
+        "input_expr": "(3-4 \\sqrt{x})^2",
+        "output_expr": "9 - 24 \\sqrt{x} + 16x",
+        "explanation": "Expanding the square, we get \\( (3 - 4 \\sqrt{x})^2 = 3^2 - 2 \\cdot 3 \\cdot 4 \\sqrt{x} + (4 \\sqrt{x})^2 = 9 - 24 \\sqrt{x} + 16x \\)."
+      },
+      {
+        "step_type": "substitution",
+        "input_expr": "\\frac{9 - 24 \\sqrt{x} + 16x}{\\sqrt{x}}",
+        "output_expr": "\\frac{9}{\\sqrt{x}} - 24 + 16 \\sqrt{x}",
+        "explanation": "Substituting the expanded expression back into the original function, we divide each term by \\( \\sqrt{x} \\)."
+      },
+      {
+        "step_type": "simplification",
+        "input_expr": "\\frac{9}{\\sqrt{x}} - 24 + 16 \\sqrt{x}",
+        "output_expr": "9x^{-\\frac{1}{2}} - 24 + 16x^{\\frac{1}{2}}",
+        "explanation": "Rewriting each term in terms of powers of \\( x \\), we have \\( \\frac{9}{\\sqrt{x}} = 9x^{-\\frac{1}{2}}, -24 = -24, 16 \\sqrt{x} = 16x^{\\frac{1}{2}} \\)."
+      },
+      {
+        "step_type": "identification",
+        "input_expr": "",
+        "output_expr": "",
+        "explanation": "Identifying the constants, we find \\( A = 16 \\) and \\( B = -24 \\)."
+      }
+    ]
+  },
+  {
+    "question_text": "(b) Find \\( f'(x) \\) for \\( f(x)=9 x^{-\\frac{1}{2}}+16 x^{\\frac{1}{2}}-24 \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation",
+        "input_expr": "9 x^{-\\frac{1}{2}}",
+        "output_expr": "-\\frac{9}{2} x^{-\\frac{3}{2}}",
+        "explanation": "Differentiating \\( 9x^{-\\frac{1}{2}} \\) using the power rule, the derivative is \\( -\\frac{9}{2} x^{-\\frac{3}{2}} \\)."
+      },
+      {
+        "step_type": "differentiation",
+        "input_expr": "16 x^{\\frac{1}{2}}",
+        "output_expr": "8 x^{-\\frac{1}{2}}",
+        "explanation": "Differentiating \\( 16x^{\\frac{1}{2}} \\) using the power rule, the derivative is \\( 8x^{-\\frac{1}{2}} \\)."
+      },
+      {
+        "step_type": "differentiation",
+        "input_expr": "-24",
+        "output_expr": "0",
+        "explanation": "The derivative of a constant (-24) is 0."
+      },
+      {
+        "step_type": "combination",
+        "input_expr": "-\\frac{9}{2} x^{-\\frac{3}{2}} + 8 x^{-\\frac{1}{2}} + 0",
+        "output_expr": "-\\frac{9}{2} x^{-\\frac{3}{2}} + 8 x^{-\\frac{1}{2}}",
+        "explanation": "Combining the derivatives, we get \\( f'(x) = -\\frac{9}{2} x^{-\\frac{3}{2}} + 8 x^{-\\frac{1}{2}} \\)."
+      }
+    ]
+  },
+  {
+    "question_text": "(c) Evaluate \\( f'(9) \\) where \\( f'(x) = -\\frac{9}{2} x^{-\\frac{3}{2}} + 8 x^{-\\frac{1}{2}} \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "substitution",
+        "input_expr": "-\\frac{9}{2} \\times 9^{-\\frac{3}{2}} + 8 \\times 9^{-\\frac{1}{2}}",
+        "output_expr": "-\\frac{1}{2} + 8 \\times \\frac{1}{3}",
+        "explanation": "Substituting \\( x = 9 \\) into the derivative, we calculate each term separately."
+      },
+      {
+        "step_type": "simplification",
+        "input_expr": "-\\frac{1}{2} + \\frac{8}{3}",
+        "output_expr": "\\frac{5}{6}",
+        "explanation": "Simplifying the expression, we find \\( f'(9) = \\frac{5}{6} \\)."
+      }
+    ]
+  }
+]

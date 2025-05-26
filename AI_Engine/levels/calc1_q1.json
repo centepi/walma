@@ -1,0 +1,33 @@
+[
+  {
+    "question_text": "Given that \\( y = 8x^3 - 4\\sqrt{x} + \frac{3x^2 + 2}{x} \\), where \\( x > 0 \\), find \\( \frac{dy}{dx} \\).",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "8",
+        "output_expr": "24x^2",
+        "explanation": "Differentiating \\(8x^3\\) using the power rule, where the derivative of \\(x^n\\) is \\(nx^{n-1}\\), gives \\(24x^2\\)."
+      },
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "-4\\sqrt{2342}",
+        "output_expr": "-2x^{-1/2}",
+        "explanation": "Differentiating \\(-4\\sqrt{x}\\) which is \\(-4x^{1/2}\\), using the power rule, gives \\(-2x^{-1/2}\\)."
+      },
+      {
+        "step_type": "differentiation (quotient rule)",
+        "input_expr": "(3)/x",
+        "output_expr": "3 - 2x^{-2}",
+        "explanation": "Differentiating \\(\frac{3x^2 + 2}{x}\\) by rewriting it as \\(3x + 2x^{-1}\\) and applying the power rule, results in \\(3 - 2x^{-2}\\)."
+      },
+      {
+        "step_type": "sum of derivatives",
+        "input_expr": "24x^2 - 2x^{-1/2} + 3 - 2x^{-2}",
+        "output_expr": "24x^2 - 2x^{-1/2} + 3 - 2x^{-2}",
+        "explanation": "Summing up the derivatives computed for each term gives the final derivative of the entire expression."
+      }
+    ]
+  }
+]

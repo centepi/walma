@@ -1,0 +1,34 @@
+[
+  {
+    "question_text": "(a) Write \\( \\frac{2 \\sqrt{x}+3}{x} \\) in the form \\( 2 x^{p}+3 x^{q} \\) where \\( p \\) and \\( q \\) are constants.",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "simplify fraction",
+        "input_expr": "\\frac{2 \\sqrt{x}+3}{x}",
+        "output_expr": "2x^{-\\frac{1}{2}} + 3x^{-1}",
+        "explanation": "The expression \\( \\frac{2 \\sqrt{x}+3}{x} \\) can be rewritten by separating the terms in the numerator and dividing each by \\( x \\), resulting in \\( 2x^{-\\frac{1}{2}} + 3x^{-1} \\)."
+      }
+    ]
+  },
+  {
+    "question_text": "(b) Given that \\( y=5 x-7+\\frac{2 \\sqrt{x}+3}{x}, x>0 \\), find \\( \\frac{\\mathrm{d} y}{\\mathrm{~d} x} \\), simplifying the coefficient of each term.",
+    "difficulty": "medium",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "rewrite expression",
+        "input_expr": "y = 5x - 7 + \\frac{2 \\sqrt{x} + 3}{x}",
+        "output_expr": "y = 5x - 7 + 2x^{-\\frac{1}{2}} + 3x^{-1}",
+        "explanation": "First, rewrite the term \\( \\frac{2 \\sqrt{x}+3}{x} \\) as \\( 2x^{-\\frac{1}{2}} + 3x^{-1} \\) and substitute it back into the expression for \\( y \\)."
+      },
+      {
+        "step_type": "differentiation",
+        "input_expr": "5x - 7 + 2x^{-\\frac{1}{2}} + 3x^{-1}",
+        "output_expr": "5 - x^{-\\frac{3}{2}} - 3x^{-2}",
+        "explanation": "Differentiate each term of the expression separately. The derivative of \\( 5x \\) is 5, \\( -7 \\) is 0, \\( 2x^{-\\frac{1}{2}} \\) is \\( -x^{-\\frac{3}{2}} \\), and \\( 3x^{-1} \\) is \\( -3x^{-2} \\)."
+      }
+    ]
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "question_text": "Given that \\( y=2 x^{3}+\frac{3}{x^{2}}, x \\neq 0 \\), find (a) \\( \\frac{\\mathrm{d} y}{\\mathrm{~d} x} \\)",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "2x^3",
+        "output_expr": "6x^2",
+        "explanation": "Using the power rule for differentiation, the derivative of \\(2x^3\\) is \\(6x^2\\)."
+      },
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "\\frac{3}{x^2}",
+        "output_expr": "-6x^{-3}",
+        "explanation": "Rewriting \\(\\frac{3}{x^2}\\) as \\(3x^{-2}\\) and differentiating using the power rule, the derivative is \\(-6x^{-3}\\)."
+      },
+      {
+        "step_type": "algebraic simplification",
+        "input_expr": "6x^2 - 6x^{-3}",
+        "output_expr": "6x^2 - 6x^{-3}",
+        "explanation": "Combine the derivatives to get the final expression."
+      }
+    ]
+  },
+  {
+    "question_text": "Given that \\( y=2 x^{3}+\frac{3}{x^{2}}, x \\neq 0 \\), find (b) \\( \\int y \\mathrm{~d} x \\), simplifying each term.",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "integration (power rule)",
+        "input_expr": "2x^3",
+        "output_expr": "\\frac{x^4}{2}",
+        "explanation": "Integrating \\(2x^3\\) with respect to \\(x\\) using the power rule, we add 1 to the exponent and divide by the new exponent, resulting in \\(\\frac{x^4}{2}\\)."
+      },
+      {
+        "step_type": "integration (power rule)",
+        "input_expr": "\\frac{3}{x^2}",
+        "output_expr": "-3x^{-1}",
+        "explanation": "Rewriting \\(\\frac{3}{x^2}\\) as \\(3x^{-2}\\) and integrating, we add 1 to the exponent and divide by the new exponent, resulting in \\(-3x^{-1}\\)."
+      },
+      {
+        "step_type": "add constant of integration",
+        "input_expr": "\\frac{x^4}{2} - 3x^{-1}",
+        "output_expr": "\\frac{x^4}{2} - 3x^{-1} + C",
+        "explanation": "Add the constant of integration \\(C\\) to the result of the integration."
+      }
+    ]
+  }
+]

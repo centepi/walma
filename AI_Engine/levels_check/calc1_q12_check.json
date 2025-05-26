@@ -1,0 +1,107 @@
+{
+  "source_file": "calc1_q12.json",
+  "questions_checked": [
+    {
+      "question_index": 1,
+      "question_text": "The curve \\( C \\) has equation \\( y=4 x+3 x^{\\frac{3}{2}}-2 x^{2}, \\quad x>0 \\).\n\n(a) Find an expression for \\( \\frac{\\mathrm{d} y}{\\mathrm{~d} x} \\).",
+      "difficulty": "medium",
+      "steps_verified": [
+        {
+          "step_type": "differentiation (power rule)",
+          "input_expr": "4x",
+          "output_expr": "4",
+          "explanation": "Differentiating \\(4x\\) with respect to \\(x\\) using the power rule gives \\(4\\).",
+          "passed": true
+        },
+        {
+          "step_type": "differentiation (power rule and chain rule)",
+          "input_expr": "3 x^{\\frac{3}{2}}",
+          "output_expr": "\\frac{9}{2} x^{\\frac{1}{2}}",
+          "explanation": "Differentiating \\(3 x^{\\frac{3}{2}}\\) with respect to \\(x\\) using the power rule and chain rule gives \\(\\frac{9}{2} x^{\\frac{1}{2}}\\).",
+          "passed": true
+        },
+        {
+          "step_type": "differentiation (power rule)",
+          "input_expr": "-2 x^{2}",
+          "output_expr": "-4x",
+          "explanation": "Differentiating \\(-2 x^{2}\\) with respect to \\(x\\) using the power rule gives \\(-4x\\).",
+          "passed": true
+        },
+        {
+          "step_type": "algebraic simplification",
+          "input_expr": "4 + \\frac{9}{2} x^{\\frac{1}{2}} - 4x",
+          "output_expr": "4 + \\frac{9}{2} x^{\\frac{1}{2}} - 4x",
+          "explanation": "Combine the results of the differentiation to form the derivative of the entire expression.",
+          "passed": true
+        }
+      ],
+      "verified": true
+    },
+    {
+      "question_index": 2,
+      "question_text": "(b) Show that the point \\( P(4,8) \\) lies on \\( C \\).",
+      "difficulty": "easy",
+      "steps_verified": [
+        {
+          "step_type": "substitution",
+          "input_expr": "4 x+3 x^{\\frac{3}{2}}-2 x^{2}",
+          "output_expr": "8",
+          "explanation": "Substituting \\(x = 4\\) into the equation of \\(C\\) gives \\(y = 8\\), confirming that \\(P(4,8)\\) lies on \\(C\\).",
+          "passed": true
+        }
+      ],
+      "verified": true
+    },
+    {
+      "question_index": 3,
+      "question_text": "(c) Show that an equation of the normal to \\( C \\) at the point \\( P \\) is\n\\[3 y=x+20\\].",
+      "difficulty": "medium",
+      "steps_verified": [
+        {
+          "step_type": "find gradient at point",
+          "input_expr": "4 + \\frac{9}{2} x^{\\frac{1}{2}} - 4x",
+          "output_expr": "-2",
+          "explanation": "Substituting \\(x = 4\\) into the derivative of \\(C\\) gives the gradient of the tangent at \\(P\\) as \\(-2\\).",
+          "passed": true
+        },
+        {
+          "step_type": "find normal gradient",
+          "input_expr": "-2",
+          "output_expr": "0.5",
+          "explanation": "The gradient of the normal is the negative reciprocal of the gradient of the tangent, which is \\(0.5\\).",
+          "passed": true
+        },
+        {
+          "step_type": "form equation of normal",
+          "input_expr": "0.5, 4, 8",
+          "output_expr": "3y = x + 20",
+          "explanation": "Using the point-slope form of a line, with the point \\(P(4,8)\\) and gradient \\(0.5\\), the equation of the normal is \\(3y = x + 20\\).",
+          "passed": true
+        }
+      ],
+      "verified": true
+    },
+    {
+      "question_index": 4,
+      "question_text": "(d) The normal to \\( C \\) at \\( P \\) cuts the \\( x \\)-axis at the point \\( Q \\). Find the length \\( P Q \\), giving your answer in a simplified surd form.",
+      "difficulty": "hard",
+      "steps_verified": [
+        {
+          "step_type": "find x-intercept",
+          "input_expr": "3y = x + 20",
+          "output_expr": "-20",
+          "explanation": "Setting \\(y = 0\\) in the equation of the normal and solving for \\(x\\) gives the x-coordinate of \\(Q\\) as \\(-20\\).",
+          "passed": true
+        },
+        {
+          "step_type": "calculate distance",
+          "input_expr": "P(4, 8), Q(-20, 0)",
+          "output_expr": "8 \\sqrt{10}",
+          "explanation": "Using the distance formula between points \\(P(4, 8)\\) and \\(Q(-20, 0)\\), the length \\(PQ\\) is calculated as \\(8 \\sqrt{10}\\).",
+          "passed": true
+        }
+      ],
+      "verified": true
+    }
+  ]
+}

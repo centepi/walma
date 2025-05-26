@@ -1,0 +1,48 @@
+{
+  "source_file": "calc1_q3.json",
+  "questions_checked": [
+    {
+      "question_index": 1,
+      "question_text": "The curve C has equation \\( y=\\frac{(x+3)(x-8)}{x}, x>0 \\).\n\n(a) Find \\( \\frac{\\mathrm{d} y}{\\mathrm{~d} x} \\) in its simplest form.\n\n(b) Find an equation of the tangent to \\( C \\) at the point where \\( x=2 \\).",
+      "difficulty": "medium",
+      "steps_verified": [
+        {
+          "step_type": "simplification",
+          "input_expr": "y=\\frac{(x+3)(x-8)}{x}",
+          "output_expr": "y=x-5+\\frac{24}{x}",
+          "explanation": "First, simplify the expression for y by expanding the numerator and then dividing each term by x.",
+          "passed": true
+        },
+        {
+          "step_type": "differentiation",
+          "input_expr": "y=x-5+\\frac{24}{x}",
+          "output_expr": "\\frac{dy}{dx}=1-\\frac{24}{x^2}",
+          "explanation": "Differentiate the simplified expression for y with respect to x using the power rule and the chain rule.",
+          "passed": true
+        },
+        {
+          "step_type": "evaluate function",
+          "input_expr": "y=x-5+\\frac{24}{x}",
+          "output_expr": "y=7",
+          "explanation": "Evaluate y at x=2 to find the y-coordinate of the point of tangency.",
+          "passed": true
+        },
+        {
+          "step_type": "evaluate derivative",
+          "input_expr": "\\frac{dy}{dx}=1-\\frac{24}{x^2}",
+          "output_expr": "dy/dx=-5",
+          "explanation": "Evaluate the derivative at x=2 to find the slope of the tangent line at that point.",
+          "passed": true
+        },
+        {
+          "step_type": "equation of tangent",
+          "input_expr": "point (2, 7) and slope -5",
+          "output_expr": "y=7x-29",
+          "explanation": "Use the point-slope form of the equation of a line to find the equation of the tangent line at the point (2, 7) with slope -5.",
+          "passed": true
+        }
+      ],
+      "verified": true
+    }
+  ]
+}

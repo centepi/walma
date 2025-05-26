@@ -1,0 +1,33 @@
+[
+  {
+    "question_text": "Given that \\( y = 4x^3 - 1 + 2x^{\\frac{1}{2}}, x > 0 \\), find \\( \\frac{\\mathrm{d}y}{\\mathrm{d}x} \\).",
+    "difficulty": "easy",
+    "diagram_equations": [],
+    "solution_steps": [
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "4x^3",
+        "output_expr": "12x^2",
+        "explanation": "Differentiating \\(4x^3\\) with respect to \\(x\\) using the power rule, the derivative is \\(3 \\times 4x^{3-1} = 12x^2\\)."
+      },
+      {
+        "step_type": "differentiation (constant)",
+        "input_expr": "-1",
+        "output_expr": "0",
+        "explanation": "The derivative of a constant (-1) is 0."
+      },
+      {
+        "step_type": "differentiation (power rule)",
+        "input_expr": "2x^{\\frac{1}{2}}",
+        "output_expr": "x^{-\\frac{1}{2}}",
+        "explanation": "Differentiating \\(2x^{\\frac{1}{2}}\\) with respect to \\(x\\) using the power rule, the derivative is \\(\\frac{1}{2} \\times 2x^{\\frac{1}{2}-1} = x^{-\\frac{1}{2}}\\)."
+      },
+      {
+        "step_type": "sum of derivatives",
+        "input_expr": "12x^2 + 0 + x^{-\\frac{1}{2}}",
+        "output_expr": "12x^2 + x^{-\\frac{1}{2}}",
+        "explanation": "Summing the derivatives, we get \\(12x^2 + 0 + x^{-\\frac{1}{2}} = 12x^2 + x^{-\\frac{1}{2}}\\)."
+      }
+    ]
+  }
+]

@@ -1,0 +1,62 @@
+{
+  "source_file": "calc1_q14.json",
+  "questions_checked": [
+    {
+      "question_index": 1,
+      "question_text": "Given that \\( y = 2x^2 - \frac{6}{x^3}, x \\neq 0 \\),\\n(a) find \\( \\frac{dy}{dx} \\),\\n(b) evaluate \\( \\int_1^3 y \\, dx \\).",
+      "difficulty": "medium",
+      "steps_verified": [
+        {
+          "step_type": "differentiation (power rule)",
+          "input_expr": "2x^2",
+          "output_expr": "4x",
+          "explanation": "Differentiating \\(2x^2\\) with respect to \\(x\\) using the power rule, the derivative of \\(x^n\\) is \\(nx^{n-1}\\), gives \\(4x\\).",
+          "passed": true
+        },
+        {
+          "step_type": "differentiation (power rule)",
+          "input_expr": "-\\frac{6}{x^3}",
+          "output_expr": "18x^{-4}",
+          "explanation": "Differentiating \\(-\\frac{6}{x^3}\\) with respect to \\(x\\), which is \\(-6x^{-3}\\), using the power rule, gives \\(18x^{-4}\\).",
+          "passed": true
+        },
+        {
+          "step_type": "combine derivatives",
+          "input_expr": "4x + 18x^{-4}",
+          "output_expr": "4x - 18x^{-4}",
+          "explanation": "Combining the derivatives of the individual terms, we get \\(4x - 18x^{-4}\\).",
+          "passed": true
+        },
+        {
+          "step_type": "integration (power rule)",
+          "input_expr": "2x^2",
+          "output_expr": "\\frac{2}{3}x^3",
+          "explanation": "Integrating \\(2x^2\\) with respect to \\(x\\) using the power rule, the integral of \\(x^n\\) is \\(\\frac{x^{n+1}}{n+1} + C\\), gives \\(\\frac{2}{3}x^3\\).",
+          "passed": true
+        },
+        {
+          "step_type": "integration (power rule)",
+          "input_expr": "-\\frac{6}{x^3}",
+          "output_expr": "\\frac{3}{x^2}",
+          "explanation": "Integrating \\(-\\frac{6}{x^3}\\) with respect to \\(x\\), which is \\(-6x^{-3}\\), using the power rule, gives \\(\\frac{3}{x^2}\\).",
+          "passed": true
+        },
+        {
+          "step_type": "combine integrals",
+          "input_expr": "\\frac{2}{3}x^3 - \\frac{3}{x^2}",
+          "output_expr": "\\left[\\frac{2}{3}x^3 - \\frac{3}{x^2}\\right]_1^3",
+          "explanation": "Combining the integrals of the individual terms, we get \\(\\frac{2}{3}x^3 - \\frac{3}{x^2}\\).",
+          "passed": true
+        },
+        {
+          "step_type": "evaluate definite integral",
+          "input_expr": "\\left[\\frac{2}{3}x^3 - \\frac{3}{x^2}\\right]_1^3",
+          "output_expr": "\\frac{44}{3}",
+          "explanation": "Evaluating the definite integral from \\(x = 1\\) to \\(x = 3\\), we substitute these values into the expression and simplify to find the area under the curve, which results in \\(\\frac{44}{3}\\).",
+          "passed": true
+        }
+      ],
+      "verified": true
+    }
+  ]
+}
