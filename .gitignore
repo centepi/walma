@@ -29,3 +29,14 @@ src/serviceAccountKey.json
 # Secret config files
 .env
 key.txt
+
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments (ignore any folder named venv or .venv)
+venv/
+.venv/
+
