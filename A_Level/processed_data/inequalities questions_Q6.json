@@ -1,0 +1,14 @@
+{
+    "question_stem": "Consider the inequality \\(6 + 2x^2 > x(x + 4)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of values of \\(x\\) that satisfy the inequality.",
+            "solution_text": "We are given the inequality \\(6 + 2x^2 > x(x + 4)\\).\nExpanding the right side gives \\(6 + 2x^2 > x^2 + 4x\\).\nSubtracting \\(x^2 + 4x\\) from both sides gives \\(x^2 - 4x + 6 > 0\\).\nCompleting the square, we have \\((x - 2)^2 - 4 + 6 > 0\\), which simplifies to \\((x - 2)^2 + 2 > 0\\).\nSince \\((x-2)^2 \\ge 0\\) for all real values of \\(x\\), we know that \\((x - 2)^2 + 2 \\ge 2\\) for all real values of \\(x\\).  Therefore, \\((x - 2)^2 + 2\\) is always greater than 0.\nThus, the inequality holds for all real values of \\(x\\).  The solution set is \\(x \\in \\mathbb{R}\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "6",
+    "total_marks": 3
+}

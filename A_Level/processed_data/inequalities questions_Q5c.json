@@ -1,0 +1,14 @@
+{
+    "question_stem": "A particle moves along a straight line. Its displacement, \\(s\\) metres, from a fixed point O at time \\(t\\) seconds is given by \\(s = t^2 - 5t + 6\\).  The particle's velocity, \\(v\\) m/s, is given by \\(v = 2t - 5\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the times when both the particle's displacement is positive AND its velocity is negative.",
+            "solution_text": "The displacement is positive when \\(t^2 - 5t + 6 > 0\\).  This quadratic factorises to \\((t-2)(t-3) > 0\\), which gives the solution \\(t < 2\\) or \\(t > 3\\).\nThe velocity is negative when \\(2t - 5 < 0\\), which simplifies to \\(t < \\frac{5}{2}\\) or \\(t < 2.5\\).\nWe are looking for the values of \\(t\\) that satisfy BOTH inequalities. Combining the solutions, we get \\(t < 2\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "5c",
+    "total_marks": 3
+}

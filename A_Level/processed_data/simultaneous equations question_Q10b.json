@@ -1,0 +1,14 @@
+{
+    "question_stem": "By eliminating y from the equations \\(x + 2y = 5\\) and \\(x^2 - 3xy + 4 = 0\\), the equation \\(2x^2 - 5x + 4 = 0\\) is formed.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Hence solve the simultaneous equations \\(x + 2y = 5\\) and \\(x^2 - 3xy + 4 = 0\\).",
+            "solution_text": "From \\(2x^2 - 5x + 4 = 0\\), we use the quadratic formula to solve for x:  \\(x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} = \\frac{5 \\pm \\sqrt{25 - 4(2)(4)}}{2(2)} = \\frac{5 \\pm \\sqrt{-7}}{4}\\). Since the discriminant is negative, there are no real solutions for x. Therefore, the simultaneous equations have no real solutions."
+        }
+    ],
+    "calculator_required": true,
+    "topic": "simultaneous equations question",
+    "question_number": "10b",
+    "total_marks": 3
+}

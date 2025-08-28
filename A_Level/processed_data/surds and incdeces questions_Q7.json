@@ -1,0 +1,14 @@
+{
+    "question_stem": "Given that \\(9^{2x} = 27^{x+2}\\), find the value of \\(x\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Solve for \\(x\\).",
+            "solution_text": "We can rewrite both sides of the equation using the same base. Since 9 = \\(3^2\\) and 27 = \\(3^3\\), the equation can be rewritten as \\((3^2)^{2x} = (3^3)^{x+2}\\).  Using the power of a power rule, this simplifies to \\(3^{4x} = 3^{3(x+2)}\\) or \\(3^{4x} = 3^{3x+6}\\).  Since the bases are the same, the exponents must be equal: \\(4x = 3x + 6\\). Subtracting \\(3x\\) from both sides gives \\(x = 6\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "7",
+    "total_marks": 3
+}

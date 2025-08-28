@@ -1,0 +1,14 @@
+{
+    "question_stem": "Simplify the following expression:",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Expand and simplify \\((5 - 2\\sqrt{7})(5 + 2\\sqrt{7})\\).",
+            "solution_text": "Expanding the expression using the difference of two squares, we have:\n\\((5 - 2\\sqrt{7})(5 + 2\\sqrt{7}) = 5^2 - (2\\sqrt{7})^2\\\n= 25 - 4(7)\\\n= 25 - 28\\\n= -3"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "9a",
+    "total_marks": 2
+}

@@ -1,0 +1,51 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) is shown below. It passes through the points (1, 2), (0, -1) and (3, 4).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the points on the graph of \\(y = 2g(x)\\) corresponding to the points (1, 2), (0, -1) and (3, 4) on the graph of \\(y=g(x)\\).",
+            "solution_text": "The transformation \\(y = 2g(x)\\) represents a stretch parallel to the y-axis by a scale factor of 2. This means the x-coordinates of the points remain unchanged, while the y-coordinates are multiplied by 2.\n\nTherefore, the point (1, 2) transforms to (1, 4).\nThe point (0, -1) transforms to (0, -2).\nThe point (3, 4) transforms to (3, 8)."
+        }
+    ],
+    "calculator_required": false,
+    "visual_data": {
+        "graphs": [
+            {
+                "id": "g1",
+                "label": "y = g(x)",
+                "explicit_function": null,
+                "visual_features": {
+                    "type": "curve",
+                    "x_intercepts": null,
+                    "y_intercept": -1,
+                    "axes_range": {
+                        "x_min": -1,
+                        "x_max": 4,
+                        "y_min": -2,
+                        "y_max": 5
+                    }
+                }
+            }
+        ],
+        "labeled_points": [
+            {
+                "label": "(1, 2)",
+                "x": 1,
+                "y": 2
+            },
+            {
+                "label": "(0, -1)",
+                "x": 0,
+                "y": -1
+            },
+            {
+                "label": "(3, 4)",
+                "x": 3,
+                "y": 4
+            }
+        ]
+    },
+    "topic": "graph transformations questions",
+    "question_number": "1a",
+    "total_marks": 2
+}

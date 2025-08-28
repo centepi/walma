@@ -1,0 +1,14 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) passes through the points \\((-1, 3)\\), \\((0, -2)\\), and \\((2, 6)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the corresponding points on the graph of \\(y = \\frac{1}{2}g(x)\\).",
+            "solution_text": "To find the corresponding points on the graph of \\(y = \\frac{1}{2}g(x)\\), we multiply the y-coordinates of the original points by \\(\\frac{1}{2}\\). \n\nOriginal point \\((-1, 3)\\) becomes \\((-1, \\frac{1}{2}(3)) = (-1, \\frac{3}{2})\\). \nOriginal point \\((0, -2)\\) becomes \\((0, \\frac{1}{2}(-2)) = (0, -1)\\). \nOriginal point \\((2, 6)\\) becomes \\((2, \\frac{1}{2}(6)) = (2, 3)\\). \n\nTherefore, the corresponding points are \\((-1, \\frac{3}{2})\\), \\((0, -1)\\), and \\((2, 3)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "10b",
+    "total_marks": 3
+}

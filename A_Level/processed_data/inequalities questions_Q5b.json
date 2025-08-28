@@ -1,0 +1,14 @@
+{
+    "question_stem": "A particle moves along a straight line. Its displacement, \\(s\\) metres, from a fixed point O at time \\(t\\) seconds is given by \\(s = 3t^2 - 16t + 5\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the times when the particle is less than 5 metres from O.",
+            "solution_text": "We are given the displacement equation \\(s = 3t^2 - 16t + 5\\) and we need to find when \\(s < 5\\). So, \\(3t^2 - 16t + 5 < 5\\).  Subtracting 5 from both sides gives \\(3t^2 - 16t < 0\\). Factorising this gives \\(t(3t - 16) < 0\\). The critical values are \\(t = 0\\) and \\(t = \\frac{16}{3}\\). Since the quadratic \\(3t^2 - 16t\\) has a positive coefficient for the \\(t^2\\) term, its graph is a parabola that opens upwards. Thus, the inequality \\(3t^2 - 16t < 0\\) is satisfied between the roots.  Therefore, the particle is less than 5 metres from O when \\(0 < t < \\frac{16}{3}\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "5b",
+    "total_marks": 3
+}

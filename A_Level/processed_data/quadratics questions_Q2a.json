@@ -1,0 +1,14 @@
+{
+    "question_stem": "A curve is defined by the equation \\(y = 2x^2 - 5x + m\\), where \\(m\\) is a constant.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of values of \\(m\\) for which the curve does not intersect the x-axis.",
+            "solution_text": "For the curve not to intersect the x-axis, the equation \\(2x^2 - 5x + m = 0\\) must have no real solutions.  This means the discriminant must be less than zero.\\n\\nThe discriminant is given by \\(b^2 - 4ac\\), where \\(a=2\\), \\(b=-5\\), and \\(c=m\\).  So, we have:\\n\\n\\(\\left(-5\\right)^2 - 4(2)(m) < 0\\)\\n\\(25 - 8m < 0\\)\\n\\(25 < 8m\\)\\n\\(m > \\frac{25}{8}\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "2a",
+    "total_marks": 3
+}

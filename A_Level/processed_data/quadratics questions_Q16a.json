@@ -1,0 +1,14 @@
+{
+    "question_stem": "The function g(x) is defined as g(x) = x² + 8x + 5.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Express g(x) in the form (x + a)² + b, where a and b are integers.",
+            "solution_text": "To complete the square for g(x) = x² + 8x + 5, we take half the coefficient of the x term (which is 8), giving us 4.  Therefore, we have (x + 4)². Expanding this gives x² + 8x + 16.  To get from this to the original expression, we need to subtract 11. Thus, g(x) = (x + 4)² - 11.  So a = 4 and b = -11."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "16a",
+    "total_marks": 3
+}

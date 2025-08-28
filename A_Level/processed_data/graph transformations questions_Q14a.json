@@ -1,0 +1,14 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) has a minimum point at \\((3, -2)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the minimum point of the graph of \\(y = g(x) + 5\\).",
+            "solution_text": "The transformation \\(y = g(x) + 5\\) represents a vertical translation of the graph \\(y = g(x)\\) upwards by 5 units.  Therefore, the minimum point of \\(y = g(x) + 5\\) will have the same x-coordinate as the minimum point of \\(y = g(x)\\), but the y-coordinate will be increased by 5.  The original minimum point is \\((3, -2)\\).  Adding 5 to the y-coordinate gives \\(-2 + 5 = 3\\).  Therefore, the minimum point of \\(y = g(x) + 5\\) is at \\((3, 3)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "14a",
+    "total_marks": 1
+}

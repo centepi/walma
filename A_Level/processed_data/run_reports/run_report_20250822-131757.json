@@ -1,0 +1,35 @@
+{
+  "started_at": "20250822-131757",
+  "log_file": "/Users/bxn/walma/A_Level/logs/pipeline-20250822-131757-p4924.log",
+  "jobs": [
+    {
+      "job_name": "simultaneous equations question",
+      "type": "paired",
+      "groups": 12,
+      "parts_processed": 20,
+      "verified": 18,
+      "rejected": 2,
+      "uploaded_ok": 18,
+      "upload_failed": 0,
+      "failures": [
+        {
+          "question_id": "10a",
+          "reason": "The solution has an error in the expansion and simplification.  (5-2y)^2 should expand to 25 - 20y + 4y^2. The solution…"
+        },
+        {
+          "question_id": "12c",
+          "reason": "The solution is incorrect. It repeatedly calculates the product of gradients and compares it to -1.  Two lines are perp…"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "jobs": 1,
+    "groups": 12,
+    "parts_processed": 20,
+    "verified": 18,
+    "rejected": 2,
+    "uploaded_ok": 18,
+    "upload_failed": 0
+  }
+}

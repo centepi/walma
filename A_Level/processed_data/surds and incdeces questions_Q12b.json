@@ -1,0 +1,14 @@
+{
+    "question_stem": "A curve is defined by the equation \\(y = 6x^\\frac{5}{2} - 4x^3 + \\frac{3}{x} + 5\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find \\(\\frac{dy}{dx}\\), simplifying the coefficient of each term.",
+            "solution_text": "Given \\(y = 6x^\\frac{5}{2} - 4x^3 + \\frac{3}{x} + 5\\), we can rewrite this as \\(y = 6x^\\frac{5}{2} - 4x^3 + 3x^{-1} + 5\\) to make differentiation easier.\n\nApplying the power rule for differentiation, where \\(\\frac{d}{dx}(ax^n) = nax^{n-1}\\), we differentiate each term separately:\n\n\\(\\frac{d}{dx}(6x^\\frac{5}{2}) = \\frac{5}{2} \\cdot 6x^{\\frac{5}{2} - 1} = 15x^\\frac{3}{2}\\)\n\\(\\frac{d}{dx}(-4x^3) = 3 \\cdot (-4)x^{3-1} = -12x^2\\)\n\\(\\frac{d}{dx}(3x^{-1}) = -1 \\cdot 3x^{-1-1} = -3x^{-2} = -\\frac{3}{x^2}\\)\n\\(\\frac{d}{dx}(5) = 0\\) (since the derivative of a constant is 0)\n\nCombining these results, we get:\n\n\\(\\frac{dy}{dx} = 15x^\\frac{3}{2} - 12x^2 - \\frac{3}{x^2}\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "12b",
+    "total_marks": 4
+}

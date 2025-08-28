@@ -1,0 +1,14 @@
+{
+    "question_stem": "The volume, \\(V\\) cm³, of a cuboid is given by the expression \\(V = 2t³ + 10t² + 12t\\), where \\(t\\) is a positive real number.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Factorise the expression for \\(V\\) completely.",
+            "solution_text": "We can factorise the expression for \\(V\\) as follows:\n\\(V = 2t³ + 10t² + 12t\\)\n\\(V = 2t(t² + 5t + 6)\\)\n\\(V = 2t(t + 2)(t + 3)\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "5a",
+    "total_marks": 2
+}

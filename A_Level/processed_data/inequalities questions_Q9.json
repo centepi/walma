@@ -1,0 +1,14 @@
+{
+    "question_stem": "The equation \\(3x^2 + 5x + p = 0\\), where \\(p\\) is a constant, has two distinct real roots.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of possible values of \\(p\\).",
+            "solution_text": "For the quadratic equation \\(ax^2 + bx + c = 0\\) to have two distinct real roots, the discriminant \\(b^2 - 4ac\\) must be greater than 0.\n\nIn this case, \\(a=3\\), \\(b=5\\), and \\(c=p\\).  So we have:\n\n\\(5^2 - 4(3)(p) > 0\\)\n\\(25 - 12p > 0\\)\n\\(25 > 12p\\)\n\\(p < \\frac{25}{12}\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "9",
+    "total_marks": 3
+}

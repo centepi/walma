@@ -1,0 +1,39 @@
+{
+  "started_at": "20250822-143724",
+  "log_file": "/Users/bxn/walma/A_Level/logs/run_20250822-143724.log",
+  "jobs": [
+    {
+      "job_name": "inequalities questions",
+      "type": "paired",
+      "groups": 11,
+      "parts_processed": 24,
+      "verified": 21,
+      "rejected": 3,
+      "uploaded_ok": 21,
+      "upload_failed": 0,
+      "failures": [
+        {
+          "question_id": "7b",
+          "reason": "The final answer is incorrect. While the individual inequalities are solved correctly, the combination of the solutions is flawed. The…"
+        },
+        {
+          "question_id": "10",
+          "reason": "The question asks for when the particle is *more than* 11 metres from O, meaning we are looking for when the magnitude of the displacement…"
+        },
+        {
+          "question_id": "11a",
+          "reason": "The question asks for a linear inequality in x representing the perimeter constraint. The solution derives an inequality for x alone (x ≤…"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "jobs": 1,
+    "groups": 11,
+    "parts_processed": 24,
+    "verified": 21,
+    "rejected": 3,
+    "uploaded_ok": 21,
+    "upload_failed": 0
+  }
+}

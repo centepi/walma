@@ -1,0 +1,14 @@
+{
+    "question_stem": "The function \\(g(x)\\) is defined as \\(g(x) = kf(x+5)\\), where \\(f(x) = x^2 - 3x + 2\\).  If \\(g(0) = 14\\),",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Write down the value of the constant \\(k\\).",
+            "solution_text": "We are given \\(g(x) = kf(x+5)\\) and \\(g(0) = 14\\). Substituting \\(x=0\\) into the equation for \\(g(x)\\) gives \\(g(0) = kf(0+5) = kf(5)\\).\nSince \\(f(x) = x^2 - 3x + 2\\), we have \\(f(5) = 5^2 - 3(5) + 2 = 25 - 15 + 2 = 12\\).\nTherefore, \\(g(0) = k(12) = 12k\\). We are given that \\(g(0) = 14\\), so \\(12k = 14\\). Dividing both sides by 12 gives \\(k = \\frac{14}{12} = \\frac{7}{6}\\). Thus, \\(k = \\frac{7}{6}\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "2c",
+    "total_marks": 2
+}

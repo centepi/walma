@@ -1,0 +1,645 @@
+{
+    "paired_refs": [
+        {
+            "question_id": "1a",
+            "original_question": {
+                "id": "1a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "sin(x - 20°) = 1/√2",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "1a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "Add 20 (for at least one angle)",
+                "pedagogical_notes": "",
+                "page_number": 0
+            }
+        },
+        {
+            "question_id": "1b",
+            "original_question": {
+                "id": "1b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "cos 3x = 1/2",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "1b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "Dividing by 3 (for at least one angle)\n40 80 160 200 280 320",
+                "pedagogical_notes": "",
+                "page_number": 0
+            }
+        },
+        {
+            "question_id": "2a",
+            "original_question": {
+                "id": "2a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "Given that 5sin θ = 2cosθ, find the value of tan θ.",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "2a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "tan θ = \\frac{2}{5} (or 0.4)",
+                "pedagogical_notes": "",
+                "page_number": 0
+            }
+        },
+        {
+            "question_id": "2b",
+            "original_question": {
+                "id": "2b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "Solve, for 0 ≤ x < 360°,\n5sin 2x = 2cos 2x,\ngiving your answers to 1 decimal place.",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "2b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "awrt 21.8 (α)\n180+α (= 201.8), or 90+(α/2) (if division by 2 has already occurred)\n(α found from tan 2x = ... or tan x = ... or sin 2x = ±... or cos 2x = ±...)\n360+α (= 381.8), or 180+(α/2)\n(α found from tan 2x = ... or sin 2x = ... or cos 2x = ...)\nOR 540+α (= 561.8), or 270+(α/2)\n(α found from tan 2x = ...)\nDividing at least one of the angles by 2\n(α found from tan 2x = ... or sin 2x = ... or cos 2x = ...)\nx = 10.9, 100.9, 190.9, 280.9 (Allow awrt)",
+                "pedagogical_notes": "Requires the correct value with no incorrect working seen.\n(Also allow awrt 68.2. ft from tan θ = \\frac{5}{2} in (a), but no other ft)\n(This value must be seen in part (b). It may be implied by a correct solution, e.g. 10.9)",
+                "page_number": 0
+            }
+        },
+        {
+            "question_id": "3i",
+            "original_question": {
+                "id": "3i",
+                "type": "roman",
+                "raw_label": "(i)",
+                "content": "Solve, for 0 ≤ θ < 360°, the equation\n9sin(θ + 60°) = 4\ngiving your answers to 1 decimal place.\nYou must show each step of your working.",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "3i",
+                "type": "roman",
+                "raw_label": "(i)",
+                "content": "9sin(θ + 60°) = 4; 0 ≤ θ < 360°\nsin(θ + 60°) = ⁴⁄₉ , so (θ + 60°) = 26.3877...\n(α = 26.3877...)\nSo, θ + 60° = {153.6122..., 386.3877...}\nand θ = {93.6122..., 326.3877...}",
+                "pedagogical_notes": "Sight of sin⁻¹(⁴⁄₉) or awrt 26.4° or 0.461°\nCan also be implied for θ = awrt -33.6 (i.e. 26.4 – 60)\nθ + 60° = either \"180 – their α\" or \"360 + their α\" and not for θ = either \"180 – their α\" or \"360 + their α\". This can be implied by later working. The candidate's α could also be in radians but do not allow mixing of degrees and radians.\nAt least one of awrt 93.6° or awrt 326.4°\nBoth awrt 93.6° and awrt 326.4°\nBoth answers are cso and must come from correct work\nIgnore extra solutions outside the range.\nIn an otherwise fully correct solution deduct the final A1 for any extra solutions in range",
+                "page_number": 1
+            }
+        },
+        {
+            "question_id": "3ii",
+            "original_question": {
+                "id": "3ii",
+                "type": "roman",
+                "raw_label": "(ii)",
+                "content": "Solve, for −180 ≤ x < 180°, the equation\n2tan x − 3sin x = 0\ngiving your answers to 2 decimal places where appropriate.\n[Solutions based entirely on graphical or numerical methods are not acceptable.]",
+                "pedagogical_notes": "",
+                "page_number": 0
+            },
+            "original_answer": {
+                "id": "3ii",
+                "type": "roman",
+                "raw_label": "(ii)",
+                "content": "2(sin x / cos x) – 3sin x = 0\nNote: Applies tan x = sin x / cos x\n2sin x – 3sin x cos x = 0\nsin x(2 – 3cos x) = 0\ncos x = ⅔\nx = awrt {±48.13}",
+                "pedagogical_notes": "Applies tan x = sin x / cos x\ncan be implied by 2tan x – 3sin x = 0 ⇒ tan x(2 – 3cos x)\nYou can apply ft for x = ±α, where α = cos⁻¹k and -1 ≤ k ≤ 1",
+                "page_number": 1
+            }
+        },
+        {
+            "question_id": "4a",
+            "original_question": {
+                "id": "4a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "cos²x = 8sin²x − 6sin x\n(3sin x − 1)² = 2",
+                "pedagogical_notes": "",
+                "page_number": 1
+            },
+            "original_answer": {
+                "id": "4a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "Way 1\n1-sin²x = 8sin²x-6sinx\nE.g. 9sin²x-6sinx = 1\nor\n9 sin²x-6sinx-1=0 or\n9 sin²x-6sinx+1=2\nSo 9sin²x-6sinx+1=2 or\n(3sinx-1)²-2=0\nso (3sinx-1)² = 2 or\n2 = (3 sinx-1)² *\nWay 2\n2=(3sinx-1)² gives 9 sin²x-6sinx+1=2\nso sin²x + 8sin²x-6sinx+1=2\nso 8 sin²x-6sinx = 1-sin²x\n8sin²x-6sinx = cos²x *",
+                "pedagogical_notes": "Uses cos²x=1-sin²x\nCollects sin²x terms to form a three term quadratic or into a suitable completed square format.\nMay be sign slips in the collection of terms.\ncso This needs an intermediate step from 3 term quadratic and no errors in answer and printed answer stated but allow 2 = (3sinx-1)². If sin is used throughout instead of sinx it is A0.",
+                "page_number": 2
+            }
+        },
+        {
+            "question_id": "4b",
+            "original_question": {
+                "id": "4b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "cos²x = 8sin²x − 6sin x",
+                "pedagogical_notes": "",
+                "page_number": 1
+            },
+            "original_answer": {
+                "id": "4b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "Way 1: (3sinx-1) = (±)√2\nsin x = 1±√2\n           3\nor awrt 0.8047 and awrt-0.1381\nx=53.58, 126.42 (or 126.41), 352.06, 187.94\nWay 2: Expands (3sinx-1)² = 2 and uses quadratic formula on 3TQ",
+                "pedagogical_notes": "Square roots both sides (Way 1), or expands and uses quadratic formula (Way 2) Attempts at factorization after expanding are M0.\nBoth correct answers for sinx (need plus and minus). Need not be simplified.\nUses inverse sin to give one of the given correct answers\nNeed two correct angles (allow awrt) Note that the scheme allows 126.41 in place of 126.42 though 126.42 is preferred\nAll four solutions correct (Extra solutions in range lose this A mark, but outside range - ignore)\n(Premature approximation:- in the final three marks lose first Al then ft other angles for second A mark)\nDo not require degrees symbol for the marks\nSpecial case: Working in radians\nM1A1A0 for the correct 0.94, 2.21, 6.14, 3.28",
+                "page_number": 2
+            }
+        },
+        {
+            "question_id": "5ii",
+            "original_question": {
+                "id": "5ii",
+                "type": "roman",
+                "raw_label": "(ii)",
+                "content": "9cos²x − 11cos x + 3sin²x = 0",
+                "pedagogical_notes": "",
+                "page_number": 1
+            },
+            "original_answer": {
+                "id": "5b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "9cos²x-11cosx+3(1-cos²x)=0 or 6cos²x-11cosx+3(sin²x+cos²x) = 0\n6cos²x-11cosx+3=0 {as (sin²x+cos²x)=1}\n(3cosx-1)(2cosx-3)=0 implies cos x =\n(\\frac{1}{3}, \\frac{3}{2})\nx=70.5\nx=360-\"70.5\"\nx=289.5",
+                "pedagogical_notes": "Use of sin²x =(1-cos²x) or (sin²x+cos²x)=1 in the given equation\nCorrect three term quadratic in any equivalent form\nUses standard method to solve quadratic and obtains cosx =\nA1 for \\frac{1}{3} with \\frac{3}{2} ignored but A0 if \\frac{3}{2} is incorrect\n70.5 or answers which round to this value\n360-arcos(their1/3) (or 2π - arccos(their1/3) in radians)\nSecond answer\nWorking in radians in (b) may earn M1A1M1A1B0M1A0\nExtra values in the range coming from arcos (1/3) - deduct final A mark - so A0",
+                "page_number": 3
+            }
+        },
+        {
+            "question_id": "6a",
+            "original_question": {
+                "id": "6a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "$\\frac{10sin^2\\theta - 7cos\\theta + 2}{3 + 2cos\\theta} = 4 - 5cos\\theta$",
+                "pedagogical_notes": "",
+                "page_number": 1
+            },
+            "original_answer": {
+                "id": "6a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "10sin²θ-7cosθ+2 = 10(1-cos²θ)-7cosθ+2\n                      3+2cosθ                  3+2cosθ\n= 12-7cosθ-10cos²θ\n     3+2cosθ\n= (3+2cosθ)(4-5cosθ)\n     3+2cosθ\n= 4-5cosθ*",
+                "pedagogical_notes": "Uses the identity sin²θ=1-cos²θ within the fraction.\nCorrect (simplified) expression in just cosθ 12-7cosθ-10cos²θ or exact equivalent such as (3+2cosθ)(4-5cosθ). Allow for 12-7u-10u² where they introduce u=cosθ. We would condone mixed variables here.\nA correct attempt to factorise the numerator, usual rules. Allow candidates to use u=cosθ oe.\nA fully correct proof with correct notation and no errors.\nOnly withhold the last mark for (1) Mixed variable e.g θ and x's (2) Poor notation cosθ -> cos²θ or sin² = 1-cos²θ within the solution.\nDon't penalise incomplete lines if it is obvious that it is just part of their working",
+                "page_number": 4
+            }
+        },
+        {
+            "question_id": "6b",
+            "original_question": {
+                "id": "6b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "$\\frac{10sin^2x - 7cosx + 2}{3 + 2cosx} = 4 + 3sinx$",
+                "pedagogical_notes": "",
+                "page_number": 1
+            },
+            "original_answer": {
+                "id": "6b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "4+3sinx = 4-5cosx ⇒ tanx = -5/3\nx = awrt 121°, 301°",
+                "pedagogical_notes": "Attempts to use part (a) and proceeds to an equation of the form tan x = k, k≠0\nCondone θ↔x. Do not condone atanx=0 ⇒ tanx=b ⇒ x=...\nAlternatively squares 3sinx = -5cosx and uses sin²x = 1-cos²x oe to reach sinx = A, -1<A<1 or cosx = B, -1<B<1\nEither x = awrt 121° or 301°. Condone awrt 2.11 or 5.25 which are the radian solutions.\nBoth x = awrt 121° and 301° and no other solutions.\nAnswers without working, or with no incorrect working in (b).\nQuestion states hence or otherwise so allow\nFor 3 marks both x = awrt 121° and 301° and no other solutions.\nFor 1 mark scored SC 100 for either x = awrt 121° or 301°",
+                "page_number": 4
+            }
+        },
+        {
+            "question_id": "7i",
+            "original_question": {
+                "id": "7i",
+                "type": "roman",
+                "raw_label": "(i)",
+                "content": "Solve, for -180° ≤ x < 180°,\ngiving your answers to 1 decimal place.\ntan(x - 40°) = 1.5",
+                "pedagogical_notes": "",
+                "page_number": 2
+            },
+            "original_answer": {
+                "id": "7i",
+                "type": "roman",
+                "raw_label": "(i)",
+                "content": "(|α| = 56.3099...)\nx = {α + 40 = 96.309993...} = awrt 96.3\nx - 40° = -180 + \"56.3099\"...\nx = {-180 + 56.3099... + 40 = -83.6901...} = awrt -83.7\nor x - 40° = -π + \"0.983\"...",
+                "pedagogical_notes": "96.3 by any or no method\nTakes 180 degrees from arctan (1.5) or from their \"96.3\". May be implied by A1. (Could be obtained by adding 180, then subtracting 360).\nawrt -83.7\nExtra answers: ignore extra answers outside range. Any extra answers in range lose final A mark (if earned)\nWorking in radians – could earn M1 for x - 40° = -π + \"0.983\"... so B0M1A0",
+                "page_number": 5
+            }
+        },
+        {
+            "question_id": "7iia",
+            "original_question": {
+                "id": "7iia",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "Show that the equation\nsinθ tanθ = 3cosθ + 2\ncan be written in the form\n4cos²θ + 2cosθ – 1 = 0",
+                "pedagogical_notes": "",
+                "page_number": 2
+            },
+            "original_answer": {
+                "id": "7iia",
+                "type": "alpha",
+                "raw_label": "(ii)(a)",
+                "content": "sinθ / cosθ = 3cosθ + 2\n(1 - cos²θ) / cosθ = 3cosθ + 2",
+                "pedagogical_notes": "uses tan θ = sin θ / cos θ or equivalent in equation (not just tan = sin / cos, with no argument)\nuses sin² θ = 1 - cos² θ (quoted correctly) in equation",
+                "page_number": 5
+            }
+        },
+        {
+            "question_id": "7b",
+            "original_question": {
+                "id": "7b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "Hence solve, for 0 ≤ θ < 360°,\nshowing each stage of your working.\nsinθ tanθ = 3cosθ + 2",
+                "pedagogical_notes": "",
+                "page_number": 2
+            },
+            "original_answer": {
+                "id": "7",
+                "type": "num",
+                "raw_label": "Q7.",
+                "content": null,
+                "pedagogical_notes": "",
+                "page_number": 5
+            }
+        },
+        {
+            "question_id": "8a",
+            "original_question": {
+                "id": "8a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "Show that the equation\ntan 2x = 5 sin 2x\ncan be written in the form\n(1 – 5 cos 2x) sin 2x = 0",
+                "pedagogical_notes": "",
+                "page_number": 2
+            },
+            "original_answer": {
+                "id": "8a",
+                "type": "alpha",
+                "raw_label": "(a)",
+                "content": "States or uses tan 2x = \\frac{sin 2x}{cos 2x}\n\\frac{sin 2x}{cos 2x} = 5 sin 2x \\implies sin 2x - 5 sin 2x cos 2x = 0 \\implies sin 2x (1 - 5 cos 2x) = 0 *",
+                "pedagogical_notes": "Statement that tan θ = \\frac{sin θ}{cos θ} or Replacement of tan (wherever it appears). Must be a correct statement but may involve θ instead of 2x.\nThe answer is given so all steps should be given.\nN.B. sin 2x - 5sin 2x cos 2x = 0 or -5sin 2x cos 2x + sin 2x = 0 or sin 2x(\\frac{1}{cos 2x} - 5) = 0 o.e. must be seen and be followed by printed answer for A1 mark\nsin 2x = 5sin 2x cos 2x is not sufficient.",
+                "page_number": 6
+            }
+        },
+        {
+            "question_id": "8b",
+            "original_question": {
+                "id": "8b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "Hence solve, for 0 ≤ x ≤ 180°,\ngiving your answers to 1 decimal place where appropriate.\nYou must show clearly how you obtained your answers.\ntan 2x = 5 sin 2x",
+                "pedagogical_notes": "",
+                "page_number": 2
+            },
+            "original_answer": {
+                "id": "8b",
+                "type": "alpha",
+                "raw_label": "(b)",
+                "content": "sin 2x = 0 gives 2x = 0, 180, 360   so x = 0, 90, 180\ncos 2x = \\frac{1}{5} gives 2x = 78.46 (or 78.5 or 78.4)  or  2x = 281.54 (or 281.6)\nx = 39.2 (or 39.3), 140.8 (or 141)",
+                "pedagogical_notes": "Statement of 0 and 180 with no working gets B1 B0 (bod) as it is two solutions\nThis mark for one of the two statements given (must relate to 2x not just to x)\nfirst A1 for 39.2, second for 140.8\nSpecial case solving cos 2x = -1/5 giving 2x = 101.5 or 258.5 is awarded M1A0A0\n140.8 omitted would give M1A1A0\nAllow answers which round to 39.2 or 39.3 and which round to 140.8 and allow 141\nAnswers in radians lose last A1 awarded (These are 0, 0.68, 1.57, 2.46 and 3.14)\nExcess answers in range lose last A1 Ignore excess answers outside range.\nAll 5 correct answers with no extras and no working gets full marks in part (b). The answers imply the method here",
+                "page_number": 6
+            }
+        }
+    ],
+    "hierarchical_groups": [
+        {
+            "main_pair": {
+                "question_id": "1a",
+                "original_question": {
+                    "id": "1a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "sin(x - 20°) = 1/√2",
+                    "pedagogical_notes": "",
+                    "page_number": 0
+                },
+                "original_answer": {
+                    "id": "1a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "Add 20 (for at least one angle)",
+                    "pedagogical_notes": "",
+                    "page_number": 0
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "1b",
+                    "original_question": {
+                        "id": "1b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "cos 3x = 1/2",
+                        "pedagogical_notes": "",
+                        "page_number": 0
+                    },
+                    "original_answer": {
+                        "id": "1b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "Dividing by 3 (for at least one angle)\n40 80 160 200 280 320",
+                        "pedagogical_notes": "",
+                        "page_number": 0
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "2a",
+                "original_question": {
+                    "id": "2a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "Given that 5sin θ = 2cosθ, find the value of tan θ.",
+                    "pedagogical_notes": "",
+                    "page_number": 0
+                },
+                "original_answer": {
+                    "id": "2a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "tan θ = \\frac{2}{5} (or 0.4)",
+                    "pedagogical_notes": "",
+                    "page_number": 0
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "2b",
+                    "original_question": {
+                        "id": "2b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "Solve, for 0 ≤ x < 360°,\n5sin 2x = 2cos 2x,\ngiving your answers to 1 decimal place.",
+                        "pedagogical_notes": "",
+                        "page_number": 0
+                    },
+                    "original_answer": {
+                        "id": "2b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "awrt 21.8 (α)\n180+α (= 201.8), or 90+(α/2) (if division by 2 has already occurred)\n(α found from tan 2x = ... or tan x = ... or sin 2x = ±... or cos 2x = ±...)\n360+α (= 381.8), or 180+(α/2)\n(α found from tan 2x = ... or sin 2x = ... or cos 2x = ...)\nOR 540+α (= 561.8), or 270+(α/2)\n(α found from tan 2x = ...)\nDividing at least one of the angles by 2\n(α found from tan 2x = ... or sin 2x = ... or cos 2x = ...)\nx = 10.9, 100.9, 190.9, 280.9 (Allow awrt)",
+                        "pedagogical_notes": "Requires the correct value with no incorrect working seen.\n(Also allow awrt 68.2. ft from tan θ = \\frac{5}{2} in (a), but no other ft)\n(This value must be seen in part (b). It may be implied by a correct solution, e.g. 10.9)",
+                        "page_number": 0
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "3i",
+                "original_question": {
+                    "id": "3i",
+                    "type": "roman",
+                    "raw_label": "(i)",
+                    "content": "Solve, for 0 ≤ θ < 360°, the equation\n9sin(θ + 60°) = 4\ngiving your answers to 1 decimal place.\nYou must show each step of your working.",
+                    "pedagogical_notes": "",
+                    "page_number": 0
+                },
+                "original_answer": {
+                    "id": "3i",
+                    "type": "roman",
+                    "raw_label": "(i)",
+                    "content": "9sin(θ + 60°) = 4; 0 ≤ θ < 360°\nsin(θ + 60°) = ⁴⁄₉ , so (θ + 60°) = 26.3877...\n(α = 26.3877...)\nSo, θ + 60° = {153.6122..., 386.3877...}\nand θ = {93.6122..., 326.3877...}",
+                    "pedagogical_notes": "Sight of sin⁻¹(⁴⁄₉) or awrt 26.4° or 0.461°\nCan also be implied for θ = awrt -33.6 (i.e. 26.4 – 60)\nθ + 60° = either \"180 – their α\" or \"360 + their α\" and not for θ = either \"180 – their α\" or \"360 + their α\". This can be implied by later working. The candidate's α could also be in radians but do not allow mixing of degrees and radians.\nAt least one of awrt 93.6° or awrt 326.4°\nBoth awrt 93.6° and awrt 326.4°\nBoth answers are cso and must come from correct work\nIgnore extra solutions outside the range.\nIn an otherwise fully correct solution deduct the final A1 for any extra solutions in range",
+                    "page_number": 1
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "3ii",
+                    "original_question": {
+                        "id": "3ii",
+                        "type": "roman",
+                        "raw_label": "(ii)",
+                        "content": "Solve, for −180 ≤ x < 180°, the equation\n2tan x − 3sin x = 0\ngiving your answers to 2 decimal places where appropriate.\n[Solutions based entirely on graphical or numerical methods are not acceptable.]",
+                        "pedagogical_notes": "",
+                        "page_number": 0
+                    },
+                    "original_answer": {
+                        "id": "3ii",
+                        "type": "roman",
+                        "raw_label": "(ii)",
+                        "content": "2(sin x / cos x) – 3sin x = 0\nNote: Applies tan x = sin x / cos x\n2sin x – 3sin x cos x = 0\nsin x(2 – 3cos x) = 0\ncos x = ⅔\nx = awrt {±48.13}",
+                        "pedagogical_notes": "Applies tan x = sin x / cos x\ncan be implied by 2tan x – 3sin x = 0 ⇒ tan x(2 – 3cos x)\nYou can apply ft for x = ±α, where α = cos⁻¹k and -1 ≤ k ≤ 1",
+                        "page_number": 1
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "4a",
+                "original_question": {
+                    "id": "4a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "cos²x = 8sin²x − 6sin x\n(3sin x − 1)² = 2",
+                    "pedagogical_notes": "",
+                    "page_number": 1
+                },
+                "original_answer": {
+                    "id": "4a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "Way 1\n1-sin²x = 8sin²x-6sinx\nE.g. 9sin²x-6sinx = 1\nor\n9 sin²x-6sinx-1=0 or\n9 sin²x-6sinx+1=2\nSo 9sin²x-6sinx+1=2 or\n(3sinx-1)²-2=0\nso (3sinx-1)² = 2 or\n2 = (3 sinx-1)² *\nWay 2\n2=(3sinx-1)² gives 9 sin²x-6sinx+1=2\nso sin²x + 8sin²x-6sinx+1=2\nso 8 sin²x-6sinx = 1-sin²x\n8sin²x-6sinx = cos²x *",
+                    "pedagogical_notes": "Uses cos²x=1-sin²x\nCollects sin²x terms to form a three term quadratic or into a suitable completed square format.\nMay be sign slips in the collection of terms.\ncso This needs an intermediate step from 3 term quadratic and no errors in answer and printed answer stated but allow 2 = (3sinx-1)². If sin is used throughout instead of sinx it is A0.",
+                    "page_number": 2
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "4b",
+                    "original_question": {
+                        "id": "4b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "cos²x = 8sin²x − 6sin x",
+                        "pedagogical_notes": "",
+                        "page_number": 1
+                    },
+                    "original_answer": {
+                        "id": "4b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "Way 1: (3sinx-1) = (±)√2\nsin x = 1±√2\n           3\nor awrt 0.8047 and awrt-0.1381\nx=53.58, 126.42 (or 126.41), 352.06, 187.94\nWay 2: Expands (3sinx-1)² = 2 and uses quadratic formula on 3TQ",
+                        "pedagogical_notes": "Square roots both sides (Way 1), or expands and uses quadratic formula (Way 2) Attempts at factorization after expanding are M0.\nBoth correct answers for sinx (need plus and minus). Need not be simplified.\nUses inverse sin to give one of the given correct answers\nNeed two correct angles (allow awrt) Note that the scheme allows 126.41 in place of 126.42 though 126.42 is preferred\nAll four solutions correct (Extra solutions in range lose this A mark, but outside range - ignore)\n(Premature approximation:- in the final three marks lose first Al then ft other angles for second A mark)\nDo not require degrees symbol for the marks\nSpecial case: Working in radians\nM1A1A0 for the correct 0.94, 2.21, 6.14, 3.28",
+                        "page_number": 2
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "5ii",
+                "original_question": {
+                    "id": "5ii",
+                    "type": "roman",
+                    "raw_label": "(ii)",
+                    "content": "9cos²x − 11cos x + 3sin²x = 0",
+                    "pedagogical_notes": "",
+                    "page_number": 1
+                },
+                "original_answer": {
+                    "id": "5b",
+                    "type": "alpha",
+                    "raw_label": "(b)",
+                    "content": "9cos²x-11cosx+3(1-cos²x)=0 or 6cos²x-11cosx+3(sin²x+cos²x) = 0\n6cos²x-11cosx+3=0 {as (sin²x+cos²x)=1}\n(3cosx-1)(2cosx-3)=0 implies cos x =\n(\\frac{1}{3}, \\frac{3}{2})\nx=70.5\nx=360-\"70.5\"\nx=289.5",
+                    "pedagogical_notes": "Use of sin²x =(1-cos²x) or (sin²x+cos²x)=1 in the given equation\nCorrect three term quadratic in any equivalent form\nUses standard method to solve quadratic and obtains cosx =\nA1 for \\frac{1}{3} with \\frac{3}{2} ignored but A0 if \\frac{3}{2} is incorrect\n70.5 or answers which round to this value\n360-arcos(their1/3) (or 2π - arccos(their1/3) in radians)\nSecond answer\nWorking in radians in (b) may earn M1A1M1A1B0M1A0\nExtra values in the range coming from arcos (1/3) - deduct final A mark - so A0",
+                    "page_number": 3
+                }
+            },
+            "sub_question_pairs": []
+        },
+        {
+            "main_pair": {
+                "question_id": "6a",
+                "original_question": {
+                    "id": "6a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "$\\frac{10sin^2\\theta - 7cos\\theta + 2}{3 + 2cos\\theta} = 4 - 5cos\\theta$",
+                    "pedagogical_notes": "",
+                    "page_number": 1
+                },
+                "original_answer": {
+                    "id": "6a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "10sin²θ-7cosθ+2 = 10(1-cos²θ)-7cosθ+2\n                      3+2cosθ                  3+2cosθ\n= 12-7cosθ-10cos²θ\n     3+2cosθ\n= (3+2cosθ)(4-5cosθ)\n     3+2cosθ\n= 4-5cosθ*",
+                    "pedagogical_notes": "Uses the identity sin²θ=1-cos²θ within the fraction.\nCorrect (simplified) expression in just cosθ 12-7cosθ-10cos²θ or exact equivalent such as (3+2cosθ)(4-5cosθ). Allow for 12-7u-10u² where they introduce u=cosθ. We would condone mixed variables here.\nA correct attempt to factorise the numerator, usual rules. Allow candidates to use u=cosθ oe.\nA fully correct proof with correct notation and no errors.\nOnly withhold the last mark for (1) Mixed variable e.g θ and x's (2) Poor notation cosθ -> cos²θ or sin² = 1-cos²θ within the solution.\nDon't penalise incomplete lines if it is obvious that it is just part of their working",
+                    "page_number": 4
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "6b",
+                    "original_question": {
+                        "id": "6b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "$\\frac{10sin^2x - 7cosx + 2}{3 + 2cosx} = 4 + 3sinx$",
+                        "pedagogical_notes": "",
+                        "page_number": 1
+                    },
+                    "original_answer": {
+                        "id": "6b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "4+3sinx = 4-5cosx ⇒ tanx = -5/3\nx = awrt 121°, 301°",
+                        "pedagogical_notes": "Attempts to use part (a) and proceeds to an equation of the form tan x = k, k≠0\nCondone θ↔x. Do not condone atanx=0 ⇒ tanx=b ⇒ x=...\nAlternatively squares 3sinx = -5cosx and uses sin²x = 1-cos²x oe to reach sinx = A, -1<A<1 or cosx = B, -1<B<1\nEither x = awrt 121° or 301°. Condone awrt 2.11 or 5.25 which are the radian solutions.\nBoth x = awrt 121° and 301° and no other solutions.\nAnswers without working, or with no incorrect working in (b).\nQuestion states hence or otherwise so allow\nFor 3 marks both x = awrt 121° and 301° and no other solutions.\nFor 1 mark scored SC 100 for either x = awrt 121° or 301°",
+                        "page_number": 4
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "7i",
+                "original_question": {
+                    "id": "7i",
+                    "type": "roman",
+                    "raw_label": "(i)",
+                    "content": "Solve, for -180° ≤ x < 180°,\ngiving your answers to 1 decimal place.\ntan(x - 40°) = 1.5",
+                    "pedagogical_notes": "",
+                    "page_number": 2
+                },
+                "original_answer": {
+                    "id": "7i",
+                    "type": "roman",
+                    "raw_label": "(i)",
+                    "content": "(|α| = 56.3099...)\nx = {α + 40 = 96.309993...} = awrt 96.3\nx - 40° = -180 + \"56.3099\"...\nx = {-180 + 56.3099... + 40 = -83.6901...} = awrt -83.7\nor x - 40° = -π + \"0.983\"...",
+                    "pedagogical_notes": "96.3 by any or no method\nTakes 180 degrees from arctan (1.5) or from their \"96.3\". May be implied by A1. (Could be obtained by adding 180, then subtracting 360).\nawrt -83.7\nExtra answers: ignore extra answers outside range. Any extra answers in range lose final A mark (if earned)\nWorking in radians – could earn M1 for x - 40° = -π + \"0.983\"... so B0M1A0",
+                    "page_number": 5
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "7iia",
+                    "original_question": {
+                        "id": "7iia",
+                        "type": "alpha",
+                        "raw_label": "(a)",
+                        "content": "Show that the equation\nsinθ tanθ = 3cosθ + 2\ncan be written in the form\n4cos²θ + 2cosθ – 1 = 0",
+                        "pedagogical_notes": "",
+                        "page_number": 2
+                    },
+                    "original_answer": {
+                        "id": "7iia",
+                        "type": "alpha",
+                        "raw_label": "(ii)(a)",
+                        "content": "sinθ / cosθ = 3cosθ + 2\n(1 - cos²θ) / cosθ = 3cosθ + 2",
+                        "pedagogical_notes": "uses tan θ = sin θ / cos θ or equivalent in equation (not just tan = sin / cos, with no argument)\nuses sin² θ = 1 - cos² θ (quoted correctly) in equation",
+                        "page_number": 5
+                    }
+                },
+                {
+                    "question_id": "7b",
+                    "original_question": {
+                        "id": "7b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "Hence solve, for 0 ≤ θ < 360°,\nshowing each stage of your working.\nsinθ tanθ = 3cosθ + 2",
+                        "pedagogical_notes": "",
+                        "page_number": 2
+                    },
+                    "original_answer": {
+                        "id": "7",
+                        "type": "num",
+                        "raw_label": "Q7.",
+                        "content": null,
+                        "pedagogical_notes": "",
+                        "page_number": 5
+                    }
+                }
+            ]
+        },
+        {
+            "main_pair": {
+                "question_id": "8a",
+                "original_question": {
+                    "id": "8a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "Show that the equation\ntan 2x = 5 sin 2x\ncan be written in the form\n(1 – 5 cos 2x) sin 2x = 0",
+                    "pedagogical_notes": "",
+                    "page_number": 2
+                },
+                "original_answer": {
+                    "id": "8a",
+                    "type": "alpha",
+                    "raw_label": "(a)",
+                    "content": "States or uses tan 2x = \\frac{sin 2x}{cos 2x}\n\\frac{sin 2x}{cos 2x} = 5 sin 2x \\implies sin 2x - 5 sin 2x cos 2x = 0 \\implies sin 2x (1 - 5 cos 2x) = 0 *",
+                    "pedagogical_notes": "Statement that tan θ = \\frac{sin θ}{cos θ} or Replacement of tan (wherever it appears). Must be a correct statement but may involve θ instead of 2x.\nThe answer is given so all steps should be given.\nN.B. sin 2x - 5sin 2x cos 2x = 0 or -5sin 2x cos 2x + sin 2x = 0 or sin 2x(\\frac{1}{cos 2x} - 5) = 0 o.e. must be seen and be followed by printed answer for A1 mark\nsin 2x = 5sin 2x cos 2x is not sufficient.",
+                    "page_number": 6
+                }
+            },
+            "sub_question_pairs": [
+                {
+                    "question_id": "8b",
+                    "original_question": {
+                        "id": "8b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "Hence solve, for 0 ≤ x ≤ 180°,\ngiving your answers to 1 decimal place where appropriate.\nYou must show clearly how you obtained your answers.\ntan 2x = 5 sin 2x",
+                        "pedagogical_notes": "",
+                        "page_number": 2
+                    },
+                    "original_answer": {
+                        "id": "8b",
+                        "type": "alpha",
+                        "raw_label": "(b)",
+                        "content": "sin 2x = 0 gives 2x = 0, 180, 360   so x = 0, 90, 180\ncos 2x = \\frac{1}{5} gives 2x = 78.46 (or 78.5 or 78.4)  or  2x = 281.54 (or 281.6)\nx = 39.2 (or 39.3), 140.8 (or 141)",
+                        "pedagogical_notes": "Statement of 0 and 180 with no working gets B1 B0 (bod) as it is two solutions\nThis mark for one of the two statements given (must relate to 2x not just to x)\nfirst A1 for 39.2, second for 140.8\nSpecial case solving cos 2x = -1/5 giving 2x = 101.5 or 258.5 is awarded M1A0A0\n140.8 omitted would give M1A1A0\nAllow answers which round to 39.2 or 39.3 and which round to 140.8 and allow 141\nAnswers in radians lose last A1 awarded (These are 0, 0.68, 1.57, 2.46 and 3.14)\nExcess answers in range lose last A1 Ignore excess answers outside range.\nAll 5 correct answers with no extras and no working gets full marks in part (b). The answers imply the method here",
+                        "page_number": 6
+                    }
+                }
+            ]
+        }
+    ]
+}

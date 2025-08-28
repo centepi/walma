@@ -1,0 +1,14 @@
+{
+    "question_stem": "Consider the quadratic function \\(f(x) = -2x^2 + 4x - 5\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Calculate the discriminant of \\(f(x)\\).  Explain how the sign of the discriminant relates to the number of real roots of the equation \\(f(x) = 0\\).",
+            "solution_text": "The discriminant, Δ, is given by Δ = \\(b^2 - 4ac\\), where \\(a = -2\\), \\(b = 4\\), and \\(c = -5\\).  Therefore, Δ = \\(4^2 - 4(-2)(-5) = 16 - 40 = -24\\). Since the discriminant is negative (Δ < 0), the equation \\(f(x) = 0\\) has no real roots."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "6c",
+    "total_marks": 3
+}

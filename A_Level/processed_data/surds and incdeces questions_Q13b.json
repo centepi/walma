@@ -1,0 +1,14 @@
+{
+    "question_stem": "Consider the expression \\( (5 - \\sqrt{7})^2 \\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Express \\( (5 - \\sqrt{7})^2 \\) in the form \\( p + q\\sqrt{7} \\), where \\(p\\) and \\(q\\) are integers to be found.",
+            "solution_text": "To expand \\( (5 - \\sqrt{7})^2 \\), we can use the formula \\( (a - b)^2 = a^2 - 2ab + b^2 \\). In this case, \\( a = 5 \\) and \\( b = \\sqrt{7} \\). \n\nSo, \\( (5 - \\sqrt{7})^2 = 5^2 - 2(5)(\\sqrt{7}) + (\\sqrt{7})^2 \\)\n\n\\( = 25 - 10\\sqrt{7} + 7 \\)\n\n\\( = 32 - 10\\sqrt{7} \\)\n\nTherefore, \\( p = 32 \\) and \\( q = -10 \\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "13b",
+    "total_marks": 2
+}

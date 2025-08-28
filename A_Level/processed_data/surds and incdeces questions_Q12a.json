@@ -1,0 +1,14 @@
+{
+    "question_stem": "Given the function \\(f(x) = 5x^{\\frac{7}{2}} - 4x^{-3}\\), rewrite \\(f(x)\\) in the form \\(ax^m + bx^n\\), where \\(a\\), \\(b\\), \\(m\\), and \\(n\\) are constants.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Write down the values of \\(m\\) and \\(n\\).",
+            "solution_text": "Comparing \\(f(x) = 5x^{\\frac{7}{2}} - 4x^{-3}\\) to the form \\(ax^m + bx^n\\), we can see that \\(m = \\frac{7}{2}\\) and \\(n = -3\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "12a",
+    "total_marks": 1
+}

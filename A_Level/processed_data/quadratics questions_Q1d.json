@@ -1,0 +1,14 @@
+{
+    "question_stem": "The points P\\((4, 11)\\) and Q lie on the curve with equation \\(y = x^2 - 2x + 3\\). The gradient of the curve at P is equal to the gradient of the line segment PQ.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Show that PQ is parallel to the y-axis.",
+            "solution_text": "First, find the derivative of the curve: \\(\\frac{dy}{dx} = 2x - 2\\). At P\\((4, 11)\\), the gradient is \\(2(4) - 2 = 6\\). Let the coordinates of Q be \\((x_q, y_q)\\). Since Q lies on the curve, \\(y_q = x_q^2 - 2x_q + 3\\). The gradient of PQ is given by \\(\\frac{y_q - 11}{x_q - 4}\\). We are given that this gradient is equal to the gradient of the curve at P, which is 6. So, \\(\\frac{x_q^2 - 2x_q + 3 - 11}{x_q - 4} = 6\\). Simplifying, we get \\(\\frac{x_q^2 - 2x_q - 8}{x_q - 4} = 6\\), which leads to \\(x_q^2 - 2x_q - 8 = 6x_q - 24\\). Rearranging gives \\(x_q^2 - 8x_q + 16 = 0\\). This quadratic factorises to \\((x_q - 4)^2 = 0\\), so \\(x_q = 4\\). Thus, Q has x-coordinate 4, the same as P. Therefore, PQ is a vertical line, parallel to the y-axis."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "1d",
+    "total_marks": 4
+}

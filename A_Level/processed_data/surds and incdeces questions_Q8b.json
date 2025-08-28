@@ -1,0 +1,14 @@
+{
+    "question_stem": "Express the following expression in the form \\(a + b\\sqrt{3}\\), where \\(a\\) and \\(b\\) are rational numbers.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "\\( \\frac{5}{7 - 2\\sqrt{3}} \\)",
+            "solution_text": "To rationalize the denominator, we multiply both the numerator and denominator by the conjugate of the denominator, which is \\(7 + 2\\sqrt{3}\\).\n\n\\( \\frac{5}{7 - 2\\sqrt{3}} \\times \\frac{7 + 2\\sqrt{3}}{7 + 2\\sqrt{3}} \\)\n\n\\( = \\frac{5(7 + 2\\sqrt{3})}{(7 - 2\\sqrt{3})(7 + 2\\sqrt{3})} \\)\n\n\\( = \\frac{35 + 10\\sqrt{3}}{49 - 4(3)} \\)\n\n\\( = \\frac{35 + 10\\sqrt{3}}{49 - 12} \\)\n\n\\( = \\frac{35 + 10\\sqrt{3}}{37} \\)\n\n\\( = \\frac{35}{37} + \\frac{10}{37}\\sqrt{3} \\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "8b",
+    "total_marks": 3
+}

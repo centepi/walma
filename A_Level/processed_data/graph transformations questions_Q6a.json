@@ -1,0 +1,14 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) passes through the points \\((1, 2)\\), \\((2, 5)\\), and \\((3, 0)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the three corresponding points that lie on the graph of \\(y = g(x - 2)\\).",
+            "solution_text": "The transformation \\(y = g(x - 2)\\) represents a horizontal translation of the graph \\(y = g(x)\\) to the right by 2 units.  Therefore, the x-coordinate of each point on the graph of \\(y = g(x)\\) is increased by 2 to obtain the corresponding point on the graph of \\(y = g(x - 2)\\). The y-coordinates remain unchanged.\n\nOriginal Point \\((1, 2)\\) transforms to \\((1 + 2, 2) = (3, 2)\\)\nOriginal Point \\((2, 5)\\) transforms to \\((2 + 2, 5) = (4, 5)\\)\nOriginal Point \\((3, 0)\\) transforms to \\((3 + 2, 0) = (5, 0)\\)\n\nTherefore, the corresponding points are \\((3, 2)\\), \\((4, 5)\\), and \\((5, 0)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "6a",
+    "total_marks": 3
+}

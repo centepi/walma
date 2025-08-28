@@ -1,0 +1,14 @@
+{
+    "question_stem": "A curve has the equation \\(y = 2x^3 - 18x\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Factorise \\(2x^3 - 18x\\) completely.",
+            "solution_text": "\\(2x^3 - 18x = 2x(x^2 - 9) = 2x(x-3)(x+3)\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "9a",
+    "total_marks": 2
+}

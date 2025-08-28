@@ -1,0 +1,14 @@
+{
+    "question_stem": "Consider the function defined by \\(f(x) = \\frac{4}{x - 1} \\) for \\( x \\ne 1 \\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of any points where the curve \\(y = f(x)\\) intersects the coordinate axes, and write down the equations of any asymptotes.",
+            "solution_text": "To find the y-intercept, we set x = 0: \\(f(0) = \\frac{4}{0 - 1} = -4\\).  So the curve intersects the y-axis at (0, -4).\nTo find any x-intercepts, we set y = 0: \\(0 = \\frac{4}{x - 1}\\).  This equation has no solutions, so the curve does not intersect the x-axis.\nThe vertical asymptote occurs when the denominator is zero, i.e., \\(x - 1 = 0\\), so \\(x = 1\\) is the equation of the vertical asymptote.\nAs \\(x \\to \\pm \\infty\\), \\(f(x) \\to 0\\). Therefore, the horizontal asymptote is \\(y = 0\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "3a",
+    "total_marks": 4
+}

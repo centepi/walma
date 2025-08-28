@@ -1,0 +1,14 @@
+{
+    "question_stem": "A rectangle has a length of \\(2x + 5\\) cm and a width of \\(x - 3\\) cm. The area of the rectangle must be greater than 20 cm\\(^2\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Show that \\(2x^2 - x - 35 > 0\\).",
+            "solution_text": "The area of a rectangle is given by length multiplied by width.  In this case, the area is \\((2x + 5)(x - 3)\\) cm\\(^2\\). We are given that the area must be greater than 20 cm\\(^2\\), so we can set up the inequality:\n\n\\((2x + 5)(x - 3) > 20\\)\n\nExpanding the brackets gives:\n\n\\(2x^2 - 6x + 5x - 15 > 20\\)\n\n\\(2x^2 - x - 15 > 20\\)\n\nSubtracting 20 from both sides gives:\n\n\\(2x^2 - x - 35 > 0\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "1a",
+    "total_marks": 3
+}

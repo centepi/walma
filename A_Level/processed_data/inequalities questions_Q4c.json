@@ -1,0 +1,14 @@
+{
+    "question_stem": "A particle moves along a straight line. Its displacement, \\(s\\) metres, from a fixed point O at time \\(t\\) seconds is given by \\(s = 2t^2 - 9t + 4\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the values of \\(t\\) for which the particle is more than 5 metres from O and its velocity is positive.",
+            "solution_text": "The particle is more than 5 metres from O when \\(|s| > 5\\), so \\(|2t^2 - 9t + 4| > 5\\).  The velocity is given by \\(v = \\frac{ds}{dt} = 4t - 9\\). The velocity is positive when \\(4t - 9 > 0\\), so \\(t > \\frac{9}{4} = 2.25\\).\n\nCase 1: \\(2t^2 - 9t + 4 > 5\\)\n\\(2t^2 - 9t - 1 > 0\\)\nUsing the quadratic formula, \\(t = \\frac{9 \\pm \\sqrt{81 - 4(2)(-1)}}{4} = \\frac{9 \\pm \\sqrt{89}}{4}\\). So, \\(t < \\frac{9 - \\sqrt{89}}{4} \\approx -0.108\\) or \\(t > \\frac{9 + \\sqrt{89}}{4} \\approx 4.608\\).  We require \\(t > 2.25\\), so \\(t > 4.608\\).\n\nCase 2: \\(2t^2 - 9t + 4 < -5\\)\n\\(2t^2 - 9t + 9 < 0\\)\nUsing the quadratic formula, \\(t = \\frac{9 \\pm \\sqrt{81 - 4(2)(9)}}{4} = \\frac{9 \\pm \\sqrt{9}}{4} = \\frac{9 \\pm 3}{4}\\). So, \\(t = \\frac{6}{4} = 1.5\\) or \\(t = \\frac{12}{4} = 3\\). Thus, \\(1.5 < t < 3\\). We require \\(t > 2.25\\), so \\(2.25 < t < 3\\).\n\nCombining both cases with the condition \\(t > 2.25\\), the final solution is \\(2.25 < t < 3\\) or \\(t > 4.608\\)."
+        }
+    ],
+    "calculator_required": true,
+    "topic": "inequalities questions",
+    "question_number": "4c",
+    "total_marks": 7
+}

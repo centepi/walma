@@ -1,0 +1,14 @@
+{
+    "question_stem": "The function \\(g(x)\\) is defined as \\(g(x) = 2x^2 - 5\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the coordinates of the vertex of the graph of \\(y = g(\\frac{x}{3})\\).",
+            "solution_text": "The vertex of \\(g(x) = 2x^2 - 5\\) is at \\((0, -5)\\).  The transformation \\(g(\\frac{x}{3})\\) represents a horizontal stretch by a factor of 3. This means the x-coordinate of the vertex is multiplied by 3, while the y-coordinate remains unchanged. Therefore, the vertex of \\(y = g(\\frac{x}{3})\\) is at \\((3 \\times 0, -5) = (0, -5)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "14b",
+    "total_marks": 2
+}

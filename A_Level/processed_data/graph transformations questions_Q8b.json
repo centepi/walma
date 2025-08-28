@@ -1,0 +1,14 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) intersects the x-axis at \\((-2, 0)\\), \\((1, 0)\\), and \\((5, 0)\\), and the y-axis at \\((0, -5)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "The function \\(h(x)\\) is defined as \\(h(x) = g(x) + 10\\).  Find the coordinates of the points where \\(y = h(x)\\) crosses the coordinate axes.",
+            "solution_text": "The x-intercepts of \\(g(x)\\) occur when \\(g(x) = 0\\).  Since \\(h(x) = g(x) + 10\\), the x-intercepts of \\(h(x)\\) occur when \\(g(x) + 10 = 0\\), or \\(g(x) = -10\\).  We don't know the full form of \\(g(x)\\), so we can't determine these x-intercepts. \n\nThe y-intercept of \\(g(x)\\) occurs when \\(x = 0\\), and is \\(g(0) = -5\\).  The y-intercept of \\(h(x)\\) occurs when \\(x = 0\\), and is \\(h(0) = g(0) + 10 = -5 + 10 = 5\\).  Therefore, the y-intercept of \\(h(x)\\) is \\((0, 5)\\). \n\nSo, the graph of \\(y=h(x)\\) crosses the y-axis at \\((0, 5)\\).  We cannot determine where it crosses the x-axis without more information about \\(g(x)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "8b",
+    "total_marks": 2
+}

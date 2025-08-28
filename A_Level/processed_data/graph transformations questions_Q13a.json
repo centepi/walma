@@ -1,0 +1,14 @@
+{
+    "question_stem": "The function \\(g(x)\\) is defined for all real values of \\(x\\). The graph of \\(y = g(x)\\) passes through the points (1, 2), (4, 5) and (7, -1).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Write down three points that lie on the graph of \\(y = g(x-2)\\).",
+            "solution_text": "The transformation \\(y = g(x-2)\\) represents a horizontal translation of the graph \\(y=g(x)\\) 2 units to the right.\nSo, we add 2 to the x-coordinate of each given point.\n(1, 2) becomes (1+2, 2) = (3, 2)\n(4, 5) becomes (4+2, 5) = (6, 5)\n(7, -1) becomes (7+2, -1) = (9, -1)\nTherefore, the three points on the graph of \\(y = g(x-2)\\) are (3, 2), (6, 5) and (9, -1)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "13a",
+    "total_marks": 2
+}

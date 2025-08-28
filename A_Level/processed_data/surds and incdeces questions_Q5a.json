@@ -1,0 +1,14 @@
+{
+    "question_stem": "Simplify the following surd expressions.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Write √200 in the form p√2, where p is an integer.",
+            "solution_text": "We can write √200 as √(100 × 2). Since √100 = 10, this simplifies to 10√2. Therefore, p = 10."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "5a",
+    "total_marks": 1
+}

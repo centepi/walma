@@ -1,0 +1,14 @@
+{
+    "question_stem": "The function g(x) is defined as \\(g(x) = 2x^3 - 7\\).  The function h(x) is defined as \\(h(x) = g(x) + k\\), where k is a constant. It is given that \\(h(2) = 3\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Write down the value of \\(k\\).",
+            "solution_text": "We are given \\(h(x) = g(x) + k\\) and \\(h(2) = 3\\).  Substituting \\(x=2\\) into \\(g(x)\\), we have \\(g(2) = 2(2^3) - 7 = 2(8) - 7 = 16 - 7 = 9\\).  Since \\(h(x) = g(x) + k\\), we have \\(h(2) = g(2) + k\\).  Substituting the given values, we get \\(3 = 9 + k\\).  Solving for \\(k\\), we find \\(k = 3 - 9 = -6\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "13c",
+    "total_marks": 2
+}

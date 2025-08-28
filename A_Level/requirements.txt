@@ -1,0 +1,8 @@
+firebase-admin
+google-generativeai
+numpy
+pdf2image
+pdfplumber
+python-dotenv
+requests
+sympy

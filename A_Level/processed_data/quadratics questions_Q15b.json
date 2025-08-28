@@ -1,0 +1,14 @@
+{
+    "question_stem": "The area of a rectangle is given by the expression \\(2x^2 + 7x - 15\\), where \\(x\\) represents the width of the rectangle.  For the area to be positive, the width must satisfy certain conditions.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of possible values of \\(x\\) for which the area of the rectangle is positive.",
+            "solution_text": "The area is given by \\(2x^2 + 7x - 15\\). For the area to be positive, we require \\(2x^2 + 7x - 15 > 0\\).\n\nWe first find the critical values by solving the equation \\(2x^2 + 7x - 15 = 0\\).  This can be factored as \\((2x - 3)(x + 5) = 0\\).\n\nTherefore, the critical values are \\(x = \\frac{3}{2}\\) and \\(x = -5\\).\n\nSince the quadratic has a positive leading coefficient, the parabola opens upwards. Thus, the quadratic is positive when \\(x < -5\\) or \\(x > \\frac{3}{2}\\).\n\nHowever, since \\(x\\) represents the width of a rectangle, \\(x\\) must be positive. Therefore, the set of possible values for \\(x\\) is \\(x > \\frac{3}{2}\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "15b",
+    "total_marks": 4
+}

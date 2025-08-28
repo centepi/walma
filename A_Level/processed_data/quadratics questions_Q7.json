@@ -1,0 +1,14 @@
+{
+    "question_stem": "The equation \\(2x^2 - tx + 8 = 0\\), where \\(t\\) is a positive constant, has equal roots.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the value of \\(t\\).",
+            "solution_text": "For a quadratic equation to have equal roots, the discriminant must be equal to zero.  The discriminant is given by \\(b^2 - 4ac\\). In this case, \\(a = 2\\), \\(b = -t\\), and \\(c = 8\\). So we have:\n\n\\((-t)^2 - 4(2)(8) = 0\\)\n\\(t^2 - 64 = 0\\)\n\\(t^2 = 64\\)\nSince \\(t\\) is positive, \\(t = \\sqrt{64} = 8\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "7",
+    "total_marks": 3
+}

@@ -1,0 +1,14 @@
+{
+    "question_stem": "The equation of a curve is given by \\(y = x(x+3)(x-4)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the points where the curve intersects the \\(x\\)-axis.",
+            "solution_text": "The curve intersects the \\(x\\)-axis when \\(y=0\\).  Setting \\(y = 0\\) gives \\(x(x+3)(x-4) = 0\\). This equation has solutions \\(x = 0\\), \\(x = -3\\), and \\(x = 4\\).  Therefore, the coordinates of the intersection points are \\((0, 0)\\), \\((-3, 0)\\), and \\((4, 0)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "graph transformations questions",
+    "question_number": "7ai",
+    "total_marks": 2
+}

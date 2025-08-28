@@ -1,0 +1,14 @@
+{
+    "question_stem": "The discriminant of a quadratic equation \\(3x^2 + px + 2 = 0\\) is greater than zero. ",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of possible values of \\(p\\).",
+            "solution_text": "The discriminant of the quadratic equation \\(ax^2 + bx + c = 0\\) is given by \\(b^2 - 4ac\\). In this case, \\(a=3\\), \\(b=p\\), and \\(c=2\\). We are given that the discriminant is greater than zero, so\n\\(p^2 - 4(3)(2) > 0\\)\n\\(p^2 - 24 > 0\\)\n\\(p^2 > 24\\)\nTaking the square root of both sides, we get\n\\(|p| > \\sqrt{24}\\)\n\\(|p| > 2\\sqrt{6}\\)\nThis means that either \\(p > 2\\sqrt{6}\\) or \\(p < -2\\sqrt{6}\\). \nTherefore, the set of possible values for \\(p\\) is \\(p < -2\\sqrt{6}\\) or \\(p > 2\\sqrt{6}\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "inequalities questions",
+    "question_number": "8a",
+    "total_marks": 3
+}

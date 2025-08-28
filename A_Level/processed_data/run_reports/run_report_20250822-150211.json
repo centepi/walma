@@ -1,0 +1,31 @@
+{
+  "started_at": "20250822-150211",
+  "log_file": "/Users/bxn/walma/A_Level/logs/run_20250822-150211.log",
+  "jobs": [
+    {
+      "job_name": "graph transformations questions",
+      "type": "paired",
+      "groups": 16,
+      "parts_processed": 35,
+      "verified": 34,
+      "rejected": 1,
+      "uploaded_ok": 34,
+      "upload_failed": 0,
+      "failures": [
+        {
+          "question_id": "12c",
+          "reason": "The question stem states that the curves intersect at the origin and two other points.  The solution initially finds x^2 - 3x + 5 = 0,…"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "jobs": 1,
+    "groups": 16,
+    "parts_processed": 35,
+    "verified": 34,
+    "rejected": 1,
+    "uploaded_ok": 34,
+    "upload_failed": 0
+  }
+}

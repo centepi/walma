@@ -1,0 +1,52 @@
+{
+    "question_stem": "The graph of \\(y = g(x)\\) is shown below.  It passes through the points \\((-1, 2)\\), \\((0, 0)\\), and \\((1, -1)\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "State the coordinates of the corresponding points on the graph of \\(y = g(\\frac{1}{3}x)\\).",
+            "solution_text": "The transformation \\(y = g(\\frac{1}{3}x)\\) represents a horizontal stretch by a scale factor of 3.  Therefore, the x-coordinates of the original points are multiplied by 3, while the y-coordinates remain unchanged.\n\n\\((-1, 2)\\) becomes \\((-3, 2)\\).\n\\((0, 0)\\) becomes \\((0, 0)\\).\n\\((1, -1)\\) becomes \\((3, -1)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "visual_data": {
+        "graphs": [
+            {
+                "id": "g1",
+                "label": "y = g(x)",
+                "explicit_function": null,
+                "visual_features": {
+                    "type": "curve",
+                    "x_intercepts": null,
+                    "y_intercept": 0,
+                    "turning_points": null,
+                    "axes_range": {
+                        "x_min": -2,
+                        "x_max": 2,
+                        "y_min": -2,
+                        "y_max": 3
+                    }
+                }
+            }
+        ],
+        "labeled_points": [
+            {
+                "label": "(-1, 2)",
+                "x": -1,
+                "y": 2
+            },
+            {
+                "label": "(0, 0)",
+                "x": 0,
+                "y": 0
+            },
+            {
+                "label": "(1, -1)",
+                "x": 1,
+                "y": -1
+            }
+        ]
+    },
+    "topic": "graph transformations questions",
+    "question_number": "6c",
+    "total_marks": 2
+}

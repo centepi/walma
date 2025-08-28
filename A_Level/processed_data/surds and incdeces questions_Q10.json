@@ -1,0 +1,14 @@
+{
+    "question_stem": "Simplify the following expression, leaving your answer in the form \\(a\\sqrt{b}\\), where \\(a\\) and \\(b\\) are integers and \\(b\\) is as small as possible.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "\\(\\sqrt{175} - \\sqrt{63}\\)",
+            "solution_text": "\\(\\sqrt{175} - \\sqrt{63} = \\sqrt{25 \\times 7} - \\sqrt{9 \\times 7}\\n= 5\\sqrt{7} - 3\\sqrt{7}\\n= 2\\sqrt{7}\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "surds and incdeces questions",
+    "question_number": "10",
+    "total_marks": 2
+}

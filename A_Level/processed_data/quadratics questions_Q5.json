@@ -1,0 +1,14 @@
+{
+    "question_stem": "The equation \\(2x^2 - kx + 3k = 0\\), where \\(k\\) is a non-zero constant, has equal roots.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the value of \\(k\\).",
+            "solution_text": "For a quadratic equation \\(ax^2 + bx + c = 0\\) to have equal roots, the discriminant \\(b^2 - 4ac\\) must be equal to 0. \\nIn this case, \\(a = 2\\), \\(b = -k\\), and \\(c = 3k\\).  So we have:\\n\\((-k)^2 - 4(2)(3k) = 0\\)\\n\\(k^2 - 24k = 0\\)\\n\\(k(k - 24) = 0\\)\\nTherefore, \\(k = 0\\) or \\(k = 24\\). Since \\(k\\) is a non-zero constant, we must have \\(k = 24\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "5",
+    "total_marks": 3
+}

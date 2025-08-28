@@ -1,0 +1,14 @@
+{
+    "question_stem": "The curve \\(y = 2x^2 + px + 5\\), where \\(p\\) is a real constant, lies entirely above the x-axis.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the set of possible values of \\(p\\), giving your answer in surd form.",
+            "solution_text": "Since the curve lies entirely above the x-axis, the quadratic equation \\(2x^2 + px + 5 = 0\\) has no real roots. Therefore, the discriminant must be negative.\n\nDiscriminant, \\(\\Delta = b^2 - 4ac\\)\n\\(\\Delta = p^2 - 4(2)(5) = p^2 - 40\\)\n\nFor no real roots, \\(\\Delta < 0\\):\n\\(p^2 - 40 < 0\\)\n\\(p^2 < 40\\)\n\\(-\\sqrt{40} < p < \\sqrt{40}\\)\n\\(-2\\sqrt{10} < p < 2\\sqrt{10}\\)"
+        }
+    ],
+    "calculator_required": false,
+    "topic": "quadratics questions",
+    "question_number": "6d",
+    "total_marks": 3
+}
