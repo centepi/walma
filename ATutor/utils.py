@@ -14,6 +14,9 @@ def initialize_firebase():
             firebase_project_id = os.getenv('project_id')
             firebase_client_email = os.getenv('client_email')
             firebase_private_key = os.getenv('private_key').replace('\\n', '\n')
+            print(firebase_project_id)
+            print(firebase_client_email)
+            print(firebase_private_key)
             cred = credentials.Certificate({
                 "type": "service_account",
                 "project_id": firebase_project_id,
