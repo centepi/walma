@@ -1,6 +1,0 @@
-This worksheet is for Week 3 of Calc II.
-It covers gradients, level curves, and directional derivatives. The goal is to help students:
-- Understand the meaning and computation of the gradient ∇f
-- Learn how the gradient relates to level curves
-- Use the gradient to compute directional derivatives
-- Interpret what a directional derivative means geometrically

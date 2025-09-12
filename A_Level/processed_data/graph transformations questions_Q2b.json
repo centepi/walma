@@ -1,10 +1,10 @@
 {
-    "question_stem": "The graph of \\(y = g(x)\\) is shown below. The function has a maximum point at (3, 6) and intersects the x-axis at x = 1 and x = 5.",
+    "question_stem": "The graph of \\(y = g(x)\\) is shown below. It passes through the points \\((1, 0)\\), \\((4, 0)\\) and has a maximum point at \\((2.5, 6)\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "State the coordinates of the maximum point and the x-intercepts of the graph of \\(y = g(-x)\\).",
-            "solution_text": "The transformation \\(y = g(-x)\\) represents a reflection in the y-axis.  Therefore, the x-coordinates of all points are multiplied by -1, while the y-coordinates remain unchanged.\n\nOriginal maximum point: (3, 6)\nTransformed maximum point: (-3, 6)\n\nOriginal x-intercepts: x = 1 and x = 5, meaning the coordinates are (1, 0) and (5, 0).\nTransformed x-intercepts: (-1, 0) and (-5, 0), so the x-intercepts are x = -1 and x = -5."
+            "question_text": "State the coordinates of the maximum point and the \\(x\\)-intercepts of the graph of \\(y = g(-x)\\).",
+            "solution_text": "The graph of \\(y = g(-x)\\) is a reflection of the graph of \\(y = g(x)\\) in the \\(y\\)-axis.  The \\(x\\)-coordinates of the key points change sign, while the \\(y\\)-coordinates remain unchanged.\n\nOriginal maximum point: \\((2.5, 6)\\). Reflected maximum point: \\((-2.5, 6)\\).\n\nOriginal \\(x\\)-intercepts: \\((1, 0)\\) and \\((4, 0)\\). Reflected \\(x\\)-intercepts: \\((-1, 0)\\) and \\((-4, 0)\\).\n\nTherefore, the maximum point of \\(y = g(-x)\\) is at \\((-2.5, 6)\\), and the \\(x\\)-intercepts are at \\((-1, 0)\\) and \\((-4, 0)\\)."
         }
     ],
     "calculator_required": false,
@@ -15,42 +15,42 @@
                 "label": "y = g(x)",
                 "explicit_function": null,
                 "visual_features": {
-                    "type": "parabola",
+                    "type": "curve",
                     "x_intercepts": [
                         1,
-                        5
+                        4
                     ],
                     "y_intercept": null,
                     "turning_points": [
                         {
-                            "x": 3,
+                            "x": 2.5,
                             "y": 6
                         }
                     ],
                     "axes_range": {
-                        "x_min": -1,
-                        "x_max": 7,
-                        "y_min": -2,
-                        "y_max": 8
+                        "x_min": 0,
+                        "x_max": 5,
+                        "y_min": 0,
+                        "y_max": 7
                     }
                 }
             }
         ],
         "labeled_points": [
             {
-                "label": "(3,6)",
-                "x": 3,
-                "y": 6
-            },
-            {
-                "label": "(1,0)",
+                "label": "(1, 0)",
                 "x": 1,
                 "y": 0
             },
             {
-                "label": "(5,0)",
-                "x": 5,
+                "label": "(4, 0)",
+                "x": 4,
                 "y": 0
+            },
+            {
+                "label": "(2.5, 6)",
+                "x": 2.5,
+                "y": 6
             }
         ]
     },

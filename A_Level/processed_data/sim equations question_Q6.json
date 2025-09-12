@@ -1,0 +1,14 @@
+{
+    "question_stem": "Find the points of intersection between the line \\(y = 2x + 1\\) and the curve \\(y^2 + 3x - 2x^2 = 7\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Solve the simultaneous equations \\(y = 2x + 1\\) and \\(y^2 + 3x - 2x^2 = 7\\).",
+            "solution_text": "Substitute \\(y = 2x + 1\\) into the second equation:\n\\((2x+1)^2 + 3x - 2x^2 = 7\\)\n\\(4x^2 + 4x + 1 + 3x - 2x^2 = 7\\)\n\\(2x^2 + 7x + 1 = 7\\)\n\\(2x^2 + 7x - 6 = 0\\)\nWe can factorise this quadratic equation:\n\\((2x - 1)(x + 6) = 0\\)\nSo, \\(x = \\frac{1}{2}\\) or \\(x = -6\\).\nWhen \\(x = \\frac{1}{2}\\), \\(y = 2(\\frac{1}{2}) + 1 = 1 + 1 = 2\\).\nWhen \\(x = -6\\), \\(y = 2(-6) + 1 = -12 + 1 = -11\\).\nTherefore, the points of intersection are \\((\\frac{1}{2}, 2)\\) and \\((-6, -11)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "sim equations question",
+    "question_number": "6",
+    "total_marks": 4
+}

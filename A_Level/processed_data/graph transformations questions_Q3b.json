@@ -1,10 +1,10 @@
 {
-    "question_stem": "The function \\(f(x)\\) is defined as \\(f(x) = \\frac{2x - 1}{x + 5}\\) for \\(x \\neq -5\\).",
+    "question_stem": "The function \\(f(x)\\) is defined as \\(f(x) = \\frac{2x - 1}{x + 4}\\) for \\(x \\neq -4\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "Write down the equations of the asymptotes of the curve \\(y = f(x)\\).",
-            "solution_text": "The vertical asymptote occurs when the denominator is zero, so \\(x + 5 = 0\\), giving \\(x = -5\\).\nAs \\(x\\) tends to infinity, \\(f(x)\\) approaches \\(\\frac{2x}{x} = 2\\). Therefore, the horizontal asymptote is \\(y = 2\\).\nThe equations of the asymptotes are \\(x = -5\\) and \\(y = 2\\)."
+            "question_text": "State the equations of the asymptotes of the curve \\(y = f(x)\\).",
+            "solution_text": "The vertical asymptote occurs when the denominator is equal to zero.  Setting \\(x + 4 = 0\\) gives \\(x = -4\\).  The horizontal asymptote can be found by considering the limit as \\(x\\) tends to infinity:  \\(\\lim_{x \\to \\infty} \\frac{2x - 1}{x + 4} = \\lim_{x \\to \\infty} \\frac{2 - \\frac{1}{x}}{1 + \\frac{4}{x}} = \\frac{2}{1} = 2\\). Therefore, the equations of the asymptotes are \\(x = -4\\) and \\(y = 2\\)."
         }
     ],
     "calculator_required": false,

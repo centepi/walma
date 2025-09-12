@@ -1,10 +1,10 @@
 {
-    "question_stem": "A curve has the equation \\(y = 2x^3 - 18x\\).",
+    "question_stem": "Consider the expression \\(2x^3 - 18x\\).",
     "parts": [
         {
             "part_label": "a",
             "question_text": "Factorise \\(2x^3 - 18x\\) completely.",
-            "solution_text": "\\(2x^3 - 18x = 2x(x^2 - 9) = 2x(x-3)(x+3)\\)"
+            "solution_text": "First, we can factor out \\(2x\\) from both terms: \\(2x(x^2 - 9)\\).  The expression in the parentheses is a difference of two squares, so we can further factorise it as \\((x-3)(x+3)\\). Therefore, the complete factorisation of \\(2x^3 - 18x\\) is \\(2x(x-3)(x+3)\\)."
         }
     ],
     "calculator_required": false,

@@ -4,7 +4,7 @@
         {
             "part_label": "a",
             "question_text": "State the coordinates of the points where the graph of this function intersects the x-axis.",
-            "solution_text": "The graph intersects the x-axis when \\(y = 0\\).  Setting \\(y = 0\\) in the equation \\(y = x(5 - x)\\) gives \\(x(5 - x) = 0\\). This equation has two solutions: \\(x = 0\\) and \\(5 - x = 0 \\Rightarrow x = 5\\). Therefore, the points of intersection are \\((0, 0)\\) and \\((5, 0)\\)."
+            "solution_text": "The graph intersects the x-axis when \\(y = 0\\).  Setting \\(y = 0\\) in the equation \\(y = x(5 - x)\\) gives \\(0 = x(5 - x)\\).  This equation has two solutions: \\(x = 0\\) or \\(5 - x = 0\\), which means \\(x = 5\\).\n\nTherefore, the points of intersection are \\((0, 0)\\) and \\((5, 0)\\)."
         }
     ],
     "calculator_required": false,

@@ -1,0 +1,14 @@
+{
+    "question_stem": "By eliminating \\(y\\) from the equations \\(y = 2x + 1\\) and \\(x^2 + xy = 7\\), show that \\(x^2 + 2x^2 + x = 7\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Hence, or otherwise, solve the simultaneous equations\n\\(y = 2x + 1\\)\n\\(x^2 + xy = 7\\)\ngiving your answers in the form \\(a \\pm b\\sqrt{2}\\), where \\(a\\) and \\(b\\) are integers.",
+            "solution_text": "From the question stem, we have \\(3x^2 + x - 7 = 0\\). We can use the quadratic formula to solve for \\(x\\):\n\\(x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\)\n\\(x = \\frac{-1 \\pm \\sqrt{1^2 - 4(3)(-7)}}{2(3)}\\)\n\\(x = \\frac{-1 \\pm \\sqrt{1 + 84}}{6}\\)\n\\(x = \\frac{-1 \\pm \\sqrt{85}}{6}\\)\n\nSo, \\(x = \\frac{-1 + \\sqrt{85}}{6}\\) or \\(x = \\frac{-1 - \\sqrt{85}}{6}\\).\n\nWhen \\(x = \\frac{-1 + \\sqrt{85}}{6}\\):\n\\(y = 2(\\frac{-1 + \\sqrt{85}}{6}) + 1\\)\n\\(y = \\frac{-1 + \\sqrt{85}}{3} + 1\\)\n\\(y = \\frac{-1 + \\sqrt{85} + 3}{3}\\)\n\\(y = \\frac{2 + \\sqrt{85}}{3}\\)\n\nWhen \\(x = \\frac{-1 - \\sqrt{85}}{6}\\):\n\\(y = 2(\\frac{-1 - \\sqrt{85}}{6}) + 1\\)\n\\(y = \\frac{-1 - \\sqrt{85}}{3} + 1\\)\n\\(y = \\frac{-1 - \\sqrt{85} + 3}{3}\\)\n\\(y = \\frac{2 - \\sqrt{85}}{3}\\)\n\nTherefore, the solutions are:\n\\(x = \\frac{-1 + \\sqrt{85}}{6}\\), \\(y = \\frac{2 + \\sqrt{85}}{3}\\)\n\\(x = \\frac{-1 - \\sqrt{85}}{6}\\), \\(y = \\frac{2 - \\sqrt{85}}{3}\\)"
+        }
+    ],
+    "calculator_required": true,
+    "topic": "sim equations question",
+    "question_number": "3b",
+    "total_marks": 6
+}

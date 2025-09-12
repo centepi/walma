@@ -1,10 +1,10 @@
 {
-    "question_stem": "The function g(x) is defined as \\(g(x) = 2x^3 - 7\\).  The function h(x) is defined as \\(h(x) = g(x) + k\\), where k is a constant. It is given that \\(h(2) = 3\\).",
+    "question_stem": "The function \\(g(x)\\) is defined as \\(g(x) = 2x^3 - 7\\).  The function \\(h(x)\\) is defined as \\(h(x) = g(x) + k\\), where \\(k\\) is a constant.  It is given that \\(h(2) = 9\\).",
     "parts": [
         {
             "part_label": "a",
             "question_text": "Write down the value of \\(k\\).",
-            "solution_text": "We are given \\(h(x) = g(x) + k\\) and \\(h(2) = 3\\).  Substituting \\(x=2\\) into \\(g(x)\\), we have \\(g(2) = 2(2^3) - 7 = 2(8) - 7 = 16 - 7 = 9\\).  Since \\(h(x) = g(x) + k\\), we have \\(h(2) = g(2) + k\\).  Substituting the given values, we get \\(3 = 9 + k\\).  Solving for \\(k\\), we find \\(k = 3 - 9 = -6\\)."
+            "solution_text": "First, we evaluate \\(g(2)\\):\n\\(g(2) = 2(2^3) - 7 = 2(8) - 7 = 16 - 7 = 9\\).\n\nSince \\(h(x) = g(x) + k\\), we have \\(h(2) = g(2) + k\\).\nWe are given that \\(h(2) = 9\\), so \\(9 = g(2) + k\\).\nSubstituting \\(g(2) = 9\\), we get \\(9 = 9 + k\\).\nTherefore, \\(k = 9 - 9 = 0\\)."
         }
     ],
     "calculator_required": false,

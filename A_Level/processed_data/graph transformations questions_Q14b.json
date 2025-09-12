@@ -1,10 +1,10 @@
 {
-    "question_stem": "The function \\(g(x)\\) is defined as \\(g(x) = 2x^2 - 5\\).",
+    "question_stem": "The graph of \\(y = g(x)\\) is a parabola with a minimum point at (1, -2).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "Find the coordinates of the vertex of the graph of \\(y = g(\\frac{x}{3})\\).",
-            "solution_text": "The vertex of \\(g(x) = 2x^2 - 5\\) is at \\((0, -5)\\).  The transformation \\(g(\\frac{x}{3})\\) represents a horizontal stretch by a factor of 3. This means the x-coordinate of the vertex is multiplied by 3, while the y-coordinate remains unchanged. Therefore, the vertex of \\(y = g(\\frac{x}{3})\\) is at \\((3 \\times 0, -5) = (0, -5)\\)."
+            "question_text": "State the coordinates of the minimum point of the graph \\(y = g(3x)\\).",
+            "solution_text": "Let \\((x, y)\\) be the minimum point of \\(y = g(x)\\). Then the minimum point is at (1, -2). \nFor the graph of \\(y = g(3x)\\), the x-coordinate is scaled by a factor of \\(\\frac{1}{3}\\). The y-coordinate remains unchanged.\nTherefore, the minimum point of \\(y = g(3x)\\) is at \\((\\frac{1}{3} \\times 1, -2)\\), which simplifies to \\((\\frac{1}{3}, -2)\\)."
         }
     ],
     "calculator_required": false,

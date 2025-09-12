@@ -1,0 +1,14 @@
+{
+    "question_stem": "A rectangle has a perimeter of 22 cm and an area of 28 cm². Let the length of the rectangle be \\(x\\) cm and the width be \\(y\\) cm.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the length and width of the rectangle.",
+            "solution_text": "The perimeter is given by \\(2x + 2y = 22\\), which simplifies to \\(x + y = 11\\), so \\(x = 11 - y\\). The area is given by \\(xy = 28\\). Substituting \\(x = 11 - y\\) into the area equation gives \\((11 - y)y = 28\\), which expands to \\(11y - y^2 = 28\\). Rearranging this gives \\(y^2 - 11y + 28 = 0\\). This quadratic factorises as \\((y - 4)(y - 7) = 0\\). Therefore, \\(y = 4\\) or \\(y = 7\\). If \\(y = 4\\), then \\(x = 11 - 4 = 7\\). If \\(y = 7\\), then \\(x = 11 - 7 = 4\\). So, the length is 7 cm and the width is 4 cm (or vice-versa)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "sim equations question",
+    "question_number": "5",
+    "total_marks": 4
+}

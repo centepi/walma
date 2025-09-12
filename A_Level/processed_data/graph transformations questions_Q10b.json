@@ -1,14 +1,14 @@
 {
-    "question_stem": "The graph of \\(y = g(x)\\) passes through the points \\((-1, 3)\\), \\((0, -2)\\), and \\((2, 6)\\).",
+    "question_stem": "The graph of \\(y = g(x)\\) passes through the points \\((1, 2)\\), \\((2, 5)\\), and \\((3, -1)\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "State the coordinates of the corresponding points on the graph of \\(y = \\frac{1}{2}g(x)\\).",
-            "solution_text": "To find the corresponding points on the graph of \\(y = \\frac{1}{2}g(x)\\), we multiply the y-coordinates of the original points by \\(\\frac{1}{2}\\). \n\nOriginal point \\((-1, 3)\\) becomes \\((-1, \\frac{1}{2}(3)) = (-1, \\frac{3}{2})\\). \nOriginal point \\((0, -2)\\) becomes \\((0, \\frac{1}{2}(-2)) = (0, -1)\\). \nOriginal point \\((2, 6)\\) becomes \\((2, \\frac{1}{2}(6)) = (2, 3)\\). \n\nTherefore, the corresponding points are \\((-1, \\frac{3}{2})\\), \\((0, -1)\\), and \\((2, 3)\\)."
+            "question_text": "State the coordinates of the points through which the graph of \\(y = 3g(x)\\) passes.",
+            "solution_text": "The graph of \\(y = 3g(x)\\) is a vertical stretch of the graph of \\(y = g(x)\\) by a factor of 3.  This means the y-coordinates of the points on the graph of \\(g(x)\\) are multiplied by 3, while the x-coordinates remain unchanged.\n\nTherefore, the points \\((1, 2)\\), \\((2, 5)\\), and \\((3, -1)\\) on \\(y=g(x)\\) transform to:\n\n* \\((1, 2)\\) becomes \\((1, 2 \\times 3) = (1, 6)\\)\n* \\((2, 5)\\) becomes \\((2, 5 \\times 3) = (2, 15)\\)\n* \\((3, -1)\\) becomes \\((3, -1 \\times 3) = (3, -3)\\)\n\nSo the graph of \\(y = 3g(x)\\) passes through the points \\((1, 6)\\), \\((2, 15)\\), and \\((3, -3)\\)."
         }
     ],
     "calculator_required": false,
     "topic": "graph transformations questions",
     "question_number": "10b",
-    "total_marks": 3
+    "total_marks": 2
 }

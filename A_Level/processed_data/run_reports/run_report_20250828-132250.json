@@ -1,0 +1,35 @@
+{
+  "started_at": "20250828-132250",
+  "log_file": "/Users/bxn/walma/A_Level/logs/run_20250828-132250.log",
+  "jobs": [
+    {
+      "job_name": "graph transformations questions",
+      "type": "paired",
+      "groups": 16,
+      "parts_processed": 37,
+      "verified": 35,
+      "rejected": 2,
+      "uploaded_ok": 35,
+      "upload_failed": 0,
+      "failures": [
+        {
+          "question_id": "12b",
+          "reason": "The question asks to show that the x-coordinates of the intersections are given by the solutions to x^2(x-5) = 0. This is incorrect. The…"
+        },
+        {
+          "question_id": "12c",
+          "reason": "The question_stem and initial solution attempt use different equations to those plotted in the visual_data.  The solution then proceeds to…"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "jobs": 1,
+    "groups": 16,
+    "parts_processed": 37,
+    "verified": 35,
+    "rejected": 2,
+    "uploaded_ok": 35,
+    "upload_failed": 0
+  }
+}

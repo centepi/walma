@@ -1,0 +1,14 @@
+{
+  "question_number": 1,
+  "question_text": "Given that y = 8x^3 − 4√x + (3x² + 2)/x, x > 0, find dy/dx.",
+  "marks": 6,
+  "solution_steps": [
+    {
+      "detail": "Rewrite (3x² + 2)/x as 3x + 2x^(-1)."
+    },
+    {
+      "detail": "Differentiate term by term: d/dx(8x³) = 24x², d/dx(−4√x) = −2x^(-1/2), d/dx(3x) = 3, d/dx(2x^(-1)) = −2x^(-2)."
+    }
+  ],
+  "solution_text": "Thus, dy/dx = 24x² − 2x^(-1/2) + 3 − 2x^(-2)."
+}

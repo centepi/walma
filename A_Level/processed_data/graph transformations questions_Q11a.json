@@ -1,10 +1,10 @@
 {
-    "question_stem": "The equation of a curve is given by \\(y = (x-2)^2\\).",
+    "question_stem": "Consider the quadratic function defined by \\(y = (x-2)^2\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "State the coordinates of the vertex of the parabola and the coordinates where the curve intersects the y-axis.",
-            "solution_text": "The vertex of the parabola \\(y = (x-2)^2\\) occurs when \\(x-2=0\\), so \\(x=2\\).  When \\(x=2\\), \\(y = (2-2)^2 = 0^2 = 0\\). Thus, the vertex is at \\((2,0)\\).\n\nTo find the y-intercept, set \\(x=0\\). Then \\(y = (0-2)^2 = (-2)^2 = 4\\). Thus, the curve intersects the y-axis at \\((0,4)\\)."
+            "question_text": "Determine the coordinates of the vertex of the parabola and the y-intercept.",
+            "solution_text": "The equation is in vertex form, \\(y = (x-h)^2 + k\\), where the vertex is at \\((h, k)\\). In this case, \\(h = 2\\) and \\(k = 0\\), so the vertex is at \\((2, 0)\\).\n\nTo find the y-intercept, we set \\(x = 0\\) in the equation:\n\\(y = (0-2)^2 = (-2)^2 = 4\\). Thus, the y-intercept is at \\((0, 4)\\)."
         }
     ],
     "calculator_required": false,
@@ -12,7 +12,7 @@
         "graphs": [
             {
                 "id": "g1",
-                "label": "y = (x-2)^2",
+                "label": "y = (x-2)²",
                 "explicit_function": "(x-2)**2",
                 "visual_features": {
                     "type": "parabola",
@@ -20,12 +20,6 @@
                         2
                     ],
                     "y_intercept": 4,
-                    "turning_points": [
-                        {
-                            "x": 2,
-                            "y": 0
-                        }
-                    ],
                     "axes_range": {
                         "x_min": -1,
                         "x_max": 5,

@@ -1,0 +1,14 @@
+{
+    "question_stem": "A rectangle has a perimeter of 14 cm and an area of 10 cm².  Let the length of the rectangle be \\(x\\) cm and the width be \\(y\\) cm.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the length and width of the rectangle.",
+            "solution_text": "The perimeter of the rectangle is given by \\(2x + 2y = 14\\), which simplifies to \\(x + y = 7\\). The area of the rectangle is given by \\(xy = 10\\). From the perimeter equation, we can express \\(y\\) in terms of \\(x\\): \\(y = 7 - x\\). Substituting this into the area equation gives \\(x(7 - x) = 10\\), which simplifies to \\(x^2 - 7x + 10 = 0\\).  This quadratic equation factors as \\((x - 2)(x - 5) = 0\\), so \\(x = 2\\) or \\(x = 5\\). If \\(x = 2\\), then \\(y = 7 - 2 = 5\\). If \\(x = 5\\), then \\(y = 7 - 5 = 2\\). Therefore, the length and width of the rectangle are 5 cm and 2 cm (or vice versa)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "sim equations question",
+    "question_number": "4",
+    "total_marks": 4
+}

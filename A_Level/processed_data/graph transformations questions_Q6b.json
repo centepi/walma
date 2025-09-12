@@ -4,7 +4,7 @@
         {
             "part_label": "a",
             "question_text": "Find an expression for \\(h(x)\\) where \\(h(x) = 3g(x)\\).",
-            "solution_text": "Given \\(g(x) = x^2 - 3x + 2\\) and \\(h(x) = 3g(x)\\), we substitute \\(g(x)\\) into the expression for \\(h(x)\\).\n\n\\(h(x) = 3(x^2 - 3x + 2)\\)\n\\(h(x) = 3x^2 - 9x + 6\\)"
+            "solution_text": "Given \\(g(x) = x^2 - 3x + 2\\) and \\(h(x) = 3g(x)\\), we substitute \\(g(x)\\) into the expression for \\(h(x)\\):\n\\(h(x) = 3(x^2 - 3x + 2)\\)\n\\(h(x) = 3x^2 - 9x + 6\\)"
         }
     ],
     "calculator_required": false,

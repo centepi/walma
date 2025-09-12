@@ -1,10 +1,10 @@
 {
-    "question_stem": "Consider the quadratic function given by \\(y = x(4-x)\\).",
+    "question_stem": "A quadratic function is given by \\(y = x(4 - x)\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "State the key features of the graph of this function, including its shape, and any intercepts with the axes.",
-            "solution_text": "The equation \\(y = x(4-x)\\) represents a quadratic function. Expanding it gives \\(y = 4x - x^2 = -x^2 + 4x\\).  Since the coefficient of \\(x^2\\) is negative, the graph is an inverted parabola (n-shaped).  \n\nTo find the x-intercepts, we set \\(y = 0\\):\n\\(x(4-x) = 0\\)\nThis gives \\(x = 0\\) or \\(x = 4\\). Thus, the x-intercepts are (0,0) and (4,0).\n\nTo find the y-intercept, we set \\(x = 0\\):\n\\(y = 0(4-0) = 0\\)\nThus, the y-intercept is (0,0), which we already identified as one of the x-intercepts. Therefore the graph passes through the origin."
+            "question_text": "State the coordinates where the graph of this function intersects the x-axis.",
+            "solution_text": "The graph intersects the x-axis when \\(y = 0\\).  Therefore, we set \\(x(4 - x) = 0\\). This gives us two solutions: \\(x = 0\\) and \\(4 - x = 0 \\implies x = 4\\). The coordinates of intersection are therefore \\((0, 0)\\) and \\((4, 0)\\)."
         }
     ],
     "calculator_required": false,
@@ -13,15 +13,12 @@
             {
                 "id": "g1",
                 "label": "y = x(4-x)",
-                "explicit_function": "-x**2 + 4*x",
+                "explicit_function": "x*(4-x)",
                 "visual_features": {
                     "type": "parabola",
-                    "x_intercepts": [
-                        0,
-                        4
-                    ],
+                    "x_intercepts": null,
                     "y_intercept": 0,
-                    "turning_points": [],
+                    "turning_points": null,
                     "axes_range": {
                         "x_min": -1,
                         "x_max": 5,
@@ -35,7 +32,7 @@
                         },
                         {
                             "x": -0.8775510204081632,
-                            "y": -4.280299875052061
+                            "y": -4.280299875052062
                         },
                         {
                             "x": -0.7551020408163265,
@@ -47,7 +44,7 @@
                         },
                         {
                             "x": -0.5102040816326531,
-                            "y": -2.301124531445231
+                            "y": -2.3011245314452315
                         },
                         {
                             "x": -0.3877551020408163,
@@ -55,7 +52,7 @@
                         },
                         {
                             "x": -0.26530612244897966,
-                            "y": -1.1316118284048318
+                            "y": -1.1316118284048315
                         },
                         {
                             "x": -0.1428571428571429,
@@ -103,7 +100,7 @@
                         },
                         {
                             "x": 1.204081632653061,
-                            "y": 3.3665139525197834
+                            "y": 3.366513952519783
                         },
                         {
                             "x": 1.3265306122448979,
@@ -135,11 +132,11 @@
                         },
                         {
                             "x": 2.183673469387755,
-                            "y": 3.966264056643065
+                            "y": 3.9662640566430656
                         },
                         {
                             "x": 2.306122448979592,
-                            "y": 3.9062890462307367
+                            "y": 3.906289046230737
                         },
                         {
                             "x": 2.4285714285714284,
@@ -147,7 +144,7 @@
                         },
                         {
                             "x": 2.5510204081632653,
-                            "y": 3.696376509787589
+                            "y": 3.6963765097875885
                         },
                         {
                             "x": 2.673469387755102,
@@ -155,7 +152,7 @@
                         },
                         {
                             "x": 2.7959183673469385,
-                            "y": 3.3665139525197834
+                            "y": 3.366513952519784
                         },
                         {
                             "x": 2.9183673469387754,
@@ -167,47 +164,43 @@
                         },
                         {
                             "x": 3.163265306122449,
-                            "y": 2.646813827571844
+                            "y": 2.6468138275718447
                         },
                         {
                             "x": 3.2857142857142856,
-                            "y": 2.346938775510205
+                            "y": 2.3469387755102042
                         },
                         {
                             "x": 3.408163265306122,
-                            "y": 2.0170762182423996
+                            "y": 2.0170762182424
                         },
                         {
                             "x": 3.5306122448979593,
-                            "y": 1.657226155768429
+                            "y": 1.6572261557684294
                         },
                         {
                             "x": 3.6530612244897958,
-                            "y": 1.2673885880882967
+                            "y": 1.2673885880882971
                         },
                         {
                             "x": 3.775510204081632,
-                            "y": 0.8475635152020011
+                            "y": 0.8475635152020008
                         },
                         {
                             "x": 3.8979591836734695,
-                            "y": 0.3977509371095369
-                        },
-                        {
-                            "x": 4.0,
-                            "y": 0.0
+                            "y": 0.3977509371095373
                         },
                         {
                             "x": 4.020408163265306,
-                            "y": -0.08204914618908532
+                            "y": -0.08204914618908707
                         },
                         {
                             "x": 4.142857142857142,
-                            "y": -0.5918367346938744
+                            "y": -0.5918367346938753
                         },
                         {
                             "x": 4.26530612244898,
-                            "y": -1.1316118284048322
+                            "y": -1.1316118284048315
                         },
                         {
                             "x": 4.387755102040816,
@@ -215,11 +208,11 @@
                         },
                         {
                             "x": 4.5102040816326525,
-                            "y": -2.301124531445229
+                            "y": -2.3011245314452284
                         },
                         {
                             "x": 4.63265306122449,
-                            "y": -2.9308621407746784
+                            "y": -2.9308621407746775
                         },
                         {
                             "x": 4.755102040816326,
@@ -240,5 +233,5 @@
     },
     "topic": "graph transformations questions",
     "question_number": "7aii",
-    "total_marks": 3
+    "total_marks": 2
 }

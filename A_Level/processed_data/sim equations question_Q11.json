@@ -1,0 +1,14 @@
+{
+    "question_stem": "Find the coordinates of the points where the line \\(2x + y = 7\\) intersects the curve \\(x^2 + xy - y^2 = 1\\).",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Solve the simultaneous equations \\(2x + y = 7\\) and \\(x^2 + xy - y^2 = 1\\).",
+            "solution_text": "From the first equation, we can express \\(y\\) in terms of \\(x\\): \\(y = 7 - 2x\\).\nSubstituting this into the second equation gives:\n\\(x^2 + x(7 - 2x) - (7 - 2x)^2 = 1\\)\n\\(x^2 + 7x - 2x^2 - (49 - 28x + 4x^2) = 1\\)\n\\(x^2 + 7x - 2x^2 - 49 + 28x - 4x^2 = 1\\)\n\\(-5x^2 + 35x - 50 = 0\\)\nDividing by -5 gives:\n\\(x^2 - 7x + 10 = 0\\)\n\\((x - 2)(x - 5) = 0\\)\nSo \\(x = 2\\) or \\(x = 5\\).\nWhen \\(x = 2\\), \\(y = 7 - 2(2) = 7 - 4 = 3\\).\nWhen \\(x = 5\\), \\(y = 7 - 2(5) = 7 - 10 = -3\\).\nTherefore, the points of intersection are \\((2, 3)\\) and \\((5, -3)\\)."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "sim equations question",
+    "question_number": "11",
+    "total_marks": 4
+}

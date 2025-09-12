@@ -1,10 +1,10 @@
 {
-    "question_stem": "The volume, \\(V\\) cm³, of a cuboid is given by the expression \\(V = 2t³ + 10t² + 12t\\), where \\(t\\) is a positive real number.",
+    "question_stem": "The volume, V cm³, of a cuboid is given by the expression \\(V = 2t³ + 12t² + 18t\\), where \\(t\\) is a positive real number representing one of the dimensions of the cuboid.",
     "parts": [
         {
             "part_label": "a",
             "question_text": "Factorise the expression for \\(V\\) completely.",
-            "solution_text": "We can factorise the expression for \\(V\\) as follows:\n\\(V = 2t³ + 10t² + 12t\\)\n\\(V = 2t(t² + 5t + 6)\\)\n\\(V = 2t(t + 2)(t + 3)\\)"
+            "solution_text": "First, we can factor out \\(2t\\) from the expression: \\(V = 2t(t² + 6t + 9)\\).\nThen, we recognize the quadratic expression inside the parentheses as a perfect square: \\(t² + 6t + 9 = (t + 3)²\\).\nTherefore, the fully factorized expression for the volume is \\(V = 2t(t + 3)²\\)."
         }
     ],
     "calculator_required": false,

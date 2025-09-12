@@ -40,3 +40,6 @@ __pycache__/
 venv/
 .venv/
 
+
+# Firebase service account (A_Level)
+A_Level/config/firebase_service_account.json

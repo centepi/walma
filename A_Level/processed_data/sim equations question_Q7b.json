@@ -1,0 +1,14 @@
+{
+    "question_stem": "A rectangle has a perimeter of 20 cm and an area of 21 cm².  Let the length of the rectangle be \\(l\\) cm and the width be \\(w\\) cm.",
+    "parts": [
+        {
+            "part_label": "a",
+            "question_text": "Find the length and width of the rectangle.",
+            "solution_text": "The perimeter is given by \\(2l + 2w = 20\\), which simplifies to \\(l + w = 10\\), or \\(l = 10 - w\\). The area is given by \\(lw = 21\\). Substituting the expression for \\(l\\) into the area equation gives \\((10 - w)w = 21\\). Expanding and rearranging gives \\(w^2 - 10w + 21 = 0\\). This quadratic factorises to \\((w - 3)(w - 7) = 0\\). Thus, \\(w = 3\\) or \\(w = 7\\). If \\(w = 3\\), then \\(l = 10 - 3 = 7\\). If \\(w = 7\\), then \\(l = 10 - 7 = 3\\).  Since length is typically the longer side, we can say length = 7cm and width = 3cm."
+        }
+    ],
+    "calculator_required": false,
+    "topic": "sim equations question",
+    "question_number": "7b",
+    "total_marks": 4
+}

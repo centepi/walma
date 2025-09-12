@@ -1,43 +1,49 @@
 {
-    "question_stem": "The graph of \\(y = g(x)\\) is shown below.  The function \\(g(x)\\) is defined for \\(-3 \\le x \\le 3\\).",
+    "question_stem": "The graph of \\(y = f(x)\\) is shown below. The function \\(f(x)\\) is defined for \\(-2 \\le x \\le 4\\).",
     "parts": [
         {
             "part_label": "a",
-            "question_text": "State the coordinates of the point where the graph of \\(y = -g(x)\\) intersects the y-axis.",
-            "solution_text": "The graph of \\(y = -g(x)\\) is a reflection of the graph of \\(y = g(x)\\) in the x-axis.  The graph of \\(y = g(x)\\) intersects the y-axis at (0, 2).  Therefore, the graph of \\(y = -g(x)\\) intersects the y-axis at (0, -2)."
+            "question_text": "State the coordinates of the point where the graph of \\(y = -f(x)\\) intersects the y-axis.",
+            "solution_text": "The graph of \\(y = -f(x)\\) is a reflection of \\(y = f(x)\\) in the x-axis.  The graph of \\(y = f(x)\\) intersects the y-axis at (0, 2). Therefore, the graph of \\(y = -f(x)\\) intersects the y-axis at (0, -2)."
         }
     ],
     "calculator_required": false,
     "visual_data": {
         "graphs": [
             {
-                "id": "g1",
-                "label": "y = g(x)",
+                "id": "f(x)",
+                "label": "\\(y = f(x)\\)",
                 "explicit_function": null,
                 "visual_features": {
                     "type": "piecewise",
-                    "segments": [
+                    "pieces": [
                         {
-                            "start_x": -3,
-                            "end_x": -1,
-                            "explicit_function": "x + 5"
+                            "range": {
+                                "start": -2,
+                                "end": 0
+                            },
+                            "explicit_function": "2*x + 2"
                         },
                         {
-                            "start_x": -1,
-                            "end_x": 1,
+                            "range": {
+                                "start": 0,
+                                "end": 2
+                            },
                             "explicit_function": "2"
                         },
                         {
-                            "start_x": 1,
-                            "end_x": 3,
+                            "range": {
+                                "start": 2,
+                                "end": 4
+                            },
                             "explicit_function": "-x + 4"
                         }
                     ],
                     "axes_range": {
-                        "x_min": -4,
-                        "x_max": 4,
-                        "y_min": -1,
-                        "y_max": 5
+                        "x_min": -3,
+                        "x_max": 5,
+                        "y_min": -3,
+                        "y_max": 3
                     }
                 }
             }
