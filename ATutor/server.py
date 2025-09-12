@@ -8,6 +8,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict
 from dotenv import load_dotenv
+from utils import initialize_firebase
+import datetime
+from firebase_admin import credentials, firestore
 
 # --- Import the prompt functions from the new file ---
 from prompts import get_analysis_prompt, get_chat_prompt, get_help_prompt
@@ -95,7 +98,7 @@ async def analyse_work(request: AnalysisRequest):
     
 # --- Main help endpoint ---
 @app.post("/stuck-at-question")
-async def analyse_work(request: AnalysisRequest):
+async def stuck_at_question(request: AnalysisRequest):
     image_b64_string = "data:image/jpeg;base64," + request.image_data
     try:
         r = requests.post("https://api.mathpix.com/v3/text", headers={ "app_id": os.getenv("MATHPIX_APP_ID"), "app_key": os.getenv("MATHPIX_APP_KEY"), "Content-type": "application/json" }, json={"src": image_b64_string, "formats": ["text"]})
@@ -163,7 +166,7 @@ async def chat(request: ChatRequest):
     )
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         gemini_response = model.generate_content(prompt)
 
         ai_reply = gemini_response.text.strip()
@@ -184,3 +187,150 @@ async def chat(request: ChatRequest):
     except Exception as e:
         print(f"❌ Error in chat endpoint: {e}")
         return {"status": "error", "message": f"Failed in chat endpoint: {e}"}
+TIERS = [
+    {"id": 0, "name": "Copper"},
+    {"id": 1, "name": "Bronze"}, 
+    {"id": 2, "name": "Silver"},
+    {"id": 3, "name": "Gold"},
+    {"id": 4, "name": "Platinum"},
+    {"id": 5, "name": "Diamond"},
+    {"id": 6, "name": "Legendary"}
+]
+
+GROUP_SIZE = 20
+
+@app.post("/add-new-user")
+async def add_new_user(request):
+    db_client = initialize_firebase()
+    """Assign new user to Copper tier and allocate to appropriate group"""
+    
+    # Find current Copper groups and their sizes
+    copper_users = db_client.collection('users').where('tierID', '==', 0).get()
+    
+    # Group users by groupID
+    groups = {}
+    for user in copper_users:
+        user_data = user.to_dict()
+        group_id = user_data.get('groupID', 0)
+        if group_id not in groups:
+            groups[group_id] = []
+        groups[group_id].append(user_data)
+    
+    # Find a group with less than GROUP_SIZE members or create new one
+    target_group_id = 0
+    for group_id, members in groups.items():
+        if len(members) < GROUP_SIZE:
+            target_group_id = group_id
+            break
+    else:
+        # All groups are full, create new group
+        target_group_id = len(groups)
+    
+    # Add user to database
+    user_data = {
+        'userID': request.user_id,
+        'username': request.username,
+        'tierID': 0,  # Copper tier ID
+        'groupID': target_group_id,
+        'totalXP': 0,
+        'currentStreak': 0,
+        'timeSpentInSeconds': 0,
+        'lastLoginDate': datetime.now(),
+        'friends': []
+    }
+    try:
+        db_client.collection('users').document(request.user_id).set(user_data)
+        return {"status":"ok"}
+    except Exception as e:
+        return {"status":"nok","reason":e}
+    
+@app.post("/tiered-leaderboard")
+async def tiered_leaderboard(request):
+    """Get leaderboard for user's current tier and group"""    
+    db_client = initialize_firebase()
+    user_doc = db_client.collection('users').document(request.user_id).get()
+    if not user_doc.exists:
+        return []
+    
+    user_data = user_doc.to_dict()
+    tier_id = user_data['tierID']
+    group_id = user_data['groupID']
+    
+    # Get all users in same tier and group
+    users = db_client.collection('users').where('tierID', '==', tier_id).where('groupID', '==', group_id).order_by('totalXP', direction=firestore.Query.DESCENDING).get()
+    
+    leaderboard = []
+    for i, user in enumerate(users):
+        user_data = user.to_dict()
+        leaderboard.append({
+            'rank': i + 1,
+            'username': user_data['username'],
+            'totalXP': user_data['totalXP'],
+            'tierName': TIERS[tier_id]['name'],
+            'isCurrentUser': user_data['userID'] == request.user_id
+        })
+    
+    return leaderboard
+
+@app.post("/add-friend")
+async def add_friend(request):
+    """Add a friend by username"""
+    db_client = initialize_firebase()
+    # Find friend by username
+    friend_query = db_client.collection('users').where('username', '==', request.friend_username).limit(1).get()
+    
+    if not friend_query:
+        return False, "User not found"
+    
+    friend_doc = friend_query[0]
+    friend_id = friend_doc.to_dict()['userID']
+    
+    # Update current user's friends list
+    user_ref = db_client.collection('users').document(request.user_id)
+    user_ref.update({
+        'friends': firestore.ArrayUnion([friend_id])
+    })
+    
+    # Update friend's friends list (mutual)
+    friend_ref = db_client.collection('users').document(friend_id)
+    friend_ref.update({
+        'friends': firestore.ArrayUnion([request.user_id])
+    })
+    
+    return True, "Friend added successfully"
+
+
+@app.post("/get-friend-leaderboard")
+async def get_friend_leaderboard(request):
+    """Get leaderboard showing points among friends"""
+    db_client = initialize_firebase()
+    user_doc = db_client.collection('users').document(request.user_id).get()
+    if not user_doc.exists:
+        return []
+    
+    user_data = user_doc.to_dict()
+    friend_ids = user_data.get('friends', [])
+    
+    # Add current user to the list
+    friend_ids.append(request.user_id)
+    
+    leaderboard = []
+    for friend_id in friend_ids:
+        friend_doc = db_client.collection('users').document(friend_id).get()
+        if friend_doc.exists:
+            friend_data = friend_doc.to_dict()
+            leaderboard.append({
+                'username': friend_data['username'],
+                'totalXP': friend_data['totalXP'],
+                'tierName': TIERS[friend_data['tierID']]['name'],
+                'isCurrentUser': friend_id == request.user_id
+            })
+    
+    # Sort by totalXP descending
+    leaderboard.sort(key=lambda x: x['totalXP'], reverse=True)
+    
+    # Add ranks
+    for i, friend in enumerate(leaderboard):
+        friend['rank'] = i + 1
+    
+    return leaderboard
