@@ -4,3 +4,4 @@ pydantic
 python-dotenv
 requests
 google-generativeai
+firebase_admin
