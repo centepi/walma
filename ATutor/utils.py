@@ -11,9 +11,9 @@ def initialize_firebase():
     # This check prevents initializing the app more than once
     if not firebase_admin._apps:
         try:
-            firebase_project_id = os.getenv('FIREBASE_PROJECT_ID')
-            firebase_client_email = os.getenv('FIREBASE_CLIENT_EMAIL')
-            firebase_private_key = os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n')
+            firebase_project_id = os.getenv('project_id')
+            firebase_client_email = os.getenv('client_email')
+            firebase_private_key = os.getenv('private_key').replace('\\n', '\n')
             cred = credentials.Certificate({
                 "type": "service_account",
                 "project_id": firebase_project_id,
