@@ -18,7 +18,7 @@ if not GOOGLE_API_KEY:
     print(f"Warning: GOOGLE_API_KEY not found. Looked for .env at: {ENV_PATH}")
     print("Content generation will fail. Ensure .env is in the project root and contains your key.")
 
-GEMINI_MODEL_NAME = "gemini-1.5-pro-latest"  # or your preferred model
+GEMINI_MODEL_NAME = "gemini-2.5-pro"  # or your preferred model
 
 # --- Firebase Configuration ---
 FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.path.join(A_LEVEL_DIR, "config", "firebase_service_account.json")
@@ -44,7 +44,7 @@ LABEL_PATTERNS = [
 
 # --- Logging Configuration ---
 # Set lower verbosity for cleaner output
-LOG_LEVEL = "WARNING"  # options: DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL = "DEBUG"  # options: DEBUG, INFO, WARNING, ERROR
 
 # --- Gemini Generation Context Prompt ---
 GENERATION_CONTEXT_PROMPT = """You are an expert A-level Mathematics content creator specializing in the Edexcel syllabus.
