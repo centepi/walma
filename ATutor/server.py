@@ -38,6 +38,16 @@ class ChatRequest(BaseModel):
     student_work: str
     conversation_history: List[ChatMessage]
 
+class AddNewUserRequest(BaseModel):
+    user_id: str
+    username: str
+class AddFriendRequest(BaseModel):
+    user_id: str
+    friend_username: str
+class TieredLeaderboardRequest(BaseModel):
+    user_id: str
+class FriendLeaderboardRequest(BaseModel):
+    user_id: str
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
 async def analyse_work(request: AnalysisRequest):
@@ -200,7 +210,7 @@ TIERS = [
 GROUP_SIZE = 20
 
 @app.post("/add-new-user")
-async def add_new_user(request):
+async def add_new_user(request:AddNewUserRequest):
     db_client = initialize_firebase()
     """Assign new user to Copper tier and allocate to appropriate group"""
     
@@ -246,7 +256,7 @@ async def add_new_user(request):
 
 
 @app.post("/add-friend")
-async def add_friend(request):
+async def add_friend(request:AddFriendRequest):
     """Add a friend by username"""
     db_client = initialize_firebase()
     # Find friend by username
@@ -277,7 +287,7 @@ async def add_friend(request):
 
     
 @app.post("/tiered-leaderboard")
-async def tiered_leaderboard(request):
+async def tiered_leaderboard(request:TieredLeaderboardRequest):
     """Get leaderboard for user's current tier and group"""    
     leaderboard = tiered_leaderboard_desc(request,TIERS,GROUP_SIZE)
     
@@ -285,7 +295,7 @@ async def tiered_leaderboard(request):
 
 
 @app.post("/get-friend-leaderboard")
-async def get_friend_leaderboard(request):
+async def get_friend_leaderboard(request:FriendLeaderboardRequest):
     """Get leaderboard showing points among friends"""
     
     leaderboard = get_friend_leaderboard_desc(request,TIERS,GROUP_SIZE)
