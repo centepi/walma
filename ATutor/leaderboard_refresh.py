@@ -26,13 +26,11 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 TIERS = [
-    {"id": 0, "name": "Copper"},
-    {"id": 1, "name": "Bronze"}, 
-    {"id": 2, "name": "Silver"},
-    {"id": 3, "name": "Gold"},
-    {"id": 4, "name": "Platinum"},
-    {"id": 5, "name": "Diamond"},
-    {"id": 6, "name": "Legendary"}
+    {"id": 0, "name": "Broccoli"},
+    {"id": 1, "name": "Cabbage"}, 
+    {"id": 2, "name": "Banana"},
+    {"id": 3, "name": "Strawberry"},
+    {"id": 4, "name": "Apple"}
 ]
 
 GROUP_SIZE = 20
@@ -42,12 +40,12 @@ def get_promotion_demotion_counts(tier_id):
     if tier_id == 0:  # Copper
         promote_count = 10
         demote_count = 0  # No demotion from copper
-    elif tier_id == 6:  # Legendary
+    elif tier_id == 4:  # Legendary
         promote_count = 0  # No promotion from legendary
         demote_count = 10  # All except top 3 stay in legendary
     else:
-        promote_count = 10 - tier_id  # Decreases by 1 per tier
-        demote_count = 3 + (tier_id - 1)  # Increases by 1 per tier (starting from 3)
+        promote_count = 10 - tier_id - 1  # Decreases by 1 per tier
+        demote_count = 3 + (tier_id - 1) + 1  # Increases by 1 per tier (starting from 3)
     
     return promote_count, demote_count
 

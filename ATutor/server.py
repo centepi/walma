@@ -201,13 +201,13 @@ async def chat(request: ChatRequest):
         print(f"❌ Error in chat endpoint: {e}")
         return {"status": "error", "message": f"Failed in chat endpoint: {e}"}
 TIERS = [
-    {"id": 0, "name": "Copper"},
-    {"id": 1, "name": "Bronze"}, 
-    {"id": 2, "name": "Silver"},
-    {"id": 3, "name": "Gold"},
-    {"id": 4, "name": "Platinum"},
-    {"id": 5, "name": "Diamond"},
-    {"id": 6, "name": "Legendary"}
+    {"id": 0, "name": "Broccoli"},
+    {"id": 1, "name": "Cabbage"}, 
+    {"id": 2, "name": "Banana"},
+    {"id": 3, "name": "Strawberry"},
+    {"id": 4, "name": "Apple"}
+    # {"id": 5, "name": "Diamond"},
+    # {"id": 6, "name": "Legendary"}
 ]
 
 GROUP_SIZE = 20
