@@ -46,3 +46,42 @@ def initialize_firebase():
         print("Firebase: init failed — %s", e)
         print("Firebase: check key at '%s'", "./firebase_service_account.json")
         return None
+    
+
+import firebase_admin
+from firebase_admin import credentials, firestore
+import threading
+import logging
+
+class FirebaseManager:
+    _instance = None
+    _lock = threading.Lock()
+    _db_client = None
+    _app = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def initialize(self):
+        """Initialize Firebase once per application lifecycle"""
+        if self._app is None:
+            with self._lock:
+                if self._app is None:
+                    try:
+                        cred = credentials.Certificate('path/to/serviceAccountKey.json')
+                        self._app = firebase_admin.initialize_app(cred)
+                        self._db_client = firestore.client()
+                        logging.info("Firebase initialized successfully")
+                    except Exception as e:
+                        logging.error(f"Firebase initialization failed: {e}")
+                        raise e
+    
+    def get_db_client(self):
+        """Get the singleton Firestore client"""
+        if self._db_client is None:
+            self.initialize()
+        return self._db_client

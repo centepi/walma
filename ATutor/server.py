@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict
 from dotenv import load_dotenv
-from utils import initialize_firebase
+from utils import initialize_firebase,FirebaseManager
 import datetime
 from firebase_admin import credentials, firestore,auth
 from leaderboard import tiered_leaderboard_desc,get_friend_leaderboard_desc
@@ -48,6 +48,9 @@ class TieredLeaderboardRequest(BaseModel):
     user_id: str
 class FriendLeaderboardRequest(BaseModel):
     user_id: str
+
+# Global singleton instance
+firebase_manager = FirebaseManager()
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
 async def analyse_work(request: AnalysisRequest):
@@ -289,7 +292,7 @@ async def add_friend(request:AddFriendRequest):
 @app.post("/tiered-leaderboard")
 async def tiered_leaderboard(request:TieredLeaderboardRequest):
     """Get leaderboard for user's current tier and group"""    
-    leaderboard = tiered_leaderboard_desc(request,TIERS,GROUP_SIZE)
+    leaderboard = tiered_leaderboard_desc(request,TIERS,GROUP_SIZE,firebase_manager)
     
     return leaderboard
 
@@ -298,7 +301,7 @@ async def tiered_leaderboard(request:TieredLeaderboardRequest):
 async def get_friend_leaderboard(request:FriendLeaderboardRequest):
     """Get leaderboard showing points among friends"""
     
-    leaderboard = get_friend_leaderboard_desc(request,TIERS,GROUP_SIZE)
+    leaderboard = get_friend_leaderboard_desc(request,TIERS,GROUP_SIZE,firebase_manager)
     
     return leaderboard
 
