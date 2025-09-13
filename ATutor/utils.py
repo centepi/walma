@@ -72,7 +72,27 @@ class FirebaseManager:
             with self._lock:
                 if self._app is None:
                     try:
-                        cred = credentials.Certificate('path/to/serviceAccountKey.json')
+                        firebase_project_id = os.getenv('project_id')
+                        firebase_client_email = os.getenv('client_email')
+                        firebase_private_key = os.getenv('private_key').replace('\\n', '\n')
+                        if not all([firebase_project_id, firebase_client_email, firebase_private_key]):
+                            print("[ERROR] Missing one or more required Firebase environment variables.")
+                            return None
+                        
+                        firebase_private_key = firebase_private_key.replace('\\n', '\n')
+
+                        cred = credentials.Certificate({
+                            "type": "service_account",
+                            "project_id": firebase_project_id,
+                            "private_key_id": "<your-private-key-id>",
+                            "private_key": firebase_private_key,
+                            "client_email": firebase_client_email,
+                            "client_id": "<your-client-id>",
+                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                            "token_uri": "https://oauth2.googleapis.com/token",
+                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                            "client_x509_cert_url": "<your-client-cert-url>"
+                        })
                         self._app = firebase_admin.initialize_app(cred)
                         self._db_client = firestore.client()
                         logging.info("Firebase initialized successfully")
