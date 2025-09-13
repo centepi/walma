@@ -14,6 +14,7 @@ from firebase_admin import credentials, firestore,auth
 from leaderboard import tiered_leaderboard_desc,get_friend_leaderboard_desc
 # --- Import the prompt functions from the new file ---
 from prompts import get_analysis_prompt, get_chat_prompt, get_help_prompt
+import logging
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -70,6 +71,7 @@ async def analyse_work(request: AnalysisRequest):
         print(f"✅ Mathpix Response: {transcribed_text}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Error calling Mathpix API: {e}")
+        logging.error(f"Error calling Mathpix API: {e}")
         return {"status": "error", "message": "Failed to call Mathpix API."}
 
     # --- Use the imported prompt function ---
@@ -89,8 +91,8 @@ async def analyse_work(request: AnalysisRequest):
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
         except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
+            logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
+            logging.error(f"Raw Gemini response: {gemini_response.text}")
             return {"status": "error", "message": "AI response was malformed."}
             
         print(f"✅ Gemini Analysis: {analysis_data}")
