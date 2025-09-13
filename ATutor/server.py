@@ -90,10 +90,19 @@ async def analyse_work(request: AnalysisRequest):
             analysis_data = json.loads(gemini_response.text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
-        except (json.JSONDecodeError, ValueError) as e:
-            logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            logging.error(f"Raw Gemini response: {gemini_response.text}")
-            return {"status": "error", "message": "AI response was malformed."}
+        except (json.JSONDecodeError, ValueError) as ef:
+            # logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
+            # logging.error(f"Raw Gemini response: {gemini_response.text}")
+            # return {"status": "error", "message": "AI response was malformed."}
+            try:
+                response_gemini_text = (gemini_response.text).replace('\\(', '\\\\(').replace('\\)', '\\\\)')
+                analysis_data = json.loads(response_gemini_text)
+                if "analysis" not in analysis_data or "reason" not in analysis_data:
+                    raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
+                logging.error(f"Raw Gemini response: {response_gemini_text}")
+                return {"status": "error", "message": "AI response was malformed."}
             
         print(f"✅ Gemini Analysis: {analysis_data}")
 
