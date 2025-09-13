@@ -9,14 +9,17 @@ def initialize_firebase():
     Returns a Firestore client object if successful, otherwise None.
     """
     # This check prevents initializing the app more than once
-    if not firebase_admin._apps:
-        try:
+    try:
+        if not firebase_admin._apps:        
             firebase_project_id = os.getenv('project_id')
             firebase_client_email = os.getenv('client_email')
             firebase_private_key = os.getenv('private_key').replace('\\n', '\n')
-            print(firebase_project_id)
-            print(firebase_client_email)
-            print(firebase_private_key)
+            if not all([firebase_project_id, firebase_client_email, firebase_private_key]):
+                print("[ERROR] Missing one or more required Firebase environment variables.")
+                return None
+            
+            firebase_private_key = firebase_private_key.replace('\\n', '\n')
+
             cred = credentials.Certificate({
                 "type": "service_account",
                 "project_id": firebase_project_id,
@@ -31,9 +34,15 @@ def initialize_firebase():
             })
             firebase_admin.initialize_app(cred)
             print("Firebase: Admin SDK initialized.")
-        except Exception as e:
-            print("Firebase: init failed — %s", e)
-            print("Firebase: check key at '%s'", "./firebase_service_account.json")
-            return None
-
-    return firestore.client()
+            # Return Firestore client
+            client = firestore.client()
+            if client:
+                print("[INFO] Firestore client initialized successfully.")
+                return client
+            else:
+                print("[ERROR] Firestore client is None.")
+                return None
+    except Exception as e:
+        print("Firebase: init failed — %s", e)
+        print("Firebase: check key at '%s'", "./firebase_service_account.json")
+        return None

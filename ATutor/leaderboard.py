@@ -6,6 +6,9 @@ from firebase_admin import credentials, firestore,auth
 def tiered_leaderboard_desc(request,TIERS,GROUP_SIZE):
     """Get leaderboard for user's current tier and group"""    
     db_client = initialize_firebase()
+    if db_client is None:
+        print("[ERROR] Firebase client could not be initialized.")
+        return {"status": "error", "message": "Internal server error. Firebase not initialized."}
     user_doc = db_client.collection('users').document(request.user_id).get()
     if not user_doc.exists:
         return []
@@ -34,6 +37,9 @@ def tiered_leaderboard_desc(request,TIERS,GROUP_SIZE):
 def get_friend_leaderboard_desc(request,TIERS,GROUP_SIZE):
     """Get leaderboard showing points among friends"""
     db_client = initialize_firebase()
+    if db_client is None:
+        print("[ERROR] Firebase client could not be initialized.")
+        return {"status": "error", "message": "Internal server error. Firebase not initialized."}
     user_doc = db_client.collection('users').document(request.user_id).get()
     if not user_doc.exists:
         return []
