@@ -8,12 +8,13 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict
 from dotenv import load_dotenv
-from utils import initialize_firebase
+from utils import initialize_firebase,FirebaseManager
 import datetime
-from firebase_admin import credentials, firestore
-
+from firebase_admin import credentials, firestore,auth
+from leaderboard import tiered_leaderboard_desc,get_friend_leaderboard_desc
 # --- Import the prompt functions from the new file ---
 from prompts import get_analysis_prompt, get_chat_prompt, get_help_prompt
+import logging
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -38,6 +39,19 @@ class ChatRequest(BaseModel):
     student_work: str
     conversation_history: List[ChatMessage]
 
+class AddNewUserRequest(BaseModel):
+    user_id: str
+    username: str
+class AddFriendRequest(BaseModel):
+    user_id: str
+    friend_username: str
+class TieredLeaderboardRequest(BaseModel):
+    user_id: str
+class FriendLeaderboardRequest(BaseModel):
+    user_id: str
+
+# Global singleton instance
+firebase_manager = FirebaseManager()
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
 async def analyse_work(request: AnalysisRequest):
@@ -57,6 +71,7 @@ async def analyse_work(request: AnalysisRequest):
         print(f"✅ Mathpix Response: {transcribed_text}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Error calling Mathpix API: {e}")
+        logging.error(f"Error calling Mathpix API: {e}")
         return {"status": "error", "message": "Failed to call Mathpix API."}
 
     # --- Use the imported prompt function ---
@@ -75,10 +90,19 @@ async def analyse_work(request: AnalysisRequest):
             analysis_data = json.loads(gemini_response.text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
-            return {"status": "error", "message": "AI response was malformed."}
+        except (json.JSONDecodeError, ValueError) as ef:
+            # logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
+            # logging.error(f"Raw Gemini response: {gemini_response.text}")
+            # return {"status": "error", "message": "AI response was malformed."}
+            try:
+                response_gemini_text = (gemini_response.text).replace('\\(', '\\\\(').replace('\\)', '\\\\)')
+                analysis_data = json.loads(response_gemini_text)
+                if "analysis" not in analysis_data or "reason" not in analysis_data:
+                    raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
+                logging.error(f"Raw Gemini response: {response_gemini_text}")
+                return {"status": "error", "message": "AI response was malformed."}
             
         print(f"✅ Gemini Analysis: {analysis_data}")
 
@@ -188,19 +212,19 @@ async def chat(request: ChatRequest):
         print(f"❌ Error in chat endpoint: {e}")
         return {"status": "error", "message": f"Failed in chat endpoint: {e}"}
 TIERS = [
-    {"id": 0, "name": "Copper"},
-    {"id": 1, "name": "Bronze"}, 
-    {"id": 2, "name": "Silver"},
-    {"id": 3, "name": "Gold"},
-    {"id": 4, "name": "Platinum"},
-    {"id": 5, "name": "Diamond"},
-    {"id": 6, "name": "Legendary"}
+    {"id": 0, "name": "Broccoli"},
+    {"id": 1, "name": "Cabbage"}, 
+    {"id": 2, "name": "Banana"},
+    {"id": 3, "name": "Strawberry"},
+    {"id": 4, "name": "Apple"}
+    # {"id": 5, "name": "Diamond"},
+    # {"id": 6, "name": "Legendary"}
 ]
 
 GROUP_SIZE = 20
 
 @app.post("/add-new-user")
-async def add_new_user(request):
+async def add_new_user(request:AddNewUserRequest):
     db_client = initialize_firebase()
     """Assign new user to Copper tier and allocate to appropriate group"""
     
@@ -243,37 +267,10 @@ async def add_new_user(request):
         return {"status":"ok"}
     except Exception as e:
         return {"status":"nok","reason":e}
-    
-@app.post("/tiered-leaderboard")
-async def tiered_leaderboard(request):
-    """Get leaderboard for user's current tier and group"""    
-    db_client = initialize_firebase()
-    user_doc = db_client.collection('users').document(request.user_id).get()
-    if not user_doc.exists:
-        return []
-    
-    user_data = user_doc.to_dict()
-    tier_id = user_data['tierID']
-    group_id = user_data['groupID']
-    
-    # Get all users in same tier and group
-    users = db_client.collection('users').where('tierID', '==', tier_id).where('groupID', '==', group_id).order_by('totalXP', direction=firestore.Query.DESCENDING).get()
-    
-    leaderboard = []
-    for i, user in enumerate(users):
-        user_data = user.to_dict()
-        leaderboard.append({
-            'rank': i + 1,
-            'username': user_data['username'],
-            'totalXP': user_data['totalXP'],
-            'tierName': TIERS[tier_id]['name'],
-            'isCurrentUser': user_data['userID'] == request.user_id
-        })
-    
-    return leaderboard
+
 
 @app.post("/add-friend")
-async def add_friend(request):
+async def add_friend(request:AddFriendRequest):
     """Add a friend by username"""
     db_client = initialize_firebase()
     # Find friend by username
@@ -300,37 +297,51 @@ async def add_friend(request):
     return True, "Friend added successfully"
 
 
-@app.post("/get-friend-leaderboard")
-async def get_friend_leaderboard(request):
-    """Get leaderboard showing points among friends"""
-    db_client = initialize_firebase()
-    user_doc = db_client.collection('users').document(request.user_id).get()
-    if not user_doc.exists:
-        return []
+
+
     
-    user_data = user_doc.to_dict()
-    friend_ids = user_data.get('friends', [])
-    
-    # Add current user to the list
-    friend_ids.append(request.user_id)
-    
-    leaderboard = []
-    for friend_id in friend_ids:
-        friend_doc = db_client.collection('users').document(friend_id).get()
-        if friend_doc.exists:
-            friend_data = friend_doc.to_dict()
-            leaderboard.append({
-                'username': friend_data['username'],
-                'totalXP': friend_data['totalXP'],
-                'tierName': TIERS[friend_data['tierID']]['name'],
-                'isCurrentUser': friend_id == request.user_id
-            })
-    
-    # Sort by totalXP descending
-    leaderboard.sort(key=lambda x: x['totalXP'], reverse=True)
-    
-    # Add ranks
-    for i, friend in enumerate(leaderboard):
-        friend['rank'] = i + 1
+@app.post("/tiered-leaderboard")
+async def tiered_leaderboard(request:TieredLeaderboardRequest):
+    """Get leaderboard for user's current tier and group"""    
+    leaderboard = tiered_leaderboard_desc(request,TIERS,GROUP_SIZE,firebase_manager)
     
     return leaderboard
+
+
+@app.post("/get-friend-leaderboard")
+async def get_friend_leaderboard(request:FriendLeaderboardRequest):
+    """Get leaderboard showing points among friends"""
+    
+    leaderboard = get_friend_leaderboard_desc(request,TIERS,GROUP_SIZE,firebase_manager)
+    
+    return leaderboard
+
+
+def delete_user_account(uid):
+    auth.delete_user(uid)
+    print(f"Deleted user account: {uid}")
+
+
+
+
+def delete_user_data(uid):
+    # Delete from /users/{uid}
+    db_client = initialize_firebase()
+    user_doc_ref = db_client.collection('users').document(uid)
+    user_doc_ref.delete()
+
+    # Delete subcollections (e.g., /userPosts/{uid}/posts)
+    user_posts_ref = db_client.collection('userPosts').document(uid).collection('posts')
+    docs = user_posts_ref.stream()
+    for doc in docs:
+        doc.reference.delete()
+
+    # Optionally, delete the userPosts/{uid} document if it exists
+    db_client.collection('userPosts').document(uid).delete()
+
+    print(f"Deleted Firestore data for user {uid}")
+
+@app.post("/delete-user-data")
+async def delete_user_data(request):
+    delete_user_data(request.uid)
+    delete_user_account(request.uid)
