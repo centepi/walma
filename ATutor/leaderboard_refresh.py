@@ -1,255 +1,237 @@
-# cron_leaderboard_rotate.py
+# ATutor/leaderboard_refresh.py
+# Periodic reshuffle + tier rotation script aligned to the 5-tier scheme.
+# Uses the shared constants and FirebaseManager so it stays in sync with the app.
 
-import firebase_admin
-from firebase_admin import credentials, firestore
 from collections import defaultdict
 from datetime import datetime, timedelta
-import random
-import os
+from typing import Any, Dict, List
 
-firebase_project_id = os.getenv('project_id')
-firebase_client_email = os.getenv('client_email')
-firebase_private_key = os.getenv('private_key').replace('\\n', '\n')
-cred = credentials.Certificate({
-    "type": "service_account",
-    "project_id": firebase_project_id,
-    "private_key_id": "<your-private-key-id>",
-    "private_key": firebase_private_key,
-    "client_email": firebase_client_email,
-    "client_id": "<your-client-id>",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "<your-client-cert-url>"
-})
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+from utils import FirebaseManager
+from constants import TIERS, GROUP_SIZE
 
-TIERS = [
-    {"id": 0, "name": "Broccoli"},
-    {"id": 1, "name": "Cabbage"}, 
-    {"id": 2, "name": "Banana"},
-    {"id": 3, "name": "Strawberry"},
-    {"id": 4, "name": "Apple"}
-]
+# Firestore client (requires project_id, client_email, private_key env vars)
+db = FirebaseManager().get_db_client()
 
-GROUP_SIZE = 20
 
-def get_promotion_demotion_counts(tier_id):
-    """Calculate promotion and demotion counts based on tier"""
-    if tier_id == 0:  # Copper
-        promote_count = 10
-        demote_count = 0  # No demotion from copper
-    elif tier_id == 4:  # Legendary
-        promote_count = 0  # No promotion from legendary
-        demote_count = 10  # All except top 3 stay in legendary
-    else:
-        promote_count = 10 - tier_id - 1  # Decreases by 1 per tier
-        demote_count = 3 + (tier_id - 1) + 1  # Increases by 1 per tier (starting from 3)
-    
-    return promote_count, demote_count
+def _safe_int(v: Any, default: int = 0) -> int:
+    try:
+        return int(v)
+    except Exception:
+        return default
 
-def get_all_users_grouped():
-    """Get all users grouped by tier and sorted by login activity"""
-    all_users = db.collection('users').get()
-    
-    # Group users by tier
-    tier_users = defaultdict(list)
-    
+
+def _to_datetime(value: Any) -> datetime:
+    """Coerce Firestore Timestamp/ISO string/datetime to datetime for comparisons."""
+    if value is None:
+        return datetime.min
+    if isinstance(value, datetime):
+        return value
+    try:
+        # Firestore Timestamp compatibility (has .isoformat / .timestamp via datetime)
+        return value.to_datetime()  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except Exception:
+            return datetime.min
+    return datetime.min
+
+
+def get_promotion_demotion_counts(tier_id: int) -> (int, int):
+    """
+    Promotion/demotion counts per group for the 5-tier model (0..4).
+
+    Simple policy:
+      - Bottom tier (0): promote 10, demote 0
+      - Top tier (4):    promote 0,  demote 10
+      - Middle tiers:    promote decreases as you go up; demote increases
+        (mirrors the previous intent but bounded to 5 tiers)
+    """
+    top_index = len(TIERS) - 1
+    if tier_id <= 0:
+        return 10, 0
+    if tier_id >= top_index:
+        return 0, 10
+    # Middle tiers (1..3)
+    promote = max(1, 10 - tier_id - 1)  # 1:8, 2:7, 3:6
+    demote = max(1, 3 + (tier_id - 1) + 1)  # 1:4, 2:5, 3:6
+    return promote, demote
+
+
+def get_all_users_grouped() -> Dict[int, List[Dict[str, Any]]]:
+    """Get all users grouped by tier with lastLoginDate normalized to datetime."""
+    all_users = db.collection("users").get()
+    tier_users: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+
     for user_doc in all_users:
-        user_data = user_doc.to_dict()
-        tier_id = user_data['tierID']
-        
-        # Convert lastLoginDate to datetime for sorting
-        last_login = user_data.get('lastLoginDate', datetime.min)
-        if isinstance(last_login, str):
-            last_login = datetime.fromisoformat(last_login)
-        
-        user_data['lastLoginDateTime'] = last_login
+        user_data = user_doc.to_dict() or {}
+        tier_id = _safe_int(user_data.get("tierID"), 0)
+        user_data["lastLoginDateTime"] = _to_datetime(user_data.get("lastLoginDate"))
+        user_data["userID"] = user_data.get("userID") or user_doc.id
+        user_data["username"] = user_data.get("username") or "Player"
+        user_data["totalXP"] = _safe_int(user_data.get("totalXP"), 0)
         tier_users[tier_id].append(user_data)
-    
+
     return tier_users
 
-def shuffle_users_by_activity(users, group_size=GROUP_SIZE):
-    """Shuffle users into groups while keeping recently active users together"""
+
+def shuffle_users_by_activity(users: List[Dict[str, Any]], group_size: int = GROUP_SIZE) -> List[List[Dict[str, Any]]]:
+    """
+    Shuffle users into groups while keeping recently active users together.
+    Recent = last 7 days. Within recent/inactive, sort by XP desc then by last seen (recent first).
+    """
     now = datetime.now()
-    recent_threshold = now - timedelta(days=7)  # Consider users active in last 7 days
-    
-    # Separate recently active and inactive users
-    recent_users = [u for u in users if u['lastLoginDateTime'] >= recent_threshold]
-    inactive_users = [u for u in users if u['lastLoginDateTime'] < recent_threshold]
-    
-    # Sort each group by totalXP (descending) then by last login (recent first)
-    recent_users.sort(key=lambda u: (-u['totalXP'], -u['lastLoginDateTime'].timestamp()))
-    inactive_users.sort(key=lambda u: (-u['totalXP'], -u['lastLoginDateTime'].timestamp()))
-    
-    # Create mixed groups: fill each group with recent users first, then inactive users
-    groups = []
-    recent_idx = 0
-    inactive_idx = 0
-    
-    while recent_idx < len(recent_users) or inactive_idx < len(inactive_users):
-        group = []
-        
-        # Fill group with recent users first (up to 70% of group size)
-        recent_slots = min(int(group_size * 0.7), len(recent_users) - recent_idx)
+    recent_threshold = now - timedelta(days=7)
+
+    recent_users = [u for u in users if _to_datetime(u["lastLoginDateTime"]) >= recent_threshold]
+    inactive_users = [u for u in users if _to_datetime(u["lastLoginDateTime"]) < recent_threshold]
+
+    # Sort: XP desc, then recent first
+    recent_users.sort(key=lambda u: (-_safe_int(u["totalXP"], 0), -_to_datetime(u["lastLoginDateTime"]).timestamp()))
+    inactive_users.sort(key=lambda u: (-_safe_int(u["totalXP"], 0), -_to_datetime(u["lastLoginDateTime"]).timestamp()))
+
+    groups: List[List[Dict[str, Any]]] = []
+    r_idx = 0
+    i_idx = 0
+
+    while r_idx < len(recent_users) or i_idx < len(inactive_users):
+        group: List[Dict[str, Any]] = []
+
+        # Up to 70% recent users
+        recent_slots = min(int(group_size * 0.7), len(recent_users) - r_idx)
         for _ in range(recent_slots):
-            if recent_idx < len(recent_users):
-                group.append(recent_users[recent_idx])
-                recent_idx += 1
-        
-        # Fill remaining slots with inactive users
-        remaining_slots = group_size - len(group)
-        for _ in range(remaining_slots):
-            if inactive_idx < len(inactive_users):
-                group.append(inactive_users[inactive_idx])
-                inactive_idx += 1
-        
-        if group:  # Only add non-empty groups
+            if r_idx < len(recent_users):
+                group.append(recent_users[r_idx])
+                r_idx += 1
+
+        # Fill remaining with inactive
+        remaining = group_size - len(group)
+        for _ in range(remaining):
+            if i_idx < len(inactive_users):
+                group.append(inactive_users[i_idx])
+                i_idx += 1
+
+        if group:
             groups.append(group)
-    
+
     return groups
 
-def batch_update_users(updates):
-    """Batch update users to avoid Firebase limits"""
+
+def batch_update_users(updates: List[Dict[str, Any]]) -> None:
+    """Batch update users to avoid Firestore limits (500 ops per batch)."""
     if not updates:
         return
-        
+
     batch = db.batch()
-    batch_count = 0
-    
-    for update in updates:
-        user_ref = db.collection('users').document(update['user_id'])
-        batch.update(user_ref, {
-            'tierID': update['tier_id'],
-            'groupID': update['group_id']
-        })
-        batch_count += 1
-        
-        # Firebase batch limit is 500 operations
-        if batch_count >= 500:
+    count = 0
+
+    for upd in updates:
+        user_ref = db.collection("users").document(upd["user_id"])
+        batch.update(user_ref, {"tierID": upd["tier_id"], "groupID": upd["group_id"]})
+        count += 1
+        if count >= 500:
             batch.commit()
             batch = db.batch()
-            batch_count = 0
-    
-    # Commit remaining updates
-    if batch_count > 0:
+            count = 0
+
+    if count > 0:
         batch.commit()
 
-def find_available_group_in_tier(tier_id, existing_groups):
-    """Find next available group ID in a tier"""
-    existing_group_ids = set(existing_groups.keys()) if existing_groups else set()
-    group_id = 0
-    while group_id in existing_group_ids:
-        group_id += 1
-    return group_id
 
-def rotate_tiers():
-    """Main function to promote, demote users and reshuffle groups"""
+def rotate_tiers() -> None:
+    """Promote/demote and reshuffle groups across all 5 tiers."""
     print("Starting tier rotation with shuffling...")
-    
+
     tier_users = get_all_users_grouped()
-    all_updates = []
-    
-    # Process each tier
+    all_updates: List[Dict[str, Any]] = []
+
+    top_index = len(TIERS) - 1
+
     for tier_id in range(len(TIERS)):
-        tier_name = TIERS[tier_id]['name']
+        tier_name = TIERS[tier_id]["name"]
         users = tier_users.get(tier_id, [])
-        
+
         if not users:
             print(f"No users in {tier_name} tier")
             continue
-            
+
         print(f"Processing {tier_name} tier with {len(users)} users")
-        
+
         # Shuffle users into new groups based on activity
         new_groups = shuffle_users_by_activity(users, GROUP_SIZE)
-        
+
         promote_count, demote_count = get_promotion_demotion_counts(tier_id)
-        
-        promoted_users = []
-        demoted_users = []
-        staying_users = []
-        
-        # Process each group for promotions/demotions
-        for group_idx, group in enumerate(new_groups):
+
+        promoted_users: List[Dict[str, Any]] = []
+        demoted_users: List[Dict[str, Any]] = []
+        staying_users: List[Dict[str, Any]] = []
+
+        for group in new_groups:
             # Sort group by totalXP descending
-            sorted_group = sorted(group, key=lambda u: u['totalXP'], reverse=True)
-            
+            sorted_group = sorted(group, key=lambda u: _safe_int(u["totalXP"], 0), reverse=True)
+
+            # Promotions (skip if top tier)
             group_promoted = 0
+            if tier_id < top_index and promote_count > 0:
+                to_promote = min(promote_count, len(sorted_group))
+                promoted_users.extend(sorted_group[:to_promote])
+                group_promoted = to_promote
+
+            # Demotions (skip if bottom tier)
             group_demoted = 0
-            
-            # Handle promotions (except for Legendary)
-            if tier_id < len(TIERS) - 1 and promote_count > 0:
-                users_to_promote = min(promote_count, len(sorted_group))
-                promoted_users.extend(sorted_group[:users_to_promote])
-                group_promoted = users_to_promote
-                
-            # Handle demotions (except for Copper)
             if tier_id > 0 and demote_count > 0:
-                if tier_id == 6:  # Legendary tier - keep top 3
-                    if len(sorted_group) > 3:
-                        demoted_users.extend(sorted_group[3:])
-                        group_demoted = len(sorted_group) - 3
-                else:
-                    users_to_demote = min(demote_count, len(sorted_group) - group_promoted)
-                    if users_to_demote > 0:
-                        demoted_users.extend(sorted_group[-(users_to_demote):])
-                        group_demoted = users_to_demote
-            
-            # Users staying in current tier
-            staying_in_group = sorted_group[group_promoted:(len(sorted_group)-group_demoted if group_demoted > 0 else len(sorted_group))]
-            staying_users.extend(staying_in_group)
-            
-        # Assign new group IDs to staying users
+                # Demote from the bottom of the group, but don't collide with promoted slice
+                available_for_demote = len(sorted_group) - group_promoted
+                to_demote = min(demote_count, max(0, available_for_demote))
+                if to_demote > 0:
+                    demoted_users.extend(sorted_group[-to_demote:])
+                    group_demoted = to_demote
+
+            # Those who stay in current tier
+            end_idx = len(sorted_group) - group_demoted if group_demoted > 0 else len(sorted_group)
+            staying_segment = sorted_group[group_promoted:end_idx]
+            staying_users.extend(staying_segment)
+
+        # Repack staying users within current tier
         staying_groups = shuffle_users_by_activity(staying_users, GROUP_SIZE)
-        for group_idx, group in enumerate(staying_groups):
+        for g_idx, group in enumerate(staying_groups):
             for user in group:
-                all_updates.append({
-                    'user_id': user['userID'],
-                    'tier_id': tier_id,
-                    'group_id': group_idx
-                })
-        
-        # Handle promoted users
-        if promoted_users and tier_id < len(TIERS) - 1:
+                all_updates.append({"user_id": user["userID"], "tier_id": tier_id, "group_id": g_idx})
+
+        # Handle promotions → next tier
+        if promoted_users and tier_id < top_index:
             target_tier_users = tier_users.get(tier_id + 1, [])
-            combined_target_users = target_tier_users + promoted_users
-            target_groups = shuffle_users_by_activity(combined_target_users, GROUP_SIZE)
-            
-            for group_idx, group in enumerate(target_groups):
+            combined = target_tier_users + promoted_users
+            target_groups = shuffle_users_by_activity(combined, GROUP_SIZE)
+            promoted_ids = {u["userID"] for u in promoted_users}
+            for g_idx, group in enumerate(target_groups):
                 for user in group:
-                    if user['userID'] in [u['userID'] for u in promoted_users]:
-                        all_updates.append({
-                            'user_id': user['userID'],
-                            'tier_id': tier_id + 1,
-                            'group_id': group_idx
-                        })
-                        print(f"Promoting {user['username']} to {TIERS[tier_id + 1]['name']}")
-        
-        # Handle demoted users  
+                    if user["userID"] in promoted_ids:
+                        all_updates.append({"user_id": user["userID"], "tier_id": tier_id + 1, "group_id": g_idx})
+                        print(f"Promoting {user.get('username','Player')} to {TIERS[tier_id + 1]['name']}")
+
+        # Handle demotions → previous tier
         if demoted_users and tier_id > 0:
             target_tier_users = tier_users.get(tier_id - 1, [])
-            combined_target_users = target_tier_users + demoted_users
-            target_groups = shuffle_users_by_activity(combined_target_users, GROUP_SIZE)
-            
-            for group_idx, group in enumerate(target_groups):
+            combined = target_tier_users + demoted_users
+            target_groups = shuffle_users_by_activity(combined, GROUP_SIZE)
+            demoted_ids = {u["userID"] for u in demoted_users}
+            for g_idx, group in enumerate(target_groups):
                 for user in group:
-                    if user['userID'] in [u['userID'] for u in demoted_users]:
-                        all_updates.append({
-                            'user_id': user['userID'],
-                            'tier_id': tier_id - 1,
-                            'group_id': group_idx
-                        })
-                        print(f"Demoting {user['username']} to {TIERS[tier_id - 1]['name']}")
-    
-    # Apply all updates in batches
+                    if user["userID"] in demoted_ids:
+                        all_updates.append({"user_id": user["userID"], "tier_id": tier_id - 1, "group_id": g_idx})
+                        print(f"Demoting {user.get('username','Player')} to {TIERS[tier_id - 1]['name']}")
+
+    # Apply all updates
     if all_updates:
         print(f"Applying {len(all_updates)} updates...")
         batch_update_users(all_updates)
         print("Tier rotation and shuffling completed successfully!")
     else:
         print("No updates needed.")
+
 
 if __name__ == "__main__":
     rotate_tiers()
