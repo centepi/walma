@@ -53,6 +53,19 @@ def health():
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+@app.get("/health/write")
+def health_write():
+    """Verify we can write to the bucket (permissions)."""
+    if store_init_error:
+        return {"ok": False, "error": store_init_error}
+    if store is None:
+        return {"ok": False, "error": "store_not_initialized"}
+    try:
+        gen = store.write_probe()
+        return {"ok": True, "wrote": True, "generation": gen}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 
 def _b64url_decode(s: str) -> bytes:
     # Accept URL-safe base64 without padding

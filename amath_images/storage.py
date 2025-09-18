@@ -1,6 +1,6 @@
 # storage.py
 import json
-from typing import Optional, Tuple
+from typing import Optional
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -19,6 +19,7 @@ class GCSStore:
             self.client = storage.Client()
         self.bucket = self.client.bucket(bucket_name)
 
+    # ---------- READ ----------
     def get_png(self, key: str) -> Optional[bytes]:
         blob = self.bucket.blob(PNG_PATH.format(key=key))
         if not blob.exists():
@@ -30,6 +31,30 @@ class GCSStore:
         if not blob.exists():
             return None
         return blob.download_as_text()
+
+    # ---------- WRITE ----------
+    def put_png(self, key: str, data: bytes) -> None:
+        """Upload PNG with long cache headers."""
+        blob = self.bucket.blob(PNG_PATH.format(key=key))
+        blob.cache_control = f"public, max-age={ONE_YEAR}, immutable"
+        blob.upload_from_string(data, content_type="image/png")
+        blob.patch()  # ensure cache_control is persisted
+
+    def put_meta_json(self, key: str, meta: dict) -> None:
+        """Upload sidecar meta JSON with long cache headers."""
+        text = json.dumps(meta, separators=(",", ":"))
+        blob = self.bucket.blob(META_PATH.format(key=key))
+        blob.cache_control = f"public, max-age={ONE_YEAR}, immutable"
+        blob.upload_from_string(text, content_type="application/json")
+        blob.patch()
+
+    def write_probe(self) -> str:
+        """Write a tiny object to verify write perms; returns generation id."""
+        blob = self.bucket.blob("health/write_probe.txt")
+        blob.cache_control = "no-cache"
+        blob.upload_from_string("ok", content_type="text/plain")
+        blob.patch()
+        return str(blob.generation)
 
 CACHE_HEADERS = {
     "Cache-Control": f"public, max-age={ONE_YEAR}, immutable"
