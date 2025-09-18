@@ -75,12 +75,20 @@ def health_write():
 def _render_svg_node(latex: str, width_px: int, font_px: int) -> str:
     """Call the Node renderer and return SVG markup."""
     payload = json.dumps({"latex": latex, "widthPx": width_px, "fontPx": font_px})
+    # Use configured timeout if available; default to 5s.
+    timeout_s = 5
+    try:
+        if runtime_settings is not None:
+            timeout_s = max(1, int(runtime_settings.RENDER_TIMEOUT_MS)) / 1000.0
+    except Exception:
+        pass
+
     proc = subprocess.run(
         ["node", "renderer/render.js"],
         input=payload.encode("utf-8"),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        timeout=5,
+        timeout=timeout_s,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"node_render_failed: {proc.stderr.decode('utf-8', 'ignore')}")

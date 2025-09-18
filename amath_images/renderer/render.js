@@ -1,6 +1,4 @@
 // renderer/render.js
-import fs from "node:fs";
-
 import { mathjax } from "mathjax-full/js/mathjax.js";
 import { TeX } from "mathjax-full/js/input/tex.js";
 import { SVG } from "mathjax-full/js/output/svg.js";
@@ -8,7 +6,7 @@ import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
 
-// Read JSON from stdin: { latex, widthPx, fontPx }
+// Read JSON from stdin: { latex, widthPx, fontPx, display }
 const stdin = await new Promise((resolve, reject) => {
   let data = "";
   process.stdin.setEncoding("utf8");
@@ -20,7 +18,7 @@ const stdin = await new Promise((resolve, reject) => {
 let payload;
 try {
   payload = JSON.parse(stdin || "{}");
-} catch (e) {
+} catch {
   console.error("bad_json");
   process.exit(2);
 }
@@ -31,38 +29,35 @@ try {
   const adaptor = liteAdaptor();
   RegisterHTMLHandler(adaptor);
 
+  // Match the iOS WebView TeX settings (delimiters + escapes)
   const tex = new TeX({
     packages: AllPackages,
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true,
   });
 
-  // Important bits:
-  //  - fontCache 'none' => self-contained SVGs (no external fonts)
-  //  - mtextInheritFont => use system font metrics for text in <mtext>
-  //  - linebreaks via containerWidth + em scaling (see below)
+  // Self-contained SVGs, inherit mtext font, and explicit linebreaks
   const svg = new SVG({
     fontCache: "none",
     mtextInheritFont: true,
+    linebreaks: { automatic: true, width: "container" },
   });
 
-  const html = mathjax.document("", {
-    InputJax: tex,
-    OutputJax: svg,
-  });
+  const html = mathjax.document("", { InputJax: tex, OutputJax: svg });
 
-  // containerWidth is in "em". We set em so 1em = fontPx CSS pixels,
-  // then express the container width in em to match widthPx.
-  const em = fontPx; // 1em = fontPx px
+  // containerWidth is in em; set 1em = fontPx (CSS px)
+  const em = fontPx;
   const containerWidthEm = widthPx / em;
 
   const node = html.convert(latex || "", {
     display: !!display,
-    em,                // px per em
-    ex: em / 2,        // rough ex
+    em,            // px per em
+    ex: em / 2,    // rough ex
     containerWidth: containerWidthEm,
   });
 
-  const svgStr = adaptor.innerHTML(node);
-  process.stdout.write(svgStr);
+  process.stdout.write(adaptor.innerHTML(node));
 } catch (e) {
   console.error(String(e && e.stack ? e.stack : e));
   process.exit(1);
