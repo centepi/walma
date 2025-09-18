@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+google-cloud-storage
+cairosvg
+pydantic
