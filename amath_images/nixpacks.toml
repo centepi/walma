@@ -1,5 +1,13 @@
+# Tell Nixpacks to include BOTH Python and Node in the image
+providers = ["python", "node"]
+
 [phases.setup]
+# Install Node 20 into the image
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm ci"]
+# Install Python deps AND npm deps
+cmds = [
+  "pip install -r requirements.txt",
+  "npm i --omit=dev"
+]
