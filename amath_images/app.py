@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response, JSONResponse
 from typing import Optional
 import base64
+import json
+import subprocess
 
 from storage import GCSStore, CACHE_HEADERS
 from keying import compute_key
@@ -66,12 +68,37 @@ def health_write():
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+# ---------- Node SVG render probe ----------
+def _render_svg_node(latex: str, width_px: int, font_px: int) -> str:
+    """Call the Node renderer and return SVG markup."""
+    payload = json.dumps({"latex": latex, "widthPx": width_px, "fontPx": font_px})
+    proc = subprocess.run(
+        ["node", "renderer/render.js"],
+        input=payload.encode("utf-8"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=5,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"node_render_failed: {proc.stderr.decode('utf-8', 'ignore')}")
+    return proc.stdout.decode("utf-8", "ignore")
 
+@app.get("/health/render")
+def health_render():
+    """Confirm Node+MathJax can render SVG."""
+    if store_init_error:
+        return {"ok": False, "error": store_init_error}
+    try:
+        svg = _render_svg_node("E=mc^2", width_px=320, font_px=18)
+        return {"ok": True, "svg_len": len(svg)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ---------- helpers ----------
 def _b64url_decode(s: str) -> bytes:
     # Accept URL-safe base64 without padding
     pad = "=" * (-len(s) % 4)
     return base64.urlsafe_b64decode((s + pad).encode("utf-8"))
-
 
 def _validate_inputs(latex_utf8: bytes, wpt: float, fpx: int, scale: int):
     if runtime_settings is None:
@@ -85,7 +112,7 @@ def _validate_inputs(latex_utf8: bytes, wpt: float, fpx: int, scale: int):
     if not (8 <= fpx <= 48):
         raise HTTPException(status_code=400, detail="fpx_out_of_range")
 
-
+# ---------- API ----------
 @app.get("/math/v1/png/{key}.png")
 def get_png(
     key: str,
@@ -133,7 +160,6 @@ def get_png(
         "ETag": key,  # stable across time for this content
     }
     return Response(content=png, media_type="image/png", headers=headers)
-
 
 @app.get("/math/v1/meta/{key}.json")
 def get_meta(key: str):
