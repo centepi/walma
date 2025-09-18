@@ -5,8 +5,12 @@ from typing import Optional
 import base64
 import json
 import subprocess
+from io import BytesIO
 
-from storage import GCSStore, CACHE_HEADERS
+import cairosvg
+from PIL import Image
+
+from storage import GCSStore, CACHE_HEADERS, PNG_PATH, META_PATH
 from keying import compute_key
 
 app = FastAPI(title="Math Images", version="0.1.0")
@@ -48,7 +52,6 @@ def health():
     if store is None:
         return {"ok": False, "error": "store_not_initialized"}
     try:
-        # Real GCS probe (auth + bucket). HEAD request under the hood.
         probe = store.bucket.blob("health/_probe")
         _ = probe.exists()
         return {"ok": True}
@@ -68,7 +71,7 @@ def health_write():
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
-# ---------- Node SVG render probe ----------
+# ---------- Node SVG render ----------
 def _render_svg_node(latex: str, width_px: int, font_px: int) -> str:
     """Call the Node renderer and return SVG markup."""
     payload = json.dumps({"latex": latex, "widthPx": width_px, "fontPx": font_px})
@@ -112,6 +115,19 @@ def _validate_inputs(latex_utf8: bytes, wpt: float, fpx: int, scale: int):
     if not (8 <= fpx <= 48):
         raise HTTPException(status_code=400, detail="fpx_out_of_range")
 
+def _svg_to_png(svg_markup: str, output_width_px: int) -> bytes:
+    """Rasterize SVG to PNG bytes at exact pixel width (transparent background)."""
+    return cairosvg.svg2png(
+        bytestring=svg_markup.encode("utf-8"),
+        output_width=output_width_px,
+        background_color=None,  # keep transparent
+    )
+
+def _png_height_px(png_bytes: bytes) -> int:
+    """Return PNG pixel height using Pillow."""
+    with Image.open(BytesIO(png_bytes)) as im:
+        return im.height
+
 # ---------- API ----------
 @app.get("/math/v1/png/{key}.png")
 def get_png(
@@ -127,6 +143,7 @@ def get_png(
 
     try:
         latex_bytes = _b64url_decode(latex_b64)
+        latex_str = latex_bytes.decode("utf-8")
     except Exception:
         raise HTTPException(status_code=400, detail="bad_base64")
 
@@ -143,21 +160,59 @@ def get_png(
     if recomputed != key:
         raise HTTPException(status_code=400, detail="key_mismatch")
 
+    # 1) Try cache (GCS)
     png = store.get_png(key)
-    if png is None:
-        # Stub behavior for v1: no render yet — just advertise the miss.
+    if png is not None:
+        headers = {
+            **CACHE_HEADERS,
+            "Content-Type": "image/png",
+            "X-Math-Cache": "hit",
+            "X-Math-Pixel-Width": str(pixel_width),
+            "ETag": key,
+        }
+        return Response(content=png, media_type="image/png", headers=headers)
+
+    # 2) Render on miss
+    try:
+        svg = _render_svg_node(latex_str, width_px=pixel_width, font_px=fpx)
+        png = _svg_to_png(svg, output_width_px=pixel_width)
+        height_px = _png_height_px(png)
+        height_pt = height_px / float(scale)
+    except Exception as e:
+        # If render fails, behave like before (report miss) so iOS can fallback.
         return JSONResponse(
-            status_code=404,
-            content={"detail": "render_miss"},
-            headers={"X-Math-Cache": "miss", "X-Math-Pixel-Width": str(pixel_width)},
+            status_code=502,
+            content={"detail": "render_failed", "error": str(e)[:400]},
+            headers={"X-Math-Cache": "error", "X-Math-Pixel-Width": str(pixel_width)},
         )
+
+    # 3) Store PNG + meta, then return PNG
+    try:
+        # PNG
+        png_blob = store.bucket.blob(PNG_PATH.format(key=key))
+        png_blob.cache_control = CACHE_HEADERS["Cache-Control"]
+        png_blob.upload_from_string(png, content_type="image/png")
+
+        # Meta JSON
+        meta_blob = store.bucket.blob(META_PATH.format(key=key))
+        meta_blob.cache_control = CACHE_HEADERS["Cache-Control"]
+        meta_json = json.dumps({"wPt": float(wpt), "hPt": float(height_pt)}, separators=(",", ":"))
+        meta_blob.upload_from_string(meta_json, content_type="application/json")
+    except Exception:
+        # Return the rendered image even if storage write fails.
+        headers = {
+            "Content-Type": "image/png",
+            "X-Math-Cache": "render_no_store",
+            "X-Math-Pixel-Width": str(pixel_width),
+        }
+        return Response(content=png, media_type="image/png", headers=headers)
 
     headers = {
         **CACHE_HEADERS,
         "Content-Type": "image/png",
-        "X-Math-Cache": "hit",
+        "X-Math-Cache": "render",
         "X-Math-Pixel-Width": str(pixel_width),
-        "ETag": key,  # stable across time for this content
+        "ETag": key,
     }
     return Response(content=png, media_type="image/png", headers=headers)
 
