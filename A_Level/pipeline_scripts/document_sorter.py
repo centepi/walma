@@ -125,7 +125,7 @@ def classify_pdf_with_vision(pdf_path, vision_model):
 
 def sort_and_group_documents(input_dir):
     """
-    Analyzes all PDFs in a directory, classifies them using Vision AI, and groups them into processing jobs.
+    Scans all PDFs in a directory, classifies them using Vision AI, and groups them into processing jobs.
     """
     logger.info("Sorter: scanning directory '%s'", input_dir)
     
@@ -252,3 +252,34 @@ def split_interleaved_items(mixed_items_list):
             
     logger.info("Sorter: split interleaved → %d questions, %d answers", len(question_items), len(answer_items))
     return question_items, answer_items
+
+
+# --- Uploads/MVP helper: build a questions-only job (no classification/matching needed) ---
+
+def build_questions_only_job(name: str, items: list[dict]):
+    """
+    Wrap a questions-only batch as a single processing job.
+
+    Args:
+        name: Base name for the job (e.g., uploadId or filename stem).
+        items: Flat list of extracted items from the analyzer (must include 'id').
+
+    Returns:
+        dict job compatible with main_pipeline:
+        {
+            "type": "questions_only",
+            "name": <name>,
+            "questions": <items>,
+            "answers": []
+        }
+    """
+    if not isinstance(items, list):
+        items = []
+    job = {
+        "type": "questions_only",
+        "name": name or "untitled",
+        "questions": items,
+        "answers": []
+    }
+    logger.info("Sorter: job created — questions_only '%s' (items=%d)", job["name"], len(items))
+    return job

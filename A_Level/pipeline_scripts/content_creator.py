@@ -22,10 +22,58 @@ def initialize_gemini_client():
         return None
 
 
+def _normalize_generated_object(obj: dict) -> dict:
+    """
+    Post-process guard rails:
+      - ensure parts is a 1-length list with a,b,c label defaulting to 'a'
+      - trim strings
+      - drop empty visual_data dicts
+    """
+    if not isinstance(obj, dict):
+        return obj or {}
+
+    # Trim top-level strings
+    for key in ("question_stem",):
+        if key in obj and isinstance(obj[key], str):
+            obj[key] = obj[key].strip()
+
+    # Parts normalization
+    parts = obj.get("parts") or []
+    if isinstance(parts, dict):
+        parts = [parts]
+    if not parts:
+        parts = [{
+            "part_label": "a",
+            "question_text": "",
+            "solution_text": ""
+        }]
+    # Keep only the first part for MVP and ensure required keys
+    part = parts[0] or {}
+    part.setdefault("part_label", "a")
+    part["part_label"] = str(part["part_label"]).strip() or "a"
+    for k in ("question_text", "solution_text", "final_answer"):
+        if k in part and isinstance(part[k], str):
+            part[k] = part[k].strip()
+    obj["parts"] = [part]
+
+    # calculator_required default
+    if "calculator_required" not in obj:
+        obj["calculator_required"] = False
+
+    # Clean empty visual_data
+    if isinstance(obj.get("visual_data"), dict) and not obj["visual_data"]:
+        obj.pop("visual_data", None)
+
+    return obj
+
+
 def create_question(gemini_model, full_reference_text, target_part_ref, correction_feedback=None):
     """
     Creates a new, self-contained question inspired by a specific part of a reference question.
     If correction_feedback is provided, it attempts to fix a previously failed generation.
+
+    NOTE: We ask the model to include a concise 'final_answer' inside the first part
+    so downstream CAS validation can run quickly and reliably.
     """
     target_part_id = target_part_ref.get("original_question", {}).get("id", "N/A")
     target_part_content = target_part_ref.get("original_question", {}).get("content", "")
@@ -33,38 +81,45 @@ def create_question(gemini_model, full_reference_text, target_part_ref, correcti
 
     correction_prompt_section = ""
     if correction_feedback:
-        logger.info(f"Regenerating for part '{target_part_id}' with checker feedback.")
+        logger.info(f"Regenerating for part '{target_part_id}' with checker/CAS feedback.")
         logger.debug("Full correction feedback for %s: %s", target_part_id, correction_feedback)
         correction_prompt_section = f"""
     --- CORRECTION INSTRUCTIONS ---
     Your previous attempt was REJECTED for the following reason: "{correction_feedback}"
     You MUST generate the question again and fix this specific error while still following all original instructions.
     """
+
     else:
         logger.info(f"Generating new question inspired by part '{target_part_id}'.")
 
+    # Allow a configurable syllabus/context header
+    context_header = getattr(settings, "GENERATION_CONTEXT_PROMPT", "").strip()
+
     prompt = f"""
+    {context_header}
+
     You are an expert A-level Mathematics content creator. Your task is to create a NEW, ORIGINAL, and SELF-CONTAINED A-level question.
     {correction_prompt_section}
-    --- CONTEXT: THE FULL ORIGINAL QUESTION ---
+    --- CONTEXT: THE FULL ORIGINAL QUESTION (for skill + style only; do NOT copy) ---
     {full_reference_text}
 
     --- INSPIRATION: THE TARGET PART ---
     This is the specific part of the original question you should use as inspiration for the skill to be tested.
     - Reference Part Content: "{target_part_content}"
-    - Reference Part Solution: "{target_part_answer}"
+    - Reference Part Solution (if available): "{target_part_answer}"
 
     --- YOUR TASK ---
-    Create a single, new, self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
+    Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
 
     **CRITICAL INSTRUCTIONS**:
-    1.  **Self-Contained**: Your new question MUST have its own setup (a "question_stem") and a single question part.
-    2.  **Invent New Values**: You MUST invent new functions, numbers, and scenarios.
-    3.  **GUARANTEE A CLEAN ANSWER**: The values you invent MUST lead to a clean, elegant solution (e.g., integers, simple fractions, or simple surds).
-    4.  **Contextual Visuals Only**: The 'visual_data' you generate must only contain information that helps the user understand the question. It must NEVER contain the answer itself. For example, if the question is 'Find the turning point', do NOT include 'turning_points' in the data. If the question is 'Calculate the shaded area', you SHOULD include the 'shaded_regions' data.
-    5.  **Include Visuals if Appropriate**: If the skill is inherently visual, generate the 'visual_data' object.
-    6.  **Calculator Use**: Determine if a calculator is required and set the 'calculator_required' field.
-    7.  **NO DRAWING QUESTIONS**: The "question_text" you create must NEVER ask the student to "sketch", "draw", or "plot" a graph. If the reference question asks the student to draw, you must adapt the question to test the same knowledge with a text-based answer. For example, instead of "Sketch the graph of y = x^2", you could ask, "Describe the key features of the graph y = x^2, such as its shape, vertex, and any intercepts."
+    1.  **Self-Contained**: Provide a clear "question_stem" and exactly ONE part in "parts".
+    2.  **Invent New Values**: Use fresh numbers/functions/scenarios. Do not copy text.
+    3.  **GUARANTEE A CLEAN ANSWER**: Choose values that lead to a neat final result (integers, simple fractions, or simple surds).
+    4.  **Contextual Visuals Only**: Any 'visual_data' must aid understanding and must NEVER encode or reveal the answer (e.g., do NOT include turning_points if the task is to find the turning point).
+    5.  **Include Visuals if Appropriate**: If the skill is inherently visual, include a 'visual_data' object as described below.
+    6.  **Calculator Use**: Set 'calculator_required' appropriately.
+    7.  **NO DRAWING REQUESTS**: Do not ask the user to "sketch/draw/plot". Convert such tasks into textual reasoning requirements.
+    8.  **FINAL ANSWER FIELD**: Inside the single part object, include a 'final_answer' string that is the fully simplified final numeric value or algebraic expression required by the question (e.g., "5/2", "3√2", "(x-2)(x+3)", "2x+1"). This must be short and CAS-friendly (no prose).
 
     **OUTPUT FORMAT**:
     Your output MUST be a single, valid JSON object with the following structure:
@@ -74,11 +129,12 @@ def create_question(gemini_model, full_reference_text, target_part_ref, correcti
         {{
           "part_label": "a",
           "question_text": "The single task for the user to perform.",
-          "solution_text": "The detailed, step-by-step solution to your new question."
+          "solution_text": "The detailed, step-by-step solution to your new question.",
+          "final_answer": "A SHORT, simplified final numeric value or algebraic expression only."
         }}
       ],
       "calculator_required": true,
-      "visual_data": {{...}} // Omit this key entirely if no visual is needed
+      "visual_data": {{...}}  // Omit this key entirely if no visual is needed
     }}
 
     **'visual_data' structure (if needed)**:
@@ -90,7 +146,13 @@ def create_question(gemini_model, full_reference_text, target_part_ref, correcti
                 "id": "g1",
                 "label": "y = f(x)",
                 "explicit_function": "A Python-compatible expression like 'x**2 - 4*x + 7'",
-                "visual_features": {{ "type": "parabola", "x_intercepts": null, "y_intercept": 7, "turning_points": [{{ "x": 2, "y": 3 }}], "axes_range": {{ "x_min": -1, "x_max": 5, "y_min": 0, "y_max": 10 }} }}
+                "visual_features": {{
+                    "type": "parabola",
+                    "x_intercepts": null,
+                    "y_intercept": 7,
+                    "turning_points": [{{ "x": 2, "y": 3 }}],
+                    "axes_range": {{ "x_min": -1, "x_max": 5, "y_min": 0, "y_max": 10 }}
+                }}
             }}
         ],
         "labeled_points": [
@@ -107,9 +169,10 @@ def create_question(gemini_model, full_reference_text, target_part_ref, correcti
     }}
 
     **JSON TECHNICAL RULES**:
-    - All backslashes `\\` within JSON string values MUST be escaped (e.g., `"\\\\(x^2\\\\)"`).
+    - All backslashes '\\\\' within JSON string values MUST be escaped.
+    - Output ONLY the JSON object. No extra commentary.
 
-    **FINAL CHECK**: Before responding, ensure the question has a clean solution and the JSON is valid. Output ONLY the JSON object.
+    **FINAL CHECK**: Ensure the question has a clean solution; 'final_answer' is short & simplified; and the JSON is valid.
     """
 
     try:
@@ -127,6 +190,9 @@ def create_question(gemini_model, full_reference_text, target_part_ref, correcti
     if not content_object:
         logger.error(f"Failed to generate or validate content for seed '{target_part_id}'.")
         return None
+
+    # Normalize/guard
+    content_object = _normalize_generated_object(content_object)
 
     # After successful validation, process any visual data using the master function
     visual_data = content_object.get("visual_data")

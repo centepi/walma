@@ -9,6 +9,7 @@ from . import item_matcher
 from . import content_creator
 from . import firebase_uploader
 from . import content_checker
+from . import cas_validator  # NEW: CAS validation
 
 logger = utils.setup_logger(__name__)
 
@@ -60,6 +61,25 @@ def group_paired_items(paired_refs):
     return grouped_questions
 
 
+def _build_pseudo_pairs_from_questions(q_items):
+    """
+    Build 'paired' structures from questions only (no answers).
+    This keeps parent stems in the flow and allows grouping/context to work.
+    """
+    pseudo = []
+    for q in q_items or []:
+        qid = (q.get("id") or "").strip()
+        if not qid:
+            continue
+        pseudo.append({
+            "question_id": qid,
+            "original_question": q,
+            "original_answer": {}  # none available
+        })
+    logger.info("Pipeline: built %d pseudo-pairs from questions-only batch.", len(pseudo))
+    return pseudo
+
+
 # ---------- test mode (prints -> logs) ----------
 
 def test_sorter_and_matcher():
@@ -87,23 +107,27 @@ def test_sorter_and_matcher():
             a_items = job.get("answers")
         elif job_type == "interleaved":
             q_items, a_items = document_sorter.split_interleaved_items(job.get("content"))
+        elif job_type == "questions_only":
+            q_items = job.get("questions") or []
+            a_items = []
 
-        if not (q_items and a_items):
-            logger.warning(f"Skipping job '{base_name}' due to missing question or answer items.")
-            continue
-
-        paired_refs, unmatched = item_matcher.match_items_with_ai(q_items, a_items)
-        if not paired_refs:
-            logger.warning(f"AI Matcher found no pairs for job '{base_name}'.")
-            continue
+        if job_type == "questions_only":
+            paired_refs = _build_pseudo_pairs_from_questions(q_items)
+        else:
+            if not (q_items and a_items):
+                logger.warning(f"Skipping job '{base_name}' due to missing question or answer items.")
+                continue
+            paired_refs, unmatched = item_matcher.match_items_with_ai(q_items, a_items)
+            if not paired_refs:
+                logger.warning(f"AI Matcher found no pairs for job '{base_name}'.")
+                continue
 
         hierarchical_groups = group_paired_items(paired_refs)
 
         # 3) Summary Report (logged)
         logger.info(
             f"[TEST] Job '{base_name}': pairs={len(paired_refs)}, "
-            f"groups={len(hierarchical_groups)}, "
-            f"unmatched_questions={len(unmatched.get('unmatched_questions', []))}"
+            f"groups={len(hierarchical_groups)}"
         )
 
         test_output_dir = os.path.join(settings.PROCESSED_DATA_DIR, "test_outputs")
@@ -120,7 +144,7 @@ def test_sorter_and_matcher():
 
 def run_full_pipeline():
     """The main orchestrator for the 'Self-Contained Skills' generation process."""
-    logger.info("--- Starting Full Content Pipeline (Generator-Checker Model) ---")
+    logger.info("--- Starting Full Content Pipeline (Generator–Checker–CAS) ---")
 
     # Start run report (also captures the per-run log file path)
     run_report = utils.start_run_report()
@@ -134,7 +158,7 @@ def run_full_pipeline():
         utils.save_run_report(run_report)
         return
 
-    # 2) Sort and Group Source Documents
+    # 2) Sort and Group Source Documents (PDF folder mode)
     processing_jobs = document_sorter.sort_and_group_documents(settings.INPUT_PDF_DIR)
     if not processing_jobs:
         logger.warning("Smart Sorter found no processing jobs. Exiting pipeline.")
@@ -142,6 +166,10 @@ def run_full_pipeline():
         return
 
     run_report["totals"]["jobs"] = len(processing_jobs)
+
+    # collection root for uploads (Topics by default)
+    collection_root = getattr(settings, "DEFAULT_COLLECTION_ROOT", "Topics")
+    cas_policy = (getattr(settings, "CAS_POLICY", "off") or "off").strip().lower()
 
     # 3) Process Each Job
     for job in processing_jobs:
@@ -158,27 +186,34 @@ def run_full_pipeline():
             a_items = job.get("answers")
         elif job_type == "interleaved":
             q_items, a_items = document_sorter.split_interleaved_items(job.get("content"))
+        elif job_type == "questions_only":
+            # New: allow questions-only uploads (images/PDFs with no mark scheme)
+            q_items = job.get("questions") or []
+            a_items = []
 
-        if not (q_items and a_items):
-            logger.warning(f"Skipping job '{base_name}' due to missing question or answer items.")
-            run_report["jobs"].append(job_summary)
-            continue
+        # Create/merge Topic doc metadata only for the Topics root (keeps existing behavior)
+        if collection_root == "Topics":
+            firebase_uploader.create_or_update_topic(db_client, base_name)
 
-        # Create/merge Topic document metadata if present in settings
-        firebase_uploader.create_or_update_topic(db_client, base_name)
-
-        # 3a) Match items
-        paired_refs, _ = item_matcher.match_items_with_ai(q_items, a_items)
-        if not paired_refs:
-            logger.warning(f"No item pairs could be matched for job '{base_name}'. Skipping.")
-            run_report["jobs"].append(job_summary)
-            continue
+        # 3a) Match items OR build pseudo-pairs
+        if job_type == "questions_only":
+            paired_refs = _build_pseudo_pairs_from_questions(q_items)
+        else:
+            if not (q_items and a_items):
+                logger.warning(f"Skipping job '{base_name}' due to missing question or answer items.")
+                run_report["jobs"].append(job_summary)
+                continue
+            paired_refs, _ = item_matcher.match_items_with_ai(q_items, a_items)
+            if not paired_refs:
+                logger.warning(f"No item pairs could be matched for job '{base_name}'. Skipping.")
+                run_report["jobs"].append(job_summary)
+                continue
 
         hierarchical_groups = group_paired_items(paired_refs)
         job_summary["groups"] = len(hierarchical_groups)
         run_report["totals"]["groups"] += len(hierarchical_groups)
 
-        # 4) Generate, Verify (with retry), and Upload
+        # 4) Generate, CAS-validate (optional), Verify (with retry), and Upload
         questions_to_process = getattr(settings, "QUESTIONS_TO_PROCESS", None)  # None or list of main IDs
 
         for group in hierarchical_groups:
@@ -219,8 +254,9 @@ def run_full_pipeline():
                 new_question_object = None
                 feedback_object = None
                 correction_feedback = None
+                cas_last_report = None
 
-                for attempt in range(2):  # 1 initial + 1 retry on checker feedback
+                for attempt in range(2):  # 1 initial + 1 retry on feedback (CAS or checker)
                     logger.info(f"{base_name} | {qid} | Attempt {attempt + 1}/2")
 
                     generated_object = content_creator.create_question(
@@ -234,15 +270,41 @@ def run_full_pipeline():
                         logger.error(f"{base_name} | {qid} | Generation failed on attempt {attempt + 1}.")
                         continue
 
+                    # --- CAS validation (optional) BEFORE AI checker to avoid wasted calls ---
+                    cas_ok = True
+                    if cas_policy != "off":
+                        cas_ok, cas_last_report = cas_validator.validate(generated_object)
+                        if not cas_ok:
+                            reason = (cas_last_report or {}).get("details") or (cas_last_report or {}).get("reason") or "unknown"
+                            short_reason = utils.truncate(str(reason), 160)
+                            logger.debug(f"{base_name} | {qid} | CAS rejected — {short_reason}")
+                            if cas_policy == "require":
+                                correction_feedback = f"CAS validation failed: {reason}. Regenerate and fix while obeying all original rules."
+                                # Retry once; skip checker this round
+                                continue
+                            # If 'prefer', we proceed to checker but we keep the CAS report for logging.
+
+                    # --- AI checker (existing) ---
                     feedback_object = content_checker.verify_and_mark_question(
                         gemini_checker_model,
                         generated_object
                     )
 
+                    # Decide acceptance based on checker + CAS policy
                     if feedback_object and feedback_object.get("is_correct"):
-                        new_question_object = generated_object
-                        logger.info(f"{base_name} | {qid} | ✅ Verified on attempt {attempt + 1} (marks={feedback_object.get('marks', 0)})")
-                        break
+                        if cas_policy == "require" and not cas_ok:
+                            # Shouldn't arrive here due to early-continue, but keep guard
+                            correction_feedback = f"CAS must pass; last failure: {(cas_last_report or {}).get('details')}"
+                        else:
+                            new_question_object = generated_object
+                            # Attach compact validation notes for audit (not required by app)
+                            if cas_policy != "off":
+                                new_question_object.setdefault("validation", {})
+                                new_question_object["validation"]["cas_ok"] = bool(cas_ok)
+                                new_question_object["validation"]["cas"] = cas_last_report
+                            logger.info(f"{base_name} | {qid} | ✅ Verified on attempt {attempt + 1} "
+                                        f"(marks={feedback_object.get('marks', 0)}, cas_ok={cas_ok})")
+                            break
                     elif feedback_object:
                         correction_feedback = feedback_object.get("feedback") or ""
                         # Demote attempt-level rejection to DEBUG to keep console concise
@@ -275,7 +337,7 @@ def run_full_pipeline():
                     )
 
                     # Upload via uploader
-                    collection_path = f"Topics/{base_name}/Questions"
+                    collection_path = f"{collection_root}/{base_name}/Questions"
                     ok = firebase_uploader.upload_content(db_client, collection_path, new_question_id, new_question_object)
                     if ok:
                         job_summary["uploaded_ok"] += 1
@@ -292,6 +354,8 @@ def run_full_pipeline():
                     # Record last known reason
                     if correction_feedback:
                         utils.append_failure(job_summary, str(qid), correction_feedback)
+                    elif cas_policy != "off" and cas_last_report:
+                        utils.append_failure(job_summary, str(qid), f"CAS failure: {cas_last_report}")
                     else:
                         utils.append_failure(job_summary, str(qid), "verification failed")
 

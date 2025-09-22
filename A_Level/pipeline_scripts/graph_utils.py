@@ -1,6 +1,7 @@
 import numpy as np
 import sympy as sp
 import re
+import math
 import traceback
 from . import utils
 
@@ -10,22 +11,64 @@ logger = utils.setup_logger(__name__)
 def generate_sampled_points(explicit_function: str, axes_range: dict, critical_x_values: list = None, num_points: int = 50):
     """
     Generates sampled (x, y) pairs, ensuring critical x-values are included for precision.
+    Robust to string/unicode inputs like 'π/4', '−2', '^', '2x', etc.
     """
-    x_min = axes_range.get("x_min", -2)
-    x_max = axes_range.get("x_max", 2)
 
-    # Base evenly spaced points
-    base_x_values = np.linspace(x_min, x_max, num_points)
+    def _coerce_float(v):
+        """Return a float if possible; understands π, unicode minus, ^, simple sympy forms."""
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        s = str(v).strip()
+        if not s:
+            return None
+        # Normalize common unicode / math glyphs
+        s = (s.replace('−', '-')    # unicode minus
+               .replace('—', '-')   # em dash just in case
+               .replace('×', '*')   # multiply
+               .replace('·', '*')   # middle dot
+               .replace('π', 'pi')  # pi
+               .replace('^', '**')) # exponent
+        # Fast numeric path
+        try:
+            val = float(s)
+            return val if math.isfinite(val) else None
+        except Exception:
+            pass
+        # SymPy path
+        try:
+            expr = sp.sympify(s)
+            if expr.is_real is False:
+                return None
+            val = float(expr.evalf())
+            return val if math.isfinite(val) else None
+        except Exception:
+            return None
 
-    # Add critical x-values (turning points, intercepts, region edges) within range
-    all_x_values = set(base_x_values)
+    # --- read & coerce axes range safely ---
+    x_min = _coerce_float((axes_range or {}).get("x_min", -2))
+    x_max = _coerce_float((axes_range or {}).get("x_max",  2))
+    if x_min is None:
+        x_min = -2.0
+    if x_max is None:
+        x_max =  2.0
+    if x_min > x_max:
+        x_min, x_max = x_max, x_min
+
+    # Base evenly spaced points (pure floats)
+    base_x_values = np.linspace(x_min, x_max, int(num_points), dtype=float)
+    all_x_values = set(base_x_values.tolist())
+
+    # Add coerced critical x-values within range
     if critical_x_values:
-        for x_val in critical_x_values:
-            if x_val is not None and x_min <= x_val <= x_max:
-                all_x_values.add(x_val)
+        for raw in critical_x_values:
+            xv = _coerce_float(raw)
+            if xv is not None and x_min <= xv <= x_max:
+                all_x_values.add(float(xv))
 
     # Sort to draw the curve correctly
-    sorted_x_values = sorted(list(all_x_values))
+    sorted_x_values = sorted(all_x_values)
 
     sampled_points = []
 
@@ -39,7 +82,8 @@ def generate_sampled_points(explicit_function: str, axes_range: dict, critical_x
         rhs = match_y.group(1).strip()
 
     # Make expression Python/SymPy friendly
-    rhs = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', rhs)  # 2x -> 2*x
+    # implicit multiplication: 2x -> 2*x, 3( -> 3*(
+    rhs = re.sub(r'(\d)([a-zA-Z(])', r'\1*\2', rhs)
     rhs = rhs.replace('^', '**')
     x_sym = sp.Symbol('x')
 
@@ -47,13 +91,21 @@ def generate_sampled_points(explicit_function: str, axes_range: dict, critical_x
     try:
         expr = sp.sympify(rhs)
         for val in sorted_x_values:
-            y = expr.subs(x_sym, val)
-            if y.is_real:
-                sampled_points.append({"x": float(val), "y": float(y.evalf())})
+            try:
+                y = expr.subs(x_sym, val)
+                y_num = float(y.evalf())
+                if math.isfinite(y_num):
+                    sampled_points.append({"x": float(val), "y": y_num})
+            except Exception:
+                # skip domain errors (e.g., log(x<=0)), poles, etc.
+                continue
         logger.debug("Graph: sampled %d pts with SymPy for '%s'", len(sampled_points), utils.truncate(explicit_function, 80))
         return sampled_points
     except Exception as e:
-        logger.warning("Graph: SymPy failed for '%s' — %s. Falling back to eval.", utils.truncate(rhs, 80), utils.truncate(str(e), 120))
+        logger.warning(
+            "Graph: SymPy failed for '%s' — %s. Falling back to eval.",
+            utils.truncate(rhs, 80), utils.truncate(str(e), 120)
+        )
 
     # Fallback: restricted eval (simple expressions)
     try:
@@ -63,9 +115,11 @@ def generate_sampled_points(explicit_function: str, axes_range: dict, critical_x
 
         fallback_points = []
         for val in sorted_x_values:
-            local_vars = {"x": val}
+            local_vars = {"x": float(val), "pi": math.pi}
             y = eval(rhs, {"__builtins__": {}}, local_vars)  # no builtins for safety
-            fallback_points.append({"x": float(val), "y": float(y)})
+            y_num = float(y)
+            if math.isfinite(y_num):
+                fallback_points.append({"x": float(val), "y": y_num})
         logger.debug("Graph: sampled %d pts with eval fallback for '%s'", len(fallback_points), utils.truncate(explicit_function, 80))
         return fallback_points
     except Exception as e:
@@ -164,7 +218,8 @@ def process_and_sample_visual_data(visual_data: dict):
         for tp in features.get("turning_points") or []:
             local_critical_x.add(tp.get("x"))
 
-        combined_critical_x = list(filter(None, global_critical_x.union(local_critical_x)))
+        # Do NOT use filter(None, ...) — that drops 0 which is a valid critical x.
+        combined_critical_x = [v for v in global_critical_x.union(local_critical_x) if v is not None]
 
         func = graph.get("explicit_function")
         axes_range = features.get("axes_range")

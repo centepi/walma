@@ -41,13 +41,23 @@ def _initialize_gemini_client():
 
 
 def _parse_ai_response(response_text):
-    """Safely parses the JSON string from the AI's response."""
+    """Safely parses the JSON string from the AI's response (expects a JSON LIST)."""
     try:
-        # The AI might wrap the JSON in markdown backticks, so we remove them
-        clean_text = re.sub(r'^```json\s*|\s*```$', '', (response_text or "").strip())
-        parsed = json.loads(clean_text)
+        # The AI might wrap the JSON in markdown backticks; strip if present.
+        txt = (response_text or "").strip()
+        txt = re.sub(r'^```json\s*', '', txt, flags=re.IGNORECASE)
+        txt = re.sub(r'^```\s*', '', txt)
+        txt = re.sub(r'\s*```$', '', txt)
+
+        # If the model sent extra prose, try to isolate the first JSON array.
+        if not (txt.startswith('[') and txt.endswith(']')):
+            m = re.search(r'$begin:math:display$\\s*[\\s\\S]*?\\s$end:math:display$', txt)
+            if m:
+                txt = m.group(0)
+
+        parsed = json.loads(txt)
         return parsed
-    except json.JSONDecodeError as e:
+    except Exception as e:
         # Console: concise; File: include first chunk for diagnosis
         logger.warning("Document Analyzer: JSON decode failed — %s", utils.truncate(str(e), 160))
         logger.debug("Document Analyzer: raw AI text (first 1200 chars): %s", (response_text or "")[:1200])
@@ -88,6 +98,38 @@ def _encode_png(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
+def _to_pil(image_like) -> Image.Image:
+    """
+    Accept a PIL.Image, raw bytes, or a file path; return a PIL.Image (RGB).
+    """
+    if isinstance(image_like, Image.Image):
+        return image_like
+    if isinstance(image_like, (bytes, bytearray)):
+        return Image.open(io.BytesIO(image_like)).convert("RGB")
+    if isinstance(image_like, str):
+        return Image.open(image_like).convert("RGB")
+    raise TypeError(f"Unsupported image type: {type(image_like)}")
+
+
+def _dedupe_items(items):
+    """
+    Simple de-duplication to combat overlap repeats across tiles.
+    Keeps the first occurrence for a given (id, content) pair.
+    """
+    seen = set()
+    out = []
+    for it in items or []:
+        key = (it.get("id", ""), (it.get("content") or "").strip())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(it)
+    duped = (len(items or []) - len(out))
+    if duped > 0:
+        logger.info("DocAnalyze: de-duplicated %d overlapping items.", duped)
+    return out
+
+
 def analyze_page_with_vision(image_obj, vision_model, page_number):
     """
     Uses Gemini Vision to extract all question/answer items and pedagogical notes from a single page image.
@@ -104,9 +146,9 @@ def analyze_page_with_vision(image_obj, vision_model, page_number):
     1.  **Identify Items**: Go through the document and identify every unique question or answer item by its label (e.g., "Q1", "(a)", "(ii)").
 
     2.  **CRITICAL - Create Hierarchical ID**: For each item, create a unique `id`.
-        - For a main question (e.g., "Q3"), normalize its ID to just the number (e.g., `"3"`).
-        - For a sub-question (e.g., "(a)" under "Q3"), its ID MUST be a combination of the main question number and the sub-part's normalized letter/roman numeral (e.g., `"3a"`).
-        - For a sub-sub-question (e.g., "(i)" under "(a)"), its ID should also be hierarchical (e.g., `"3ai"`).
+        - For a main question (e.g., "Q3"), normalize its ID to just the number (e.g., "3").
+        - For a sub-question (e.g., "(a)" under "Q3"), its ID MUST be a combination of the main question number and the sub-part's normalized letter/roman numeral (e.g., "3a").
+        - For a sub-sub-question (e.g., "(i)" under "(a)"), its ID should also be hierarchical (e.g., "3ai").
 
     3.  **CRITICAL - Associate Content Correctly**:
         - **Row Alignment is Key**: A label in one column (e.g., '(b)') and the solution in the 'Scheme' column of that **same row** belong to the same item.
@@ -125,7 +167,7 @@ def analyze_page_with_vision(image_obj, vision_model, page_number):
       "type": "'num', 'alpha', or 'roman'",
       "raw_label": "The exact label as it appears in the text (e.g., 'Q3.', '(a)')",
       "content": "The full text of the question or the mathematical solution from the 'Scheme' column.",
-      "pedagogical_notes": "The cleaned, plain English text from the 'Notes' column. If no useful notes exist, this must be an empty string `\"\"`."
+      "pedagogical_notes": "The cleaned, plain English text from the 'Notes' column. If no useful notes exist, this must be an empty string \"\"."
     }
 
     **CRITICAL**:
@@ -167,6 +209,9 @@ def analyze_page_with_vision(image_obj, vision_model, page_number):
 
             all_items.extend(extracted_data)
 
+        # De-duplicate any overlaps from tiling
+        all_items = _dedupe_items(all_items)
+
         logger.info("DocAnalyze: page %s extracted %d items (tiles=%d).", page_number + 1, len(all_items), tile_count)
         return all_items
 
@@ -203,4 +248,43 @@ def process_pdf_with_ai_analyzer(pdf_path):
             all_items.extend(page_items)
 
     logger.info("DocAnalyze: finished '%s' — total extracted items: %d", os.path.basename(pdf_path), len(all_items))
+    return all_items
+
+
+def process_images_with_ai_analyzer(images):
+    """
+    Processes a list of uploaded images (PNG/JPG/HEIC or PIL Images) using the same AI-powered analyzer.
+
+    Args:
+        images: iterable of PIL.Image.Image, bytes, or file paths.
+
+    Returns:
+        Flat list of extracted items with hierarchical IDs, same schema as process_pdf_with_ai_analyzer().
+    """
+    images = list(images or [])
+    logger.info("DocAnalyze: starting image-batch analysis (count=%d)", len(images))
+    if not images:
+        return []
+
+    vision_model = _initialize_gemini_client()
+    if not vision_model:
+        return []
+
+    all_items = []
+    for i, img_like in enumerate(images):
+        try:
+            pil_img = _to_pil(img_like)
+        except Exception as e:
+            logger.warning("DocAnalyze: skipping image %d — cannot open (%s)", i + 1, e)
+            continue
+
+        logger.info("DocAnalyze: analyzing image %d/%d", i + 1, len(images))
+        page_items = analyze_page_with_vision(pil_img, vision_model, page_number=i)
+        if page_items:
+            all_items.extend(page_items)
+
+    # Final de-dup in case multiple images overlap semantically
+    all_items = _dedupe_items(all_items)
+
+    logger.info("DocAnalyze: finished images — total extracted items: %d", len(all_items))
     return all_items

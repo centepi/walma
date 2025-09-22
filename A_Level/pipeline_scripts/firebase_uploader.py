@@ -67,10 +67,16 @@ def initialize_firebase():
 def upload_content(db_client, collection_path, document_id, data):
     """
     Upserts a dictionary of data to a specified Firestore collection/subcollection.
+
+    WRITE POLICY:
+      - settings.WRITE_MODE == "preserve": skip write if the document already exists.
+      - settings.WRITE_MODE == "refresh": current behavior (merge=True).
+
     Ensures XP-related fields exist:
       - difficulty (1..8) derived from total_marks if missing
       - xp_base from difficulty if missing
       - xp_curve_version (default 1)
+
     Normalizes numeric fields and writes with merge=True so existing fields aren't wiped.
     """
     if not db_client:
@@ -79,6 +85,19 @@ def upload_content(db_client, collection_path, document_id, data):
 
     try:
         doc_ref = db_client.collection(collection_path).document(document_id)
+
+        # Respect write policy
+        mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
+        exists_snapshot = None
+        if mode == "preserve":
+            try:
+                exists_snapshot = doc_ref.get()
+                if exists_snapshot.exists:
+                    logger.info("Firebase: preserve mode; skipping existing '%s/%s'.", collection_path, document_id)
+                    return True
+            except Exception as e:
+                logger.warning("Firebase: existence check failed for '%s/%s' — proceeding to write. (%s)",
+                               collection_path, document_id, e)
 
         # Shallow copy so we don't mutate the caller's dict
         payload = dict(data)
@@ -90,12 +109,21 @@ def upload_content(db_client, collection_path, document_id, data):
             except Exception:
                 return default
 
+        def _clamp(v, lo, hi):
+            try:
+                vi = int(v)
+            except Exception:
+                vi = lo
+            return max(lo, min(hi, vi))
+
         if "total_marks" in payload:
             payload["total_marks"] = _as_int(payload.get("total_marks"), 0)
 
-        # ✅ Ensure 'difficulty' exists (respect pre-set value if present)
+        # ✅ Ensure 'difficulty' exists (respect pre-set value if present) and clamp to 1..8
         if "difficulty" not in payload or not isinstance(payload["difficulty"], int):
             payload["difficulty"] = marks_to_difficulty(payload.get("total_marks", 0))
+        else:
+            payload["difficulty"] = _clamp(payload["difficulty"], 1, 8)
 
         # ✅ Ensure 'xp_base' exists (respect pre-set value if present)
         if "xp_base" not in payload or not isinstance(payload["xp_base"], int):
@@ -106,7 +134,11 @@ def upload_content(db_client, collection_path, document_id, data):
         if "xp_curve_version" not in payload:
             payload["xp_curve_version"] = 1
 
-        # Audit field (server timestamp)
+        # Timestamps
+        # If we already did an existence check and it didn't exist, set created_at
+        if exists_snapshot is not None and not exists_snapshot.exists:
+            payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
+        # Always bump updated_at on write
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
         # Upsert with merge so re-runs don’t wipe unrelated fields
@@ -154,6 +186,14 @@ def create_or_update_topic(db_client, topic_id):
     try:
         doc_ref = db_client.collection("Topics").document(topic_id)
         metadata["updated_at"] = firestore.SERVER_TIMESTAMP
+        # Set created_at if this is a brand-new topic
+        try:
+            snap = doc_ref.get()
+            if not snap.exists:
+                metadata.setdefault("created_at", firestore.SERVER_TIMESTAMP)
+        except Exception:
+            pass
+
         doc_ref.set(metadata, merge=True)  # merge prevents overwriting existing fields/subcollections
         logger.info("Firebase: topic ensured '%s'.", topic_id)
         return True
