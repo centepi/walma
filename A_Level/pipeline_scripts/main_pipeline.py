@@ -9,7 +9,8 @@ from . import item_matcher
 from . import content_creator
 from . import firebase_uploader
 from . import content_checker
-from . import cas_validator  # NEW: CAS validation
+from . import cas_validator              # CAS engine (SymPy-based)
+from . import checks_cas                 # NEW: build answer_spec from generated objects
 
 logger = utils.setup_logger(__name__)
 
@@ -142,7 +143,13 @@ def test_sorter_and_matcher():
 
 # ---------- main pipeline with concise logging + run report ----------
 
-def run_full_pipeline():
+def run_full_pipeline(
+    *,
+    allow_questions_only: bool | None = None,
+    keep_structure: bool | None = None,
+    cas_policy: str | None = None,
+    collection_root: str | None = None,
+):
     """The main orchestrator for the 'Self-Contained Skills' generation process."""
     logger.info("--- Starting Full Content Pipeline (Generator–Checker–CAS) ---")
 
@@ -167,15 +174,25 @@ def run_full_pipeline():
 
     run_report["totals"]["jobs"] = len(processing_jobs)
 
-    # collection root for uploads (Topics by default)
-    collection_root = getattr(settings, "DEFAULT_COLLECTION_ROOT", "Topics")
-    cas_policy = (getattr(settings, "CAS_POLICY", "off") or "off").strip().lower()
+    # defaults from settings, can be overridden by args above
+    collection_root = collection_root or getattr(settings, "DEFAULT_COLLECTION_ROOT", "Topics")
+    cas_policy = (cas_policy or getattr(settings, "CAS_POLICY", "off")).strip().lower()
+    if cas_policy not in {"off", "prefer", "require"}:
+        cas_policy = "off"
+    allow_q_only_flag = (
+        settings.ALLOW_QUESTIONS_ONLY if allow_questions_only is None else bool(allow_questions_only)
+    )
 
     # 3) Process Each Job
     for job in processing_jobs:
         job_type = job.get("type")
         base_name = job.get("name", "untitled")
         logger.info(f"Processing Job: '{base_name}' (Type: {job_type})")
+
+        # Honor per-run flag for questions-only jobs
+        if job_type == "questions_only" and not allow_q_only_flag:
+            logger.info("Skipping questions-only job because allow_questions_only=False.")
+            continue
 
         job_summary = utils.new_job_summary(base_name, job_type)
 
@@ -187,7 +204,7 @@ def run_full_pipeline():
         elif job_type == "interleaved":
             q_items, a_items = document_sorter.split_interleaved_items(job.get("content"))
         elif job_type == "questions_only":
-            # New: allow questions-only uploads (images/PDFs with no mark scheme)
+            # allow questions-only uploads (images/PDFs with no mark scheme)
             q_items = job.get("questions") or []
             a_items = []
 
@@ -212,6 +229,14 @@ def run_full_pipeline():
         hierarchical_groups = group_paired_items(paired_refs)
         job_summary["groups"] = len(hierarchical_groups)
         run_report["totals"]["groups"] += len(hierarchical_groups)
+
+        # Decide keep-structure behavior for this job
+        default_keep_when_q_only = getattr(settings, "KEEP_STRUCTURE_WHEN_QUESTIONS_ONLY", False)
+        default_keep = getattr(settings, "KEEP_STRUCTURE_DEFAULT", False)
+        if keep_structure is None:
+            keep_effective = default_keep_when_q_only if job_type == "questions_only" else default_keep
+        else:
+            keep_effective = bool(keep_structure)
 
         # 4) Generate, CAS-validate (optional), Verify (with retry), and Upload
         questions_to_process = getattr(settings, "QUESTIONS_TO_PROCESS", None)  # None or list of main IDs
@@ -263,17 +288,28 @@ def run_full_pipeline():
                         gemini_content_model,
                         full_reference_text,              # full group context
                         target_pair,                      # the specific Q/A pair for this part
-                        correction_feedback=correction_feedback
+                        correction_feedback=correction_feedback,
+                        keep_structure=keep_effective,
                     )
 
                     if not generated_object:
                         logger.error(f"{base_name} | {qid} | Generation failed on attempt {attempt + 1}.")
                         continue
 
+                    # --- Build/attach a CAS answer_spec if possible (from final_answer etc.) ---
+                    spec = checks_cas.build_answer_spec_from_generated(generated_object)
+                    if spec:
+                        generated_object["answer_spec"] = spec  # attach for downstream validation
+
                     # --- CAS validation (optional) BEFORE AI checker to avoid wasted calls ---
                     cas_ok = True
-                    if cas_policy != "off":
-                        cas_ok, cas_last_report = cas_validator.validate(generated_object)
+                    if cas_policy != "off" and spec:
+                        try:
+                            cas_ok, cas_last_report = cas_validator.validate(generated_object)
+                        except Exception as e:
+                            cas_ok, cas_last_report = True, {"kind": "internal", "reason": f"CAS error: {e}"}
+                            logger.error("%s | %s | CAS internal error — %s", base_name, qid, e)
+
                         if not cas_ok:
                             reason = (cas_last_report or {}).get("details") or (cas_last_report or {}).get("reason") or "unknown"
                             short_reason = utils.truncate(str(reason), 160)
@@ -282,7 +318,7 @@ def run_full_pipeline():
                                 correction_feedback = f"CAS validation failed: {reason}. Regenerate and fix while obeying all original rules."
                                 # Retry once; skip checker this round
                                 continue
-                            # If 'prefer', we proceed to checker but we keep the CAS report for logging.
+                            # If 'prefer', proceed to checker but retain the CAS report for logging/audit.
 
                     # --- AI checker (existing) ---
                     feedback_object = content_checker.verify_and_mark_question(
@@ -293,7 +329,6 @@ def run_full_pipeline():
                     # Decide acceptance based on checker + CAS policy
                     if feedback_object and feedback_object.get("is_correct"):
                         if cas_policy == "require" and not cas_ok:
-                            # Shouldn't arrive here due to early-continue, but keep guard
                             correction_feedback = f"CAS must pass; last failure: {(cas_last_report or {}).get('details')}"
                         else:
                             new_question_object = generated_object
