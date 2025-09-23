@@ -1,4 +1,6 @@
+import os
 import re
+import json
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -47,21 +49,45 @@ def marks_to_difficulty(marks) -> int:
 
 def initialize_firebase():
     """
-    Initializes the Firebase Admin SDK using the service account key.
+    Initializes the Firebase Admin SDK.
+
+    Priority:
+      1) FIREBASE_SERVICE_ACCOUNT_JSON (env var with full JSON)
+      2) settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH (file on disk)
+
     Returns a Firestore client object if successful, otherwise None.
     """
-    # This check prevents initializing the app more than once
     if not firebase_admin._apps:
         try:
-            cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
+            json_str = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+            if json_str:
+                try:
+                    sa_dict = json.loads(json_str)
+                except Exception as e:
+                    logger.error("Firebase: FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON — %s", e)
+                    return None
+                cred = credentials.Certificate(sa_dict)
+                logger.info("Firebase: initializing with service account from ENV.")
+            else:
+                cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
+                logger.info("Firebase: initializing with service account file at '%s'.",
+                            settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
+
             firebase_admin.initialize_app(cred)
             logger.info("Firebase: Admin SDK initialized.")
         except Exception as e:
             logger.error("Firebase: init failed — %s", e)
-            logger.error("Firebase: check key at '%s'", settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
+            logger.error(
+                "Firebase: set FIREBASE_SERVICE_ACCOUNT_JSON or check key at '%s'",
+                settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH,
+            )
             return None
 
-    return firestore.client()
+    try:
+        return firestore.client()
+    except Exception as e:
+        logger.error("Firebase: could not create Firestore client — %s", e)
+        return None
 
 
 def upload_content(db_client, collection_path, document_id, data):
@@ -96,8 +122,10 @@ def upload_content(db_client, collection_path, document_id, data):
                     logger.info("Firebase: preserve mode; skipping existing '%s/%s'.", collection_path, document_id)
                     return True
             except Exception as e:
-                logger.warning("Firebase: existence check failed for '%s/%s' — proceeding to write. (%s)",
-                               collection_path, document_id, e)
+                logger.warning(
+                    "Firebase: existence check failed for '%s/%s' — proceeding to write. (%s)",
+                    collection_path, document_id, e
+                )
 
         # Shallow copy so we don't mutate the caller's dict
         payload = dict(data)
@@ -135,16 +163,13 @@ def upload_content(db_client, collection_path, document_id, data):
             payload["xp_curve_version"] = 1
 
         # Timestamps
-        # If we already did an existence check and it didn't exist, set created_at
         if exists_snapshot is not None and not exists_snapshot.exists:
             payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
-        # Always bump updated_at on write
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
         # Upsert with merge so re-runs don’t wipe unrelated fields
         doc_ref.set(payload, merge=True)
 
-        # Keep success message quiet to avoid per-item spam; main pipeline logs uploads at INFO.
         logger.debug("Firebase: uploaded '%s' to '%s'.", document_id, collection_path)
         return True
 
@@ -194,7 +219,7 @@ def create_or_update_topic(db_client, topic_id):
         except Exception:
             pass
 
-        doc_ref.set(metadata, merge=True)  # merge prevents overwriting existing fields/subcollections
+        doc_ref.set(metadata, merge=True)
         logger.info("Firebase: topic ensured '%s'.", topic_id)
         return True
     except Exception as e:
