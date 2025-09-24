@@ -23,5 +23,5 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
-# Start (use Railway's PORT)
-CMD ["sh", "-c", "uvicorn server_pipeline:app --host 0.0.0.0 --port ${PORT}"]
+# Start (fallback to 8080 if $PORT isn't set by the platform)
+CMD ["sh", "-c", "uvicorn server_pipeline:app --host 0.0.0.0 --port ${PORT:-8080}"]
