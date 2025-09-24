@@ -17,7 +17,7 @@ from pipeline_scripts import document_analyzer, content_creator, content_checker
 from pipeline_scripts.main_pipeline import group_paired_items  # reuse grouping
 from config import settings
 
-app = FastAPI(title="Alma Pipeline Server", version="1.2")
+app = FastAPI(title="Alma Pipeline Server", version="1.3")
 
 # ---- tunables / limits ----
 MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
@@ -55,6 +55,25 @@ def _require_uid_from_request(request: Request) -> str:
         return uid
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid ID token: {e}")
+
+
+def _sanitize_upload_id(s: Optional[str]) -> str:
+    """
+    Make sure the upload_id is a single safe Firestore document id segment:
+    - replace slashes & whitespace with '-'
+    - drop any char not in [A-Za-z0-9._-]
+    - collapse duplicate '-'
+    - trim leading/trailing '-._'
+    - fallback to timestamp if empty
+    """
+    if not s:
+        return utils.make_timestamp()
+    v = s.strip()
+    v = re.sub(r"[\/\s]+", "-", v)
+    v = re.sub(r"[^A-Za-z0-9._-]+", "-", v)
+    v = re.sub(r"-{2,}", "-", v)
+    v = v.strip("-._")
+    return v or utils.make_timestamp()
 
 
 def _read_images_from_uploads(files: List[UploadFile]) -> Tuple[List[str], List[Image.Image], int]:
@@ -142,7 +161,7 @@ def _process_questions_only_job(
     job_summary["groups"] = len(hierarchical_groups)
     run["totals"]["groups"] += len(hierarchical_groups)
 
-    # Collection path for this user's upload
+    # Collection path for this user's upload (must be a collection path -> odd segment count)
     collection_base = f"Users/{uid}/Uploads/{upload_id}/Questions"
 
     created_docs: List[Dict[str, Any]] = []
@@ -283,8 +302,9 @@ def process_user_upload(
                 pass
         raise HTTPException(status_code=413, detail=f"Total upload too large (> {MAX_TOTAL_BYTES // (1024*1024)} MB).")
 
-    # ---- Default upload_id if not provided
-    upload_id = upload_id or utils.make_timestamp()
+    # ---- Default & sanitize upload_id
+    raw_upload_id = upload_id or utils.make_timestamp()
+    upload_id = _sanitize_upload_id(raw_upload_id)
 
     # ---- Ensure parent Upload doc exists with 'processing' status
     db_client = firebase_uploader.initialize_firebase()
@@ -292,9 +312,11 @@ def process_user_upload(
     parent_doc = {
         "unitName": (unit_name or "My Upload").strip(),
         "section": (section or "General").strip(),
-        "folderId": (folder_id or "").strip(),   # <-- tag this upload to a folder (can be empty string if not provided)
+        "folderId": (folder_id or "").strip(),   # tag this upload to a folder (can be empty string if not provided)
         "status": "processing",
         "questionCount": 0,
+        "originalUploadId": raw_upload_id,       # for diagnostics
+        "sanitized": upload_id != raw_upload_id
     }
     _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, parent_doc)
 
