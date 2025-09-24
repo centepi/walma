@@ -17,7 +17,7 @@ from pipeline_scripts import document_analyzer, content_creator, content_checker
 from pipeline_scripts.main_pipeline import group_paired_items  # reuse grouping
 from config import settings
 
-app = FastAPI(title="Alma Pipeline Server", version="1.1")
+app = FastAPI(title="Alma Pipeline Server", version="1.2")
 
 # ---- tunables / limits ----
 MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
@@ -254,12 +254,13 @@ def process_user_upload(
     upload_id: Optional[str] = Form(None, description="Client-side upload id; defaults to timestamp"),
     unit_name: Optional[str] = Form(None, description="User-friendly unit name"),
     section: Optional[str] = Form(None, description="Section/folder name"),
+    folder_id: Optional[str] = Form(None, description="Target folder/course id for this upload"),
     files: List[UploadFile] = File(..., description="One or more PDFs/images of the user's homework"),
 ):
     """
     Accept PDFs/images, extract items, generate practice questions,
     and upload into Users/{uid}/Uploads/{uploadId}/Questions.
-    Parent doc: Users/{uid}/Uploads/{uploadId} with status tracking.
+    Parent doc: Users/{uid}/Uploads/{uploadId} with status tracking and folderId.
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
@@ -291,6 +292,7 @@ def process_user_upload(
     parent_doc = {
         "unitName": (unit_name or "My Upload").strip(),
         "section": (section or "General").strip(),
+        "folderId": (folder_id or "").strip(),   # <-- tag this upload to a folder (can be empty string if not provided)
         "status": "processing",
         "questionCount": 0,
     }
