@@ -5,29 +5,73 @@ import re
 import tempfile
 from typing import List, Tuple, Dict, Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from PIL import Image
+
+# Firebase admin (for ID token verification)
+from firebase_admin import auth as firebase_auth
 
 # Local imports (A_Level project)
 from pipeline_scripts import document_analyzer, content_creator, content_checker, firebase_uploader, utils
 from pipeline_scripts.main_pipeline import group_paired_items  # reuse grouping
 from config import settings
 
-app = FastAPI(title="Alma Pipeline Server", version="1.0")
+app = FastAPI(title="Alma Pipeline Server", version="1.1")
+
+# ---- tunables / limits ----
+MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
+MAX_TOTAL_BYTES = int(os.getenv("UPLOAD_MAX_TOTAL_BYTES", str(25 * 1024 * 1024)))  # 25 MB default
+
 
 # ---- helpers ----
 
-def _read_images_from_uploads(files: List[UploadFile]) -> Tuple[List[str], List[Image.Image]]:
-    """Split uploads into PDF filepaths and PIL images (opened in-memory)."""
+def _ensure_firebase_initialized():
+    """Initialize Firebase Admin once (via uploader helper)."""
+    _ = firebase_uploader.initialize_firebase()
+
+
+def _bearer_token_from_request(request: Request) -> Optional[str]:
+    """Extract Bearer token from Authorization or X-ID-Token header."""
+    auth = request.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip()
+    # Fallback for easier client testing
+    x = request.headers.get("X-ID-Token")
+    return x.strip() if x else None
+
+
+def _require_uid_from_request(request: Request) -> str:
+    """Verify Firebase ID token and return uid (401 on failure)."""
+    _ensure_firebase_initialized()
+    token = _bearer_token_from_request(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing Authorization Bearer token.")
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        uid = decoded.get("uid")
+        if not uid:
+            raise ValueError("token_has_no_uid")
+        return uid
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid ID token: {e}")
+
+
+def _read_images_from_uploads(files: List[UploadFile]) -> Tuple[List[str], List[Image.Image], int]:
+    """
+    Split uploads into PDF filepaths and PIL images (opened in-memory).
+    Returns (pdf_paths, pil_images, total_bytes).
+    """
     pdf_paths: List[str] = []
     pil_images: List[Image.Image] = []
+    total_bytes = 0
 
     for f in files:
         fname = (f.filename or "").lower()
         data = f.file.read()
         if not data:
             continue
+        total_bytes += len(data)
 
         if fname.endswith(".pdf"):
             # pdf2image needs a filesystem path — write to a temp file
@@ -44,7 +88,7 @@ def _read_images_from_uploads(files: List[UploadFile]) -> Tuple[List[str], List[
             except Exception:
                 # Ignore non-image non-pdf files silently
                 pass
-    return pdf_paths, pil_images
+    return pdf_paths, pil_images, total_bytes
 
 
 def _build_pseudo_pairs_from_questions(q_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -138,7 +182,6 @@ def _process_questions_only_job(
                     continue
 
                 # Run checker (CAS off for MVP)
-                # (content_checker reads settings.CAS_POLICY; we force off here by temporarily overriding if needed)
                 feedback_object = content_checker.verify_and_mark_question(
                     gemini_checker_model,
                     generated_object
@@ -196,47 +239,103 @@ def _process_questions_only_job(
 
 # ---- API ----
 
+@app.get("/health")
+def health():
+    try:
+        _ensure_firebase_initialized()
+        return {"ok": True, "service": "pipeline", "version": app.version}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.post("/api/user-uploads/process")
 def process_user_upload(
-    uid: str = Form(..., description="Authenticated user id"),
+    request: Request,
     upload_id: Optional[str] = Form(None, description="Client-side upload id; defaults to timestamp"),
+    unit_name: Optional[str] = Form(None, description="User-friendly unit name"),
+    section: Optional[str] = Form(None, description="Section/folder name"),
     files: List[UploadFile] = File(..., description="One or more PDFs/images of the user's homework"),
 ):
     """
     Accept PDFs/images, extract items, generate practice questions,
     and upload into Users/{uid}/Uploads/{uploadId}/Questions.
+    Parent doc: Users/{uid}/Uploads/{uploadId} with status tracking.
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
+    if len(files) > MAX_FILES:
+        raise HTTPException(status_code=413, detail=f"Too many files (>{MAX_FILES}).")
 
-    # Default upload_id if not provided
+    # ---- Auth: require valid Firebase ID token
+    uid = _require_uid_from_request(request)
+
+    # ---- Read uploads + size guard
+    pdf_paths, pil_images, total_bytes = _read_images_from_uploads(files)
+    if total_bytes == 0:
+        raise HTTPException(status_code=400, detail="Uploaded files are empty or unsupported.")
+    if total_bytes > MAX_TOTAL_BYTES:
+        # Cleanup tmp PDFs
+        for p in pdf_paths:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
+        raise HTTPException(status_code=413, detail=f"Total upload too large (> {MAX_TOTAL_BYTES // (1024*1024)} MB).")
+
+    # ---- Default upload_id if not provided
     upload_id = upload_id or utils.make_timestamp()
 
-    pdf_paths, pil_images = _read_images_from_uploads(files)
+    # ---- Ensure parent Upload doc exists with 'processing' status
+    db_client = firebase_uploader.initialize_firebase()
+    parent_path = f"Users/{uid}/Uploads"
+    parent_doc = {
+        "unitName": (unit_name or "My Upload").strip(),
+        "section": (section or "General").strip(),
+        "status": "processing",
+        "questionCount": 0,
+    }
+    _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, parent_doc)
 
-    # Extract items (prefer PDFs if present; otherwise images)
-    items: List[Dict[str, Any]] = []
-    for p in pdf_paths:
-        items.extend(document_analyzer.process_pdf_with_ai_analyzer(p))
-    if not items and pil_images:
-        items.extend(document_analyzer.process_images_with_ai_analyzer(pil_images))
+    try:
+        # ---- Extract items (prefer PDFs if present; otherwise images)
+        items: List[Dict[str, Any]] = []
+        for p in pdf_paths:
+            items.extend(document_analyzer.process_pdf_with_ai_analyzer(p))
+        if not items and pil_images:
+            items.extend(document_analyzer.process_images_with_ai_analyzer(pil_images))
 
-    # Cleanup tmp PDFs
-    for p in pdf_paths:
-        try:
-            os.unlink(p)
-        except Exception:
-            pass
+        # Cleanup tmp PDFs ASAP
+        for p in pdf_paths:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
 
-    if not items:
-        raise HTTPException(status_code=422, detail="Could not extract any items from uploaded files.")
+        if not items:
+            raise HTTPException(status_code=422, detail="Could not extract any items from uploaded files.")
 
-    # Run streamlined questions-only job
-    result = _process_questions_only_job(
-        uid=uid,
-        upload_id=upload_id,
-        items=items,
-        keep_structure=False,   # <-- ignore "keep questions the same"
-        cas_policy="off",       # <-- ignore CAS
-    )
-    return JSONResponse(result)
+        # ---- Run streamlined questions-only job
+        result = _process_questions_only_job(
+            uid=uid,
+            upload_id=upload_id,
+            items=items,
+            keep_structure=False,   # MVP
+            cas_policy="off",       # MVP
+        )
+
+        # ---- Finalize parent doc
+        created_count = len(result.get("created") or [])
+        finalize = {
+            "status": "complete",
+            "questionCount": created_count,
+        }
+        _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, finalize)
+        return JSONResponse(result)
+
+    except HTTPException:
+        # Propagate after marking error
+        _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, {"status": "error"})
+        raise
+    except Exception as e:
+        _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, {"status": "error"})
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {e}")
