@@ -10,3 +10,4 @@ Pillow
 protobuf>=4.25.1
 fastapi
 uvicorn[standard]
+python-multipart
