@@ -10,6 +10,7 @@ from . import graph_utils
 from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
+from . import postprocess_math  # <- math text sanitizer (minimal & safe)
 
 logger = utils.setup_logger(__name__)
 
@@ -28,12 +29,15 @@ def initialize_gemini_client():
 # -------------------------
 # Output normalization
 # -------------------------
+
 def _normalize_generated_object(obj: dict) -> dict:
     """
-    Post-process guard rails:
-      - ensure parts is a 1-length list with a,b,c label defaulting to 'a'
+    Guard-rails for the raw model JSON:
+      - ensure parts is a 1-length list with label defaulting to 'a'
       - trim strings
+      - default calculator_required
       - drop empty visual_data dicts
+    (Math-specific cleanup is handled separately by postprocess_math.)
     """
     if not isinstance(obj, dict):
         return obj or {}
@@ -51,15 +55,18 @@ def _normalize_generated_object(obj: dict) -> dict:
         parts = [{
             "part_label": "a",
             "question_text": "",
-            "solution_text": ""
+            "solution_text": "",
+            "final_answer": ""
         }]
-    # Keep only the first part for MVP and ensure required keys
+
     part = parts[0] or {}
     part.setdefault("part_label", "a")
     part["part_label"] = str(part["part_label"]).strip() or "a"
+
     for k in ("question_text", "solution_text", "final_answer"):
         if k in part and isinstance(part[k], str):
             part[k] = part[k].strip()
+
     obj["parts"] = [part]
 
     # calculator_required default
@@ -221,13 +228,16 @@ def create_question(
         logger.error(f"Failed to generate or validate content for seed '{target_part_id}'.")
         return None
 
-    # Normalize/guard
+    # 1) Normalize
     content_object = _normalize_generated_object(content_object)
 
-    # If CAS is enabled but spec missing, attempt minimal synthesis for common cases
+    # 2) Sanitize math text fields (outside/inside delimiters) — removes stray **, fixes sqrt/frac, \sin, etc.
+    content_object = postprocess_math.sanitize_generated_object(content_object)
+
+    # 3) If CAS is enabled but spec missing, attempt minimal synthesis for common cases
     content_object = _synthesize_answer_spec_if_missing(content_object)
 
-    # After successful validation, process any visual data using the master function
+    # 4) Process any visual data
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
