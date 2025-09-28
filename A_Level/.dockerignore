@@ -1,0 +1,26 @@
+# Python junk
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.cache/
+
+# Local venvs & env files
+venv/
+.venv/
+.env
+
+# Local data we never need in the image
+input_pdfs/
+logs/
+processed_data/
+test_outputs/
+
+# Secrets shipped via env/host, not image
+config/firebase_service_account.json
+
+# Misc
+.DS_Store
+*.log
