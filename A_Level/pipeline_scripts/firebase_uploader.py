@@ -371,3 +371,4 @@ def create_or_update_topic(db_client, topic_id):
     except Exception as e:
         logger.error("Firebase: failed to ensure topic '%s' — %s", topic_id, e)
         return False
+    
