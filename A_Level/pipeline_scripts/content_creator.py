@@ -271,3 +271,5 @@ def request_ai_correction(chat_session, error_message, original_text, context_te
     except Exception as e:
         logger.error(f"An error occurred during AI self-correction request: {e}")
         return None
+    
+    
