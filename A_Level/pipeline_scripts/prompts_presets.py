@@ -66,7 +66,7 @@ def build_creator_prompt(
 
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
-    - Prefer `\$begin:math:text$...\\$end:math:text$` for inline math and `\$begin:math:display$...\\$end:math:display$` for display. `$...$`/`$$...$$` and backticks are also accepted.
+    - Use `\$begin:math:text$...\\$end:math:text$` for inline math and `\$begin:math:display$...\\$end:math:display$` for display math. `$...$` and `$$...$$` are also accepted for compatibility. Avoid backticks for math unless unavoidable.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.

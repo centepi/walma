@@ -10,11 +10,25 @@ Goals:
   • ensure \sin, \cos, \tan, \ln, \log, etc. (upright)
 - Keep already-correct TeX entirely unchanged.
 - Preserve delimiters: $$...$$, \[...\], \(...\), $...$, and (for legacy) `...`
+- Canonicalize legacy Alma fences `$begin:math:*$ ... $end:math:*$` (optionally wrapped in backticks)
+  to standard MathJax delimiters before processing.
 """
 
 from __future__ import annotations
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
+
+# --- Canonicalize legacy custom fences to standard TeX ---
+_INLINE_FENCE_RE = re.compile(r"`?\$begin:math:text\$([\s\S]*?)\$end:math:text\$`?", re.DOTALL)
+_DISPLAY_FENCE_RE = re.compile(r"`?\$begin:math:display\$([\s\S]*?)\$end:math:display\$`?", re.DOTALL)
+
+def _canon_custom_fences(s: str) -> str:
+    """Convert `$begin:math:*$...$end:math:*$` (with optional backticks) to \( ... \) / \[ ... \]."""
+    if not isinstance(s, str) or not s:
+        return s
+    s = _INLINE_FENCE_RE.sub(lambda m: r"\(" + m.group(1) + r"\)", s)
+    s = _DISPLAY_FENCE_RE.sub(lambda m: r"\[" + m.group(1) + r"\]", s)
+    return s
 
 # --- Regex building blocks ---
 # Order matters: longer/multiline blocks first, then single-line
@@ -28,8 +42,8 @@ _MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _MD_UNDER_RE = re.compile(r"__(.+?)__")
 
 # Inside-math fixes
-# sqrt(...) without backslash
-_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*$begin:math:text$([^()]+)$end:math:text$")
+# sqrt(...) without backslash (inside a math segment's content)
+_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*$begin:math:text$\\s*([^)]+?)\\s*$end:math:text$")
 # 'frac{' without backslash
 _FRAC_MISSING_BS_RE = re.compile(r"(^|[^\\])frac\s*\{")
 # common functions without backslash (word boundary, not already escaped)
@@ -85,6 +99,7 @@ def sanitize_text(s: str) -> str:
         return s
 
     s = _normalize_text_basics(s)
+    s = _canon_custom_fences(s)  # convert legacy fences to standard TeX
 
     # Tokenize math vs non-math
     parts: List[str] = []
