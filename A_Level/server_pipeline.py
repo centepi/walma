@@ -15,9 +15,10 @@ from firebase_admin import auth as firebase_auth
 # Local imports (A_Level project)
 from pipeline_scripts import document_analyzer, content_creator, content_checker, firebase_uploader, utils
 from pipeline_scripts.main_pipeline import group_paired_items  # reuse grouping
+from pipeline_scripts.firebase_uploader import UploadTracker   # <-- live progress
 from config import settings
 
-app = FastAPI(title="Alma Pipeline Server", version="1.3")
+app = FastAPI(title="Alma Pipeline Server", version="1.4")
 
 # ---- tunables / limits ----
 MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
@@ -124,6 +125,7 @@ def _process_questions_only_job(
     items: List[Dict[str, Any]],
     keep_structure: bool = False,
     cas_policy: str = "off",
+    tracker: Optional[UploadTracker] = None,   # <-- NEW
 ) -> Dict[str, Any]:
     """
     Generate and upload questions for a single questions-only 'job', returning a run summary.
@@ -168,6 +170,9 @@ def _process_questions_only_job(
             if not q_text:
                 continue
 
+            if tracker:
+                tracker.event_note(f"Generating Q {qid}")
+
             job_summary["parts_processed"] += 1
             run["totals"]["parts_processed"] += 1
 
@@ -203,6 +208,8 @@ def _process_questions_only_job(
                 run["totals"]["rejected"] += 1
                 if correction_feedback:
                     utils.append_failure(job_summary, str(qid), correction_feedback)
+                if tracker:
+                    tracker.event(type="reject", message=f"Rejected Q {qid}")
                 continue
 
             # Clean and prepare payload fields consistent with app
@@ -232,9 +239,14 @@ def _process_questions_only_job(
                     "id": new_question_id,
                     "path": f"{path}/{new_question_id}"
                 })
+                if tracker:
+                    # increments questionCount and updates last_message
+                    tracker.event_question_created(label=new_question_id, index=None, question_id=new_question_id)
             else:
                 job_summary["upload_failed"] += 1
                 run["totals"]["upload_failed"] += 1
+                if tracker:
+                    tracker.event(type="error", message=f"Upload failed for Q {new_question_id}")
 
     utils.save_run_report(run)
     return {
@@ -258,8 +270,11 @@ def _run_pipeline_background(
     Cleans up temp files when done.
     """
     db_client = firebase_uploader.initialize_firebase()
+    tracker = UploadTracker(uid, upload_id)  # fresh instance in background worker
 
     try:
+        tracker.event_note("Analyzing input…")
+
         # ---- Extract items
         items: List[Dict[str, Any]] = []
         for p in pdf_paths:
@@ -277,11 +292,14 @@ def _run_pipeline_background(
 
         if not items:
             # Mark error if we got nothing
+            tracker.error("No questions detected.")
             firebase_uploader.upload_content(db_client, f"Users/{uid}/Uploads", upload_id, {
                 "status": "error",
                 "questionCount": 0,
             })
             return
+
+        tracker.event(type="parse", message=f"Found {len(items)} items to process")
 
         # ---- Run streamlined questions-only job
         result = _process_questions_only_job(
@@ -290,10 +308,13 @@ def _run_pipeline_background(
             items=items,
             keep_structure=False,
             cas_policy="off",
+            tracker=tracker,  # <-- live per-question updates
         )
 
         # ---- Finalize parent doc
         created_count = len(result.get("created") or [])
+        tracker.complete(result_unit_id=upload_id)
+        # ensure final count is correct
         firebase_uploader.upload_content(db_client, f"Users/{uid}/Uploads", upload_id, {
             "status": "complete",
             "questionCount": created_count,
@@ -301,6 +322,7 @@ def _run_pipeline_background(
 
     except Exception as e:
         # Mark error state
+        tracker.error(str(e)[:120])
         firebase_uploader.upload_content(db_client, f"Users/{uid}/Uploads", upload_id, {
             "status": "error",
         })
@@ -340,6 +362,7 @@ def process_user_upload(
     The background task writes to:
       - Users/{uid}/Uploads/{upload_id} (status, questionCount, folderId, labels)
       - Users/{uid}/Uploads/{upload_id}/Questions/{questionId}
+      - Users/{uid}/Uploads/{upload_id}/events/{autoId}
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
@@ -372,26 +395,21 @@ def process_user_upload(
     raw_upload_id = upload_id or utils.make_timestamp()
     upload_id = _sanitize_doc_id(raw_upload_id)
 
-    # ---- Ensure parent Upload doc exists with 'processing' status
-    db_client = firebase_uploader.initialize_firebase()
-    parent_path = f"Users/{uid}/Uploads"
-    parent_doc = {
-        "unitName": (unit_name or "My Upload").strip(),
-        "section": (section or "General").strip(),
-        "folderId": (folder_id or "").strip(),
-        "status": "processing",
-        "questionCount": 0,
-    }
-    _ = firebase_uploader.upload_content(db_client, parent_path, upload_id, parent_doc)
+    # ---- Ensure parent Upload doc exists with 'processing' status (via tracker)
+    tracker = UploadTracker(uid, upload_id)
+    tracker.start(folder_id=(folder_id or "").strip(),
+                  unit_name=(unit_name or "My Upload").strip(),
+                  section=(section or "General").strip())
+    tracker.event_note("Queued")
 
     # ---- Kick off background processing and return immediately
     background_tasks.add_task(
         _run_pipeline_background,
         uid=uid,
         upload_id=upload_id,
-        unit_name=parent_doc["unitName"],
-        section=parent_doc["section"],
-        folder_id=parent_doc["folderId"],
+        unit_name=(unit_name or "My Upload").strip(),
+        section=(section or "General").strip(),
+        folder_id=(folder_id or "").strip(),
         pdf_paths=pdf_paths,
         image_paths=image_paths,
     )
