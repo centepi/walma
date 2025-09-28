@@ -1,3 +1,4 @@
+# pipeline_scripts/item_matcher.py
 import os
 import re
 import json
@@ -25,31 +26,75 @@ def _initialize_gemini_client():
         return None
 
 
+def _build_id_set(items):
+    """Return a set of trimmed IDs from a list of items."""
+    out = set()
+    for it in items or []:
+        qid = (it.get("id") or "").strip()
+        if qid:
+            out.add(qid)
+    return out
+
+
+def _has_child_id(target_id: str, all_ids: set[str]) -> bool:
+    """
+    An item is a 'parent' if any other ID *extends* it with a trailing **letter**.
+    Examples:
+      '1'  -> parent if '1a', '1b', '1ai' exist.
+      '3a' -> parent if '3ai', '3aii' exist.
+    Safeguards:
+      - '1' is NOT parent of '10' (next char is '0', not a letter).
+      - Requires longer string and same prefix.
+    """
+    if not target_id:
+        return False
+    tid_len = len(target_id)
+    for other in all_ids:
+        if other == target_id or len(other) <= tid_len:
+            continue
+        if other.startswith(target_id):
+            next_char = other[tid_len]
+            if next_char.isalpha():
+                return True
+    return False
+
+
 def _identify_parent_questions(question_items_list):
     """
-    Identifies questions that are just context for sub-parts.
-    A question is a parent if it's a 'num' type followed by an 'alpha' or 'roman' type.
-    Returns a set of the indices of parent questions.
+    Identify items that are *context-only parents* (should NOT generate standalone questions).
+    We combine three signals:
+      1) **Hierarchy-based (order-independent)**: any ID that has child IDs extending it
+         with a trailing letter (e.g., '1' -> '1a', '1a' -> '1ai').
+      2) **Adjacency hint (legacy)**: a 'num' followed by 'alpha'/'roman'.
+      3) **Empty numeric stem**: a 'num' with no content.
+    Returns a set of indices into question_items_list.
     """
-    parent_question_indices = set()
+    parent_indices = set()
+    ids = _build_id_set(question_items_list)
+
+    # 1) Hierarchy-based detection (leaf-only rule)
+    for i, q_item in enumerate(question_items_list):
+        qid = (q_item.get("id") or "").strip()
+        if not qid:
+            continue
+        if _has_child_id(qid, ids):
+            parent_indices.add(i)
+
+    # 2) Adjacency hint (kept for redundancy)
     for i in range(len(question_items_list) - 1):
         current_q = question_items_list[i]
         next_q = question_items_list[i + 1]
+        if current_q.get("type") == "num" and next_q.get("type") in ["alpha", "roman"]:
+            parent_indices.add(i)
 
-        is_parent = (current_q.get('type') == 'num' and
-                     next_q.get('type') in ['alpha', 'roman'])
-
-        if is_parent:
-            parent_question_indices.add(i)
-
-    # Also check if a 'num' question has no content, making it a likely parent
+    # 3) Empty numeric stem
     for i, q_item in enumerate(question_items_list):
-        content = q_item.get('content') or ''
-        if q_item.get('type') == 'num' and not content.strip():
-            parent_question_indices.add(i)
+        content = (q_item.get("content") or "").strip()
+        if q_item.get("type") == "num" and not content:
+            parent_indices.add(i)
 
-    logger.info("Matcher: identified %d parent/context questions.", len(parent_question_indices))
-    return parent_question_indices
+    logger.info("Matcher: identified %d parent/context questions.", len(parent_indices))
+    return parent_indices
 
 
 def _build_answer_index(answer_items_list):
@@ -104,7 +149,7 @@ def _parse_ai_choice(text: str, num_candidates: int):
         return None
 
     # Extract leading or first integer in the text
-    m = re.search(r'\b(\d+)\b', t)
+    m = re.search(r"\b(\d+)\b", t)
     if not m:
         return None
 
@@ -124,6 +169,7 @@ def _parse_ai_choice(text: str, num_candidates: int):
 def match_items_with_ai(question_items_list, answer_items_list):
     """
     Matches questions to answers using exact-ID matching first, then an AI-powered fallback.
+    Skips 'parent' context items so only leaf items become generation targets.
     """
     logger.info("Matcher: starting ID-aware matching…")
 
@@ -143,26 +189,31 @@ def match_items_with_ai(question_items_list, answer_items_list):
     for i, q_item in enumerate(question_items_list):
         # Skip parent questions that are just for context
         if i in parent_indices:
-            logger.debug("Matcher: skipping parent/context question '%s' (ID: %s)",
-                         q_item.get('raw_label'), q_item.get('id'))
+            logger.debug(
+                "Matcher: skipping parent/context question '%s' (ID: %s)",
+                q_item.get("raw_label"),
+                q_item.get("id"),
+            )
             unmatched_questions.append(q_item)
             continue
 
-        target_id = (q_item.get('id') or "").strip()
+        target_id = (q_item.get("id") or "").strip()
         if not target_id:
-            logger.warning("Matcher: question '%s' is missing an ID. Skipping.", q_item.get('raw_label'))
+            logger.warning("Matcher: question '%s' is missing an ID. Skipping.", q_item.get("raw_label"))
             unmatched_questions.append(q_item)
             continue
 
         # --- 1) Exact ID match (no AI) ---
         exact_ans, exact_pos = _pop_answer_by_id(available_answers, answer_index, target_id)
         if exact_ans is not None:
-            paired_references.append({
-                "question_id": target_id,
-                "original_question": q_item,
-                "original_answer": exact_ans
-            })
-            logger.info("Matcher: paired by ID — Q '%s' ↔ A '%s'.", target_id, exact_ans.get('id'))
+            paired_references.append(
+                {
+                    "question_id": target_id,
+                    "original_question": q_item,
+                    "original_answer": exact_ans,
+                }
+            )
+            logger.info("Matcher: paired by ID — Q '%s' ↔ A '%s'.", target_id, exact_ans.get("id"))
             continue
 
         # --- 2) AI fallback ---
@@ -184,7 +235,7 @@ def match_items_with_ai(question_items_list, answer_items_list):
                 f"Content: {ans_item.get('content', '')}\n---\n"
             )
 
-        q_content = (q_item.get('content') or '').strip()
+        q_content = (q_item.get("content") or "").strip()
 
         prompt = f"""
         You are an expert at matching questions to their corresponding answers using a unique ID system.
@@ -231,13 +282,19 @@ def match_items_with_ai(question_items_list, answer_items_list):
                 answer_index.clear()
                 answer_index.update(_build_answer_index(available_answers))
 
-                paired_references.append({
-                    "question_id": target_id,
-                    "original_question": q_item,
-                    "original_answer": matching_answer_item
-                })
-                logger.info("Matcher: paired via AI — Q '%s' ↔ A '%s' (candidate %d).",
-                            target_id, matching_answer_item.get('id'), choice)
+                paired_references.append(
+                    {
+                        "question_id": target_id,
+                        "original_question": q_item,
+                        "original_answer": matching_answer_item,
+                    }
+                )
+                logger.info(
+                    "Matcher: paired via AI — Q '%s' ↔ A '%s' (candidate %d).",
+                    target_id,
+                    matching_answer_item.get("id"),
+                    choice,
+                )
             else:
                 logger.warning("Matcher: AI gave invalid index %s for '%s'.", str(choice), target_id)
                 unmatched_questions.append(q_item)
@@ -249,16 +306,20 @@ def match_items_with_ai(question_items_list, answer_items_list):
     # Any remaining answers are unmatched
     unmatched_answers = available_answers
 
-    logger.info("Matcher: complete. Pairs=%d, UnmatchedQ=%d, UnmatchedA=%d",
-                len(paired_references), len(unmatched_questions), len(unmatched_answers))
+    logger.info(
+        "Matcher: complete. Pairs=%d, UnmatchedQ=%d, UnmatchedA=%d",
+        len(paired_references),
+        len(unmatched_questions),
+        len(unmatched_answers),
+    )
 
     unmatched_items = {
         "unmatched_questions": unmatched_questions,
-        "unmatched_answers": unmatched_answers
+        "unmatched_answers": unmatched_answers,
     }
 
     return paired_references, unmatched_items
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

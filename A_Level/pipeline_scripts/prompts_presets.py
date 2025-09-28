@@ -53,14 +53,26 @@ def build_creator_prompt(
     Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
 
     **CRITICAL INSTRUCTIONS**:
-    1.  **Self-Contained**: Provide a clear "question_stem" and exactly ONE part in "parts".
-    2.  **Invent Values**: Use fresh numbers/functions/scenarios to avoid copying.
-    3.  **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds).
-    4.  **Contextual Visuals Only**: Any 'visual_data' must aid understanding and must NOT encode the answer.
-    5.  **Include Visuals if Appropriate**: Only when the skill is inherently visual.
-    6.  **Calculator Use**: Set 'calculator_required' appropriately.
-    7.  **NO DRAWING REQUESTS**: Do not ask to "sketch/draw/plot"; convert to textual reasoning.
-    8.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string (CAS-friendly).
+    1.  **Single Question Shape**: Provide a clear "question_stem" and exactly ONE part in "parts".
+        - If the task naturally fits in one sentence, you may leave "question_stem" empty and put the whole prompt in "parts[0].question_text".
+        - Never duplicate the same sentence across stem and part.
+    2.  **Multiple-Choice Handling (IMPORTANT)**:
+        - If the source looks like a multiple-choice item (a single prompt with several short labelled options such as A/B/C/D or (a)/(b)/(c) that are *answers*, not sub-parts),
+          then produce **ONE** question with options inside the single part — **do not** create separate questions per option.
+        - In this MCQ case, include inside the single part:
+            * "choices": a list of 4–5 options, each as {{ "label": "A", "text": "<option text with LaTeX where needed>" }}.
+            * "correct_choice": the label of the correct option, e.g. "B".
+            * Keep "solution_text" explaining why the correct option is right (and briefly why others are wrong).
+            * Set "final_answer" to the **mathematical value or exact text** of the correct option (not just the letter),
+              so computer algebra checks can still apply when appropriate (e.g., use "1/2" rather than "B").
+        - **Never** split MCQ options into separate parts or separate questions.
+    3.  **Invent Values**: Use fresh numbers/functions/scenarios to avoid copying.
+    4.  **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
+    5.  **Contextual Visuals Only**: Any 'visual_data' must aid understanding and must NOT encode the answer.
+    6.  **Include Visuals if Appropriate**: Only when the skill is inherently visual.
+    7.  **Calculator Use**: Set 'calculator_required' appropriately.
+    8.  **NO DRAWING REQUESTS**: Do not ask to "sketch/draw/plot"; convert to textual reasoning.
+    9.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string.
 
     {dedent(keep_block).strip()}
 
@@ -72,21 +84,27 @@ def build_creator_prompt(
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
 
     **Examples — follow EXACTLY**:
-    - OK:  ``Find the gradient of the curve `y = (x-1)^3\\sqrt{{4x}}` at `x = 4`.``  
-    - OK:  ``Given `f(x) = \\frac{{e^{{4x}}}}{{(2x+1)^3}}`, find `f'(x)`.``  
-    - BAD: `sqrt(3x+1)` → use `` `\\sqrt{{3x+1}}` ``  
-    - BAD: `frac{{e^{{4x}}}}{{(2x+1)^3}}` → use `` `\\frac{{e^{{4x}}}}{{(2x+1)^3}}` ``
+    - Non-MCQ OK:  ``Find the gradient of the curve `y = (x-1)^3\\sqrt{{4x}}` at `x = 4`.``  
+    - Non-MCQ OK:  ``Given `f(x) = \\frac{{e^{{4x}}}}{{(2x+1)^3}}`, find `f'(x)`.``  
+    - MCQ OK (shape only): one stem + one part whose `question_text` states the task; include  
+      `"choices": [{{"label":"A","text":"..."}}, {{"label":"B","text":"..."}}, ...]`,  
+      `"correct_choice": "B"`, and set `"final_answer"` to the correct option’s value/text.
+    - BAD: Treating each option (A/B/C/…) as separate questions.
 
     **OUTPUT FORMAT**:
     Your output MUST be a single, valid JSON object with the structure:
     {{
-      "question_stem": "A concise introduction/setup for your new question.",
+      "question_stem": "A concise introduction/setup for your new question (may be empty if not needed).",
       "parts": [
         {{
           "part_label": "a",
           "question_text": "The single task for the user to perform.",
-          "solution_text": "The detailed, step-by-step solution to your new question.",
-          "final_answer": "A SHORT, simplified final numeric value or algebraic expression only."
+          "solution_text": "A detailed, step-by-step solution.",
+          "final_answer": "Short final result (value/expression or exact text).",
+
+          // Present *only* if this is a multiple-choice item:
+          "choices": [{{ "label": "A", "text": "..." }}, {{ "label": "B", "text": "..." }}, {{ "label": "C", "text": "..." }}, {{ "label": "D", "text": "..." }}],
+          "correct_choice": "B"
         }}
       ],
       "calculator_required": true,
@@ -127,7 +145,10 @@ def build_creator_prompt(
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
     - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
 
-    **FINAL CHECK**: Ensure the question has a clean solution; 'final_answer' is short & simplified; and the JSON is valid.
+    **FINAL CHECK**:
+    - If MCQ: exactly one part, include choices + correct_choice; final_answer equals the correct option’s value/text.
+    - If non-MCQ: no choices; provide a clean final_answer.
+    - Ensure the JSON is valid.
     """
     return dedent(prompt).strip()
 
@@ -154,7 +175,8 @@ def build_examiner_prompt(question_json_string: str, cas_policy: str = CASPolicy
     --- YOUR TASKS ---
     1) Verify the mathematics in 'solution_text' is correct and fully answers 'question_text'.
     2) {cas_line}
-    3) Assign marks only if PERFECT.
+    3) **If 'choices' are present**: ensure there is exactly one correct option; 'correct_choice' label matches the option intended; and 'final_answer' equals the correct option’s value/text (not just the label).
+    4) Assign marks only if PERFECT.
 
     --- OUTPUT FORMAT ---
     If flawed:

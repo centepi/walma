@@ -1,3 +1,4 @@
+# pipeline_scripts/main_pipeline.py
 import os
 import re
 import json
@@ -13,6 +14,44 @@ from . import cas_validator              # CAS engine (SymPy-based)
 from . import checks_cas                 # NEW: build answer_spec from generated objects
 
 logger = utils.setup_logger(__name__)
+
+
+# ---------- ID / hierarchy helpers (leaf-only rule) ----------
+
+def _build_id_set(items):
+    ids = set()
+    for it in items or []:
+        qid = (it.get("id") or "").strip()
+        if qid:
+            ids.add(qid)
+    return ids
+
+
+def _has_child_id(target_id: str, all_ids: set[str]) -> bool:
+    """
+    'Parent' if any other ID *extends* it with a trailing letter.
+    Examples:
+      '1'  -> parent if '1a', '1b', '1ai' exist.
+      '3a' -> parent if '3ai', '3aii' exist.
+    Safeguards:
+      - '1' is NOT parent of '10' (next char is digit, not alpha).
+    """
+    if not target_id:
+        return False
+    tlen = len(target_id)
+    for other in all_ids:
+        if other == target_id or len(other) <= tlen:
+            continue
+        if other.startswith(target_id):
+            next_ch = other[tlen]
+            if next_ch.isalpha():
+                return True
+    return False
+
+
+def _main_numeric_id(qid: str) -> str:
+    m = re.match(r"(\d+)", str(qid or ""))
+    return m.group(1) if m else str(qid or "")
 
 
 # ---------- grouping logic ----------
@@ -33,12 +72,10 @@ def group_paired_items(paired_refs):
             continue
 
         # Extract the main question number (e.g., '4' from '4b' or '12' from '12ai')
-        match = re.match(r'(\d+)', question_id)
-        if not match:
+        main_id = _main_numeric_id(question_id)
+        if not main_id or not main_id.isdigit():
             logger.warning(f"Could not determine main question number from id: '{question_id}'. Skipping.")
             continue
-
-        main_id = match.group(1)
 
         # If the main question number changes, start a new group.
         if main_id != current_main_question_id:
@@ -64,21 +101,186 @@ def group_paired_items(paired_refs):
 
 def _build_pseudo_pairs_from_questions(q_items):
     """
-    Build 'paired' structures from questions only (no answers).
-    This keeps parent stems in the flow and allows grouping/context to work.
+    Build 'paired' structures from questions only (no answers), **leaf-only**:
+    - Skip any parent/context items (IDs extended by trailing-letter children).
     """
+    all_ids = _build_id_set(q_items)
     pseudo = []
+    skipped_parents = 0
+
     for q in q_items or []:
         qid = (q.get("id") or "").strip()
         if not qid:
             continue
+        if _has_child_id(qid, all_ids):
+            skipped_parents += 1
+            continue  # leaf-only filter
         pseudo.append({
             "question_id": qid,
             "original_question": q,
             "original_answer": {}  # none available
         })
-    logger.info("Pipeline: built %d pseudo-pairs from questions-only batch.", len(pseudo))
+
+    logger.info(
+        "Pipeline: built %d pseudo-pairs from questions-only batch (skipped %d parent stems).",
+        len(pseudo), skipped_parents
+    )
     return pseudo
+
+
+def _build_parent_context_lookup(q_items):
+    """
+    Build a lookup for parent/context content by ID and by main numeric ID.
+    Returns:
+      - id_to_q: {id -> question_item}
+      - parent_text_by_main: {main_numeric_id -> stem_text (numeric parent content if present)}
+      - parent_texts_all_levels_by_main: {main_numeric_id -> [ (id, content) ... ] } for any parent levels like '1', '1a'
+    """
+    id_to_q = { (q.get("id") or "").strip(): q for q in (q_items or []) if (q.get("id") or "").strip() }
+    all_ids = set(id_to_q.keys())
+
+    parent_text_by_main = {}
+    parent_texts_all_levels_by_main = {}
+
+    for qid, q in id_to_q.items():
+        if _has_child_id(qid, all_ids):
+            text = (q.get("content") or "").strip()
+            if not text:
+                continue
+            main_id = _main_numeric_id(qid)
+            if qid == main_id:  # numeric stem (e.g., '1')
+                parent_text_by_main[main_id] = text
+            parent_texts_all_levels_by_main.setdefault(main_id, []).append((qid, text))
+
+    # Keep deterministic order: sort parents by ID length (numeric first, then alpha, then roman parents)
+    for k, arr in parent_texts_all_levels_by_main.items():
+        parent_texts_all_levels_by_main[k] = sorted(arr, key=lambda t: (len(t[0]), t[0]))
+
+    return id_to_q, parent_text_by_main, parent_texts_all_levels_by_main
+
+
+def _compose_group_context_text(main_id_for_filter, all_pairs, id_to_q, parent_text_by_main, parent_all_levels_by_main):
+    """
+    Compose rich context for generation:
+      1) Numeric stem text (e.g., '1') if available.
+      2) Any mid-level parent texts ('1a', '1b' that have roman children), labeled as Context.
+      3) The visible parts (the leaves) in the group (existing behavior).
+    """
+    lines = []
+
+    # 1) Numeric stem first
+    stem_txt = parent_text_by_main.get(main_id_for_filter, "").strip()
+    if stem_txt:
+        lines.append(f"Stem ({main_id_for_filter}): {stem_txt}")
+
+    # 2) Mid-level parent texts (if any), excluding the numeric stem to avoid duplication
+    for pid, ptxt in parent_all_levels_by_main.get(main_id_for_filter, []):
+        if pid == main_id_for_filter:
+            continue
+        # Only include if this parent is NOT already one of the target leaves
+        if not any(((p.get('question_id') or (p.get('original_question', {}) or {}).get('id', '')).strip() == pid) for p in all_pairs):
+            lines.append(f"Context ({pid}): {ptxt}")
+
+    # 3) Actual parts (leaves)
+    for p in all_pairs:
+        pid = (p.get('question_id') or (p.get('original_question', {}) or {}).get('id', '')).strip()
+        ptxt = ((p.get('original_question', {}) or {}).get('content') or '').strip()
+        if not ptxt:
+            continue
+        lines.append(f"Part ({pid}): {ptxt}")
+
+    return "\n".join(lines)
+
+
+# ---------- MCQ detection & collapsing ----------
+
+_ALPHA_ONE_RE = re.compile(r"^(\d+)([a-z])$")
+
+_OPTION_VERB_BLACKLIST = re.compile(
+    r"\b(show that|prove|hence|find|solve|determine|evaluate|differentiate|integrate|sketch|plot|state|write down)\b",
+    re.IGNORECASE
+)
+
+_STEM_MCQ_CUES = re.compile(
+    r"\b(which of the following|choose|select|best estimate|which statement is true|closest to|is equal to|is equivalent to|which of these)\b",
+    re.IGNORECASE
+)
+
+def _is_option_like(text: str) -> bool:
+    """Heuristic: short, not directive, looks like an answer option."""
+    if not text:
+        return False
+    t = (text or "").strip()
+    if len(t) > 140:
+        return False
+    if _OPTION_VERB_BLACKLIST.search(t):
+        return False
+    # Avoid multi-step workings: multiple equals/semicolons suggest reasoning steps
+    if t.count("=") >= 2 or t.count(";") >= 2:
+        return False
+    return True
+
+
+def _collect_alpha_leaf_pairs(group):
+    """Return [(pair, id, alpha_letter, content)] for 1a/1b/... leaves in this group."""
+    out = []
+    all_pairs = [group.get("main_pair")] + (group.get("sub_question_pairs") or [])
+    for p in all_pairs:
+        qid = (p.get("question_id") or (p.get("original_question", {}) or {}).get("id", "")).strip()
+        m = _ALPHA_ONE_RE.match(qid)
+        if not m:
+            continue
+        alpha = m.group(2).lower()
+        content = ((p.get("original_question", {}) or {}).get("content") or "").strip()
+        out.append((p, qid, alpha, content))
+    return out
+
+
+def _try_collapse_group_to_mcq(group, id_to_q):
+    """
+    If this group looks like an MCQ (several alpha leaves that read like options + a stem),
+    return (True, synthetic_pair, mcq_reference_text). Otherwise (False, None, None).
+    """
+    alpha_pairs = _collect_alpha_leaf_pairs(group)
+    # need 3..6 plausible options
+    if not (3 <= len(alpha_pairs) <= 6):
+        return False, None, None
+
+    # check all look like options
+    if not all(_is_option_like(c) for _, __, ___, c in alpha_pairs):
+        return False, None, None
+
+    # get main numeric id and stem text
+    main_qid = (group.get("main_pair", {}) or {}).get("question_id") or (group.get("main_pair", {}) or {}).get("original_question", {}).get("id", "")
+    main_id = _main_numeric_id(main_qid)
+    stem_txt = ((id_to_q.get(main_id) or {}).get("content") or "").strip()
+
+    # Prefer a stem; if not present, decline MCQ collapse (we'd be missing the actual prompt)
+    if not stem_txt:
+        return False, None, None
+
+    # If stem has MCQ cues, that's strong; otherwise still OK if options are clearly option-like
+    # Build synthetic pair
+    options_sorted = sorted(alpha_pairs, key=lambda t: t[2])  # by alpha
+    options_lines = []
+    for _, __, alpha, content in options_sorted:
+        options_lines.append(f"Option {alpha.upper()}: {content}")
+
+    mcq_reference_text = f"Stem ({main_id}): {stem_txt}\n" + "\n".join(options_lines)
+
+    synthetic_pair = {
+        "question_id": main_id,  # treat as one question
+        "original_question": {
+            "id": main_id,
+            "type": "num",
+            "raw_label": f"Q{main_id}",
+            "content": mcq_reference_text,  # pack stem + options into content for context
+        },
+        "original_answer": {},
+        "synthetic_mcq": True  # signal to bypass parent-skip guard
+    }
+
+    return True, synthetic_pair, mcq_reference_text
 
 
 # ---------- test mode (prints -> logs) ----------
@@ -208,11 +410,14 @@ def run_full_pipeline(
             q_items = job.get("questions") or []
             a_items = []
 
+        # Build context lookups from the original question items (for all job types)
+        id_to_q, parent_text_by_main, parent_all_levels_by_main = _build_parent_context_lookup(q_items or [])
+
         # Create/merge Topic doc metadata only for the Topics root (keeps existing behavior)
         if collection_root == "Topics":
             firebase_uploader.create_or_update_topic(db_client, base_name)
 
-        # 3a) Match items OR build pseudo-pairs
+        # 3a) Match items OR build pseudo-pairs (leaf-only for questions_only)
         if job_type == "questions_only":
             paired_refs = _build_pseudo_pairs_from_questions(q_items)
         else:
@@ -242,26 +447,43 @@ def run_full_pipeline(
         questions_to_process = getattr(settings, "QUESTIONS_TO_PROCESS", None)  # None or list of main IDs
 
         for group in hierarchical_groups:
-            # Filter by main id if needed
+            # Determine main numeric id
             main_q_pair = group.get("main_pair", {}) or {}
             main_qid = main_q_pair.get("question_id") or (main_q_pair.get("original_question", {}) or {}).get("id", "N/A")
-            m = re.match(r"(\d+)", str(main_qid))
-            main_id_for_filter = m.group(1) if m else str(main_qid)
+            main_id_for_filter = _main_numeric_id(main_qid)
 
+            # Apply optional main-ID filter
             if questions_to_process and main_id_for_filter not in questions_to_process:
                 logger.info(f"Skipping group {main_id_for_filter} due to QUESTIONS_TO_PROCESS filter.")
                 continue
 
-            all_pairs = [group["main_pair"]] + group.get("sub_question_pairs", [])
-            full_reference_text = "\n".join(
-                f"Part ({p.get('question_id') or (p.get('original_question', {}) or {}).get('id', '')}): "
-                f"{((p.get('original_question', {}) or {}).get('content') or '').strip()}"
-                for p in all_pairs
-            )
+            # Try MCQ collapse for this group
+            is_mcq, synthetic_pair, mcq_ref_text = _try_collapse_group_to_mcq(group, id_to_q)
 
+            if is_mcq:
+                all_pairs = [synthetic_pair]
+                full_reference_text = mcq_ref_text
+                logger.info("MCQ collapse applied for main %s — generating a single MCQ item.", main_id_for_filter)
+            else:
+                # Build rich group context text (numeric stem + any mid-level parents + the visible parts)
+                all_pairs = [group["main_pair"]] + group.get("sub_question_pairs", [])
+                full_reference_text = _compose_group_context_text(
+                    main_id_for_filter,
+                    all_pairs,
+                    id_to_q,
+                    parent_text_by_main,
+                    parent_all_levels_by_main
+                )
+
+            # Generate **only for leaves/synthetic MCQ**
             for target_pair in all_pairs:
                 qid = target_pair.get("question_id") or (target_pair.get("original_question", {}) or {}).get("id", "N/A")
                 q_text = ((target_pair.get("original_question", {}) or {}).get("content") or "").strip()
+
+                # Defensive: skip if this qid is a parent (shouldn't happen after leaf-only filtering)
+                if _has_child_id(str(qid), set(id_to_q.keys())) and not target_pair.get("synthetic_mcq"):
+                    logger.debug("Skipping parent/context id '%s' at generation step.", qid)
+                    continue
 
                 # Prefer worked solution; fall back to notes
                 a_text = (
@@ -286,7 +508,7 @@ def run_full_pipeline(
 
                     generated_object = content_creator.create_question(
                         gemini_content_model,
-                        full_reference_text,              # full group context
+                        full_reference_text,              # full group context (includes stem/options if MCQ)
                         target_pair,                      # the specific Q/A pair for this part
                         correction_feedback=correction_feedback,
                         keep_structure=keep_effective,
@@ -356,7 +578,7 @@ def run_full_pipeline(
                         logger.debug(f"{base_name} | {qid} | Removing empty 'visual_data'.")
                         del new_question_object["visual_data"]
 
-                    new_question_id = str(qid)  # use the hierarchical id like '1a', '3', etc.
+                    new_question_id = str(qid)  # use the hierarchical id like '1a', '3ai', or '1' for MCQ synthetic
                     new_question_object["topic"] = base_name
                     new_question_object["question_number"] = new_question_id
                     new_question_object["total_marks"] = (feedback_object or {}).get("marks", 0)

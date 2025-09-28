@@ -30,6 +30,180 @@ def initialize_gemini_client():
 # Output normalization
 # -------------------------
 
+def _coerce_str(x):
+    return x if isinstance(x, str) else ("" if x is None else str(x))
+
+
+def _standard_label(idx_or_label):
+    """
+    Normalize a choice label to a single uppercase letter A..Z.
+    Accepts raw labels like 'a', 'A)', '(b)', 'Option C', or an index.
+    """
+    if isinstance(idx_or_label, int):
+        return chr(ord('A') + max(0, idx_or_label))
+    s = _coerce_str(idx_or_label).strip()
+    m = re.search(r'([A-Za-z])', s)
+    if m:
+        return m.group(1).upper()
+    return ""
+
+
+def _normalize_choices(raw):
+    """
+    Normalize incoming 'choices' into a list of {"label":"A","text":"..."}.
+    Accepts list[str], list[dict], or dict[label->text].
+    Drops empty texts. Trims strings. Returns (choices, dropped_count).
+    """
+    choices = []
+    dropped = 0
+
+    if raw is None:
+        return [], 0
+
+    # dict form: {"A": "...", "B": "..."}
+    if isinstance(raw, dict):
+        # keep stable A..Z order if possible
+        items = sorted(raw.items(), key=lambda kv: _standard_label(kv[0]))
+        for k, v in items:
+            lab = _standard_label(k)
+            txt = _coerce_str(v).strip()
+            if lab and txt:
+                choices.append({"label": lab, "text": txt})
+            else:
+                dropped += 1
+        return choices, dropped
+
+    # list form
+    if isinstance(raw, list):
+        # list of strings -> map to A, B, C...
+        if all(isinstance(x, str) for x in raw):
+            for i, txt in enumerate(raw):
+                txt = _coerce_str(txt).strip()
+                if txt:
+                    choices.append({"label": _standard_label(i), "text": txt})
+                else:
+                    dropped += 1
+            return choices, dropped
+
+        # list of dicts
+        for i, item in enumerate(raw):
+            if not isinstance(item, dict):
+                # treat as string
+                txt = _coerce_str(item).strip()
+                if txt:
+                    choices.append({"label": _standard_label(i), "text": txt})
+                else:
+                    dropped += 1
+                continue
+            lab = _standard_label(item.get("label", i))
+            txt = _coerce_str(item.get("text", "")).strip()
+            if lab and txt:
+                choices.append({"label": lab, "text": txt})
+            else:
+                dropped += 1
+        # de-dup by label, first win
+        seen = set()
+        norm = []
+        for ch in choices:
+            if ch["label"] in seen:
+                continue
+            seen.add(ch["label"])
+            norm.append(ch)
+        return norm, dropped
+
+    # unknown type
+    return [], 0
+
+
+def _find_choice_by_text(choices, text):
+    """Find a choice whose text matches 'text' (case/space-insensitive)."""
+    if not text:
+        return None
+    t = re.sub(r'\s+', ' ', _coerce_str(text)).strip().lower()
+    for ch in choices or []:
+        c = re.sub(r'\s+', ' ', _coerce_str(ch.get("text"))).strip().lower()
+        if c == t:
+            return ch
+    return None
+
+
+def _normalize_mcq_fields(obj: dict) -> dict:
+    """
+    If parts[0] contains 'choices', normalize:
+      - parts[0].choices => [{"label":"A","text":"..."}]
+      - parts[0].correct_choice => single uppercase letter matching a choice
+      - final_answer => the text/value of the correct option (not the letter)
+      - add top-level is_mcq: True
+    If choices invalid/too few, remove MCQ fields to avoid partial/broken items.
+    """
+    try:
+        parts = obj.get("parts") or []
+        if not parts:
+            return obj
+        part = parts[0] or {}
+
+        raw_choices = part.get("choices", None)
+        if raw_choices is None:
+            # Not an MCQ; nothing to do
+            return obj
+
+        choices, dropped = _normalize_choices(raw_choices)
+
+        # Only keep if we have at least 3 options (prefer 4–5)
+        if len(choices) < 3:
+            logger.debug("MCQ normalize: insufficient choices (%d). Dropping MCQ fields.", len(choices))
+            part.pop("choices", None)
+            part.pop("correct_choice", None)
+            return obj
+
+        # Cap to 6 options max, keep A.. order
+        choices = sorted(choices, key=lambda ch: ch["label"])[:6]
+        part["choices"] = choices
+
+        # Normalize/derive correct_choice
+        cc_label = _standard_label(part.get("correct_choice", ""))
+        final_answer = _coerce_str(part.get("final_answer", "")).strip()
+
+        # If final_answer is a single letter, prefer that as cc
+        if not cc_label and re.fullmatch(r"[A-Za-z]", final_answer or ""):
+            cc_label = _standard_label(final_answer)
+
+        # If still empty, try to infer by matching final_answer to a choice's text
+        if not cc_label and final_answer:
+            ch = _find_choice_by_text(choices, final_answer)
+            if ch:
+                cc_label = ch["label"]
+
+        # If still empty, default to A
+        if not cc_label:
+            cc_label = "A"
+
+        # Ensure cc exists in choices; else fallback to first
+        valid_labels = {c["label"] for c in choices}
+        if cc_label not in valid_labels:
+            logger.debug("MCQ normalize: correct_choice '%s' not in labels %s; defaulting to first.", cc_label, sorted(valid_labels))
+            cc_label = choices[0]["label"]
+
+        part["correct_choice"] = cc_label
+
+        # Ensure final_answer equals the correct option's TEXT (not just the letter)
+        correct_text = next((c["text"] for c in choices if c["label"] == cc_label), "")
+        if correct_text:
+            part["final_answer"] = correct_text
+
+        # Mark top-level hint
+        obj["is_mcq"] = True
+
+        # Optional: enforce a typical 4–5 option count by trimming if >5 (keep first 5)
+        if len(part["choices"]) > 5:
+            part["choices"] = part["choices"][:5]
+
+        return obj
+    except Exception as e:
+        logger.debug("MCQ normalize: skipped due to error: %s", e)
+        return obj
+
+
 def _normalize_generated_object(obj: dict) -> dict:
     """
     Guard-rails for the raw model JSON:
@@ -37,6 +211,7 @@ def _normalize_generated_object(obj: dict) -> dict:
       - trim strings
       - default calculator_required
       - drop empty visual_data dicts
+      - MCQ-aware normalization (choices/correct_choice/final_answer/is_mcq)
     (Math-specific cleanup is handled separately by postprocess_math.)
     """
     if not isinstance(obj, dict):
@@ -76,6 +251,9 @@ def _normalize_generated_object(obj: dict) -> dict:
     # Clean empty visual_data
     if isinstance(obj.get("visual_data"), dict) and not obj["visual_data"]:
         obj.pop("visual_data", None)
+
+    # --- MCQ normalization (if choices present) ---
+    obj = _normalize_mcq_fields(obj)
 
     return obj
 
@@ -228,10 +406,11 @@ def create_question(
         logger.error(f"Failed to generate or validate content for seed '{target_part_id}'.")
         return None
 
-    # 1) Normalize
+    # 1) Normalize (includes MCQ handling if choices present)
     content_object = _normalize_generated_object(content_object)
 
     # 2) Sanitize math text fields (outside/inside delimiters) — removes stray **, fixes sqrt/frac, \sin, etc.
+    #    Note: choices text is not sanitized here (to keep this change minimal).
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
     # 3) If CAS is enabled but spec missing, attempt minimal synthesis for common cases
@@ -271,5 +450,3 @@ def request_ai_correction(chat_session, error_message, original_text, context_te
     except Exception as e:
         logger.error(f"An error occurred during AI self-correction request: {e}")
         return None
-    
-    
