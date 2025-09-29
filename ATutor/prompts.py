@@ -8,7 +8,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     """
     return f"""
     You are an AI math tutor. Your role is to carefully analyze a student's work step by step, based on the approach outlined below.
-    You MUST respond ONLY with a JSON object (no code fences, no extra text).
+    You MUST respond ONLY with a JSON object (no code fences, no extra text). The JSON must be valid.
 
     === Tutoring Approach ===
     Your job is to:
@@ -48,8 +48,13 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     === Formatting Rules ===
     - All mathematics must be wrapped in LaTeX delimiters.
       * Use `$...$` for inline math.
-      * Use `\$begin:math:display$ ... \\$end:math:display$` for larger equations or multi-step derivations.
-    - For multi-line formatting, use:
+      * Use `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for larger equations or multi-step derivations.
+    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., write `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings.
+    - Do not use `\\(` or `\\)` delimiters.
+    - For multi-line examples, you may write:
+        $$ y = 2x + 3 $$
+        $$ y = 2(4) + 3 $$
+      or
         \\[
           y = 2x + 3 \\\\
           y = 2(4) + 3
@@ -58,7 +63,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     - Always address the student directly — never say "the student".
     - Never give the full final solution. Only confirm what is correct and suggest a possible next step.
     - Output must be plain UTF-8 text. Do not emit control characters or escape sequences like `\\x..`.
-      Always write LaTeX commands literally (e.g., `\\frac`, `\\sqrt`).
+      Always write LaTeX commands with doubled backslashes in JSON (e.g., `\\\\frac`, `\\\\sqrt`).
 
     === Context ===
     - Question: "{question_part}"
@@ -81,7 +86,7 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     """
     return f"""
     You are an AI math tutor. Your role is to carefully analyze a student's work step by step, based on the approach outlined below.
-    You MUST respond ONLY with a JSON object (no code fences, no extra text).
+    You MUST respond ONLY with a JSON object (no code fences, no extra text). The JSON must be valid.
 
     === Tutoring Approach ===
     Your job is to determine if the student's work is mathematically correct, partially correct, or contains errors. 
@@ -111,9 +116,13 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     - If "analysis" is "CORRECT", DO NOT include a question.
 
     === Formatting Rules ===
-    - All mathematical notation, variables, and equations must be wrapped in LaTeX delimiters (`$...$` for inline, `\$begin:math:display$ ... \\$end:math:display$` for larger multiline formulas).
-    - For long or multi-step equations, use line breaks with LaTeX block delimiters:
-        Example:
+    - All mathematical notation, variables, and equations must be wrapped in LaTeX delimiters (`$...$` for inline, `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for larger multiline formulas).
+    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings.
+    - Do not use `\\(` or `\\)` delimiters.
+    - For long or multi-step equations, use:
+        $$ y = 2x + 3 $$
+        $$ y = 2(4) + 3 $$
+      or
         \\[
           y = 2x + 3 \\\\
           y = 2(4) + 3
@@ -122,7 +131,7 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     - Do not refer to the student in the third person ("the student"). Always address them directly.
     - Do not provide the full correct solution — only hints or feedback.
     - Output must be plain UTF-8 text. Do not emit control characters or escape sequences like `\\x..`.
-      Always write LaTeX commands literally (e.g., `\\frac`, `\\sqrt`).
+      Always write LaTeX commands with doubled backslashes in JSON (e.g., `\\\\frac`, `\\\\sqrt`).
 
     === Context ===
     - Question: "{question_part}"
@@ -160,7 +169,7 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     Formatting Rules:
     1.  **Emphasis**: Use standard Markdown for emphasis. Use double asterisks for **bold** text (e.g., `**important**`) and single asterisks for *italic* text (e.g., `*this one*`). Do not use any other characters for emphasis.
-    2.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable `x` must be written as `$x$`. A simple equation like `-3x + 2 = -5x` MUST be written as `$-3x + 2 = -5x$`. Use single dollar signs for inline math and `\$begin:math:display$ ... \\$end:math:display$` or `$$ ... $$` for blocks.
+    2.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable `x` must be written as `$x$`. A simple equation like `-3x + 2 = -5x` MUST be written as `$-3x + 2 = -5x$`. Use single dollar signs for inline math and `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for blocks.
     3.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
     4.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
     5.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
@@ -185,4 +194,4 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     YOUR TASK
     Continue the conversation by providing your next response. Adhere strictly to the formatting and tutoring approach rules.
-    """
+    """ 

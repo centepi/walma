@@ -40,6 +40,7 @@ class ChatRequest(BaseModel):
     conversation_history: List[ChatMessage]
 
 # --- Helpers ---
+
 def _strip_status_tag(text: str):
     """
     Recognize an optional trailing tag of the form [[STATUS: COMPLETE]] or [[STATUS: INCOMPLETE]]
@@ -56,6 +57,49 @@ def _strip_status_tag(text: str):
             complete = value == "COMPLETE"
             text = text[:i].rstrip()
     return text, complete
+
+
+def _extract_json_block(text: str) -> str:
+    """Return the substring from the first '{' to the last '}' if present."""
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1].strip()
+    return text.strip()
+
+
+# Valid JSON single-character escapes after a backslash
+_VALID_AFTER_BACKSLASH = set('\\/"bfnrtu"')
+
+def _escape_invalid_backslashes(json_text: str) -> str:
+    """
+    Replace any backslash that is NOT followed by a valid JSON escape char
+    with a double backslash. This safely fixes LaTeX sequences like \ln, \(
+    inside JSON strings without touching proper escapes like \\n, \\u, \\",
+    etc.
+    """
+    # We operate on the whole text; backslashes only appear inside strings
+    # in our responses, so this is safe for our use-case.
+    return re.sub(r'\\(?![\\/"bfnrtu])', r'\\\\', json_text)
+
+
+def _safe_parse_model_json(raw_text: str):
+    """
+    Try to parse model JSON. On failure due to invalid escapes, attempt a
+    minimal, safe repair by escaping illegal backslashes and retry.
+    """
+    block = _extract_json_block(raw_text)
+    try:
+        return json.loads(block)
+    except json.JSONDecodeError as e1:
+        repaired = _escape_invalid_backslashes(block)
+        try:
+            return json.loads(repaired)
+        except json.JSONDecodeError as e2:
+            # Log both errors to help debugging
+            print(f"❌ First JSON parse error: {e1}")
+            print(f"❌ Second JSON parse error after repair: {e2}")
+            raise
 
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
@@ -91,7 +135,7 @@ async def analyse_work(request: AnalysisRequest):
         gemini_response = model.generate_content(prompt)
 
         try:
-            analysis_data = json.loads(gemini_response.text)
+            analysis_data = _safe_parse_model_json(gemini_response.text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
         except (json.JSONDecodeError, ValueError) as e:
@@ -149,7 +193,7 @@ async def stuck_at_question(request: AnalysisRequest):
         gemini_response = model.generate_content(prompt)
 
         try:
-            analysis_data = json.loads(gemini_response.text)
+            analysis_data = _safe_parse_model_json(gemini_response.text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
             # Ensure is_complete exists (default False) for UI logic
