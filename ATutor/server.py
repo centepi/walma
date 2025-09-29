@@ -39,6 +39,61 @@ class ChatRequest(BaseModel):
     student_work: str
     conversation_history: List[ChatMessage]
 
+# --- Helpers: robust JSON parsing for model output ---
+
+def _strip_code_fences(s: str) -> str:
+    """Remove ```json ... ``` code fences if present."""
+    s = s.strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```(?:json)?\s*", "", s)
+        s = re.sub(r"\s*```$", "", s)
+    return s.strip()
+
+def _extract_json_object(s: str) -> str:
+    """
+    If the model wrapped the JSON with extra prose, pull out the first {...} block.
+    """
+    m = re.search(r"\{.*\}", s, flags=re.DOTALL)
+    return m.group(0).strip() if m else s
+
+def _escape_illegal_backslashes(s: str) -> str:
+    """
+    In JSON strings, backslashes must either escape one of [\"\\/bfnrtu] or be doubled.
+    This turns occurrences like \frac, \ln, \sqrt into \\frac, \\ln, \\sqrt, etc.
+    """
+    return re.sub(r'\\(?![\\/"bfnrtu])', r'\\\\', s)
+
+def _parse_model_json(raw_text: str) -> dict:
+    """
+    Best-effort JSON parse:
+      1) strip code fences
+      2) try loads
+      3) extract {...} region and retry
+      4) escape illegal backslashes and retry
+    Raises JSONDecodeError if all fail.
+    """
+    if not raw_text or not raw_text.strip():
+        raise json.JSONDecodeError("empty response", raw_text or "", 0)
+
+    s = _strip_code_fences(raw_text)
+
+    # First pass
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        pass
+
+    # Try extracting the object region
+    s2 = _extract_json_object(s)
+    try:
+        return json.loads(s2)
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: escape illegal backslashes
+    s3 = _escape_illegal_backslashes(s2)
+    return json.loads(s3)
+
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
 async def analyse_work(request: AnalysisRequest):
@@ -72,13 +127,16 @@ async def analyse_work(request: AnalysisRequest):
         model = genai.GenerativeModel("gemini-2.5-flash", generation_config=generation_config)
         gemini_response = model.generate_content(prompt)
 
+        raw = (gemini_response.text or "").strip()
         try:
-            analysis_data = json.loads(gemini_response.text)
-            if "analysis" not in analysis_data or "reason" not in analysis_data:
-                raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
+            analysis_data = _parse_model_json(raw)
+        except json.JSONDecodeError as e:
+            print(f"❌ Gemini response was not valid JSON after repairs: {e}")
+            print(f"Raw Gemini response: {raw}")
+            return {"status": "error", "message": "AI response was malformed."}
+
+        if "analysis" not in analysis_data or "reason" not in analysis_data:
+            print(f"❌ Gemini JSON missing required keys. JSON: {analysis_data}")
             return {"status": "error", "message": "AI response was malformed."}
 
         print(f"✅ Gemini Analysis: {analysis_data}")
@@ -90,7 +148,6 @@ async def analyse_work(request: AnalysisRequest):
         }
 
         print(f"➡️ Sending this JSON to the app: {response}")
-
         return response
 
     except Exception as e:
@@ -130,16 +187,20 @@ async def stuck_at_question(request: AnalysisRequest):
         model = genai.GenerativeModel("gemini-2.5-flash", generation_config=generation_config)
         gemini_response = model.generate_content(prompt)
 
+        raw = (gemini_response.text or "").strip()
         try:
-            analysis_data = json.loads(gemini_response.text)
-            if "analysis" not in analysis_data or "reason" not in analysis_data:
-                raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
-            # Ensure is_complete exists (default False) for UI logic
-            analysis_data["is_complete"] = bool(analysis_data.get("is_complete", False))
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
+            analysis_data = _parse_model_json(raw)
+        except json.JSONDecodeError as e:
+            print(f"❌ Gemini response was not valid JSON after repairs: {e}")
+            print(f"Raw Gemini response: {raw}")
             return {"status": "error", "message": "AI response was malformed."}
+
+        if "analysis" not in analysis_data or "reason" not in analysis_data:
+            print(f"❌ Gemini JSON missing required keys. JSON: {analysis_data}")
+            return {"status": "error", "message": "AI response was malformed."}
+
+        # Ensure is_complete exists (default False) for UI logic
+        analysis_data["is_complete"] = bool(analysis_data.get("is_complete", False))
 
         print(f"✅ Gemini Analysis: {analysis_data}")
 
@@ -150,7 +211,6 @@ async def stuck_at_question(request: AnalysisRequest):
         }
 
         print(f"➡️ Sending this JSON to the app: {response}")
-
         return response
 
     except Exception as e:
@@ -178,17 +238,17 @@ async def chat(request: ChatRequest):
         model = genai.GenerativeModel("gemini-2.5-flash")
         gemini_response = model.generate_content(prompt)
 
-        ai_reply = gemini_response.text.strip()
+        ai_reply = (gemini_response.text or "").strip()
         print(f"🤖 AI Reply (raw): {ai_reply}")
 
         # Parse completion tag at the very end of the reply
         complete = False
-        m = re.search(r"\[\[STATUS:\s*(COMPLETE|INCOMPLETE)\s*\]\]\s*$", ai_reply, re.IGNORECASE)
+        m = re.search(r"$begin:math:display$\\[STATUS:\\s*(COMPLETE|INCOMPLETE)\\s*$end:math:display$\]\s*$", ai_reply, re.IGNORECASE)
         if m:
             complete = m.group(1).upper() == "COMPLETE"
             # Strip the status tag from the reply shown to the user
             ai_reply = re.sub(
-                r"\s*\[\[STATUS:\s*(?:COMPLETE|INCOMPLETE)\s*\]\]\s*$", "", ai_reply, flags=re.IGNORECASE
+                r"\s*$begin:math:display$\\[STATUS:\\s*(?:COMPLETE|INCOMPLETE)\\s*$end:math:display$\]\s*$", "", ai_reply, flags=re.IGNORECASE
             ).strip()
 
         print(f"🤖 AI Reply (clean): {ai_reply}")
