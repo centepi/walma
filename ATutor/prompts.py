@@ -48,8 +48,10 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     === Formatting Rules ===
     - All mathematics must be wrapped in LaTeX delimiters.
       * Use `$...$` for inline math.
-      * Use `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for larger equations or multi-step derivations.
-    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., write `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings.
+      * Use `$$ ... $$` or `$begin:math:display$ ... $end:math:display$` for larger equations or multi-step derivations.
+      * Do **not** escape dollar signs. Write `$x$`, **not** `\\$x\\$`.
+      * Do **not** write `\\_` in prose. For subscripts, use `_` **inside math**, e.g., `$x_1$`.
+    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., write `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings. Do **not** double the dollar signs.
     - Do not use `\\(` or `\\)` delimiters.
     - For multi-line examples, you may write:
         $$ y = 2x + 3 $$
@@ -116,8 +118,9 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     - If "analysis" is "CORRECT", DO NOT include a question.
 
     === Formatting Rules ===
-    - All mathematical notation, variables, and equations must be wrapped in LaTeX delimiters (`$...$` for inline, `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for larger multiline formulas).
-    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings.
+    - All mathematical notation, variables, and equations must be wrapped in LaTeX delimiters (`$...$` for inline, `$$ ... $$` or `$begin:math:display$ ... $end:math:display$` for larger multiline formulas).
+    - Do **not** escape dollar signs. Write `$x$`, **not** `\\$x\\$`. Use `_` for subscripts **inside math** (e.g., `$x_1$`) and avoid writing `\\_` in prose.
+    - Because you are returning JSON, EVERY backslash in LaTeX inside the JSON string MUST be doubled, e.g., `\\\\frac`, `\\\\ln`, `\\\\sqrt`. Never output single-backslash LaTeX in JSON strings. Do **not** double the dollar signs.
     - Do not use `\\(` or `\\)` delimiters.
     - For long or multi-step equations, use:
         $$ y = 2x + 3 $$
@@ -169,7 +172,7 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     Formatting Rules:
     1.  **Emphasis**: Use standard Markdown for emphasis. Use double asterisks for **bold** text (e.g., `**important**`) and single asterisks for *italic* text (e.g., `*this one*`). Do not use any other characters for emphasis.
-    2.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable `x` must be written as `$x$`. A simple equation like `-3x + 2 = -5x` MUST be written as `$-3x + 2 = -5x$`. Use single dollar signs for inline math and `$$ ... $$` or `\$begin:math:display$ ... \\$end:math:display$` for blocks.
+    2.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable `x` must be written as `$x$`. A simple equation like `-3x + 2 = -5x` MUST be written as `$-3x + 2 = -5x$`. Use single dollar signs for inline math and `$$ ... $$` or `$begin:math:display$ ... $end:math:display$` for blocks. Do **not** escape dollar signs (write `$x$`, not `\\$x\\$`). Use `_` for subscripts **inside math** only (e.g., `$x_1$`).
     3.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
     4.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
     5.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
@@ -194,4 +197,4 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     YOUR TASK
     Continue the conversation by providing your next response. Adhere strictly to the formatting and tutoring approach rules.
-    """ 
+    """
