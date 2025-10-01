@@ -4,6 +4,47 @@ from . import utils
 
 logger = utils.setup_logger(__name__)
 
+# === Math fence normalization (NEW) ==========================================
+_BEGIN_END_KIND = r'(text|display)'
+
+def _normalize_math_in_string(s: str) -> str:
+    """
+    Normalize legacy Alma math fences and common accidental variants:
+    - '$\\begin:math:...$'  -> '$begin:math:...$'
+    - '$ \\begin:math:...$' -> '$begin:math:...$'
+    - backticked fences -> plain fences
+    We keep fences as $begin/$end so the iOS canonicalizer can do the final conversion.
+    """
+    if not isinstance(s, str):
+        return s
+    if '$' not in s and '\\begin:math:' not in s and '$begin:math:' not in s:
+        return s
+
+    # Strip backticks that immediately wrap our markers
+    s = re.sub(r'`(\$begin:math:' + _BEGIN_END_KIND + r'\$)', r'\1', s)
+    s = re.sub(r'(\$end:math:'   + _BEGIN_END_KIND + r'\$)`', r'\1', s)
+
+    # Remove accidental backslashes directly before our markers
+    s = re.sub(r'\$\\begin:math:' + _BEGIN_END_KIND + r'\$', r'$begin:math:\1$', s)
+    s = re.sub(r'\$\\end:math:'   + _BEGIN_END_KIND + r'\$', r'$end:math:\1$',   s)
+
+    # Handle accidental spaces between '$' and '\begin'/'\end'
+    s = re.sub(r'\$\s*\\begin:math:' + _BEGIN_END_KIND + r'\$', r'$begin:math:\1$', s)
+    s = re.sub(r'\$\s*\\end:math:'   + _BEGIN_END_KIND + r'\$', r'$end:math:\1$',   s)
+
+    return s
+
+def _deep_normalize_math(obj):
+    """Walk parsed JSON and normalize math fences in all strings."""
+    if isinstance(obj, dict):
+        return {k: _deep_normalize_math(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_deep_normalize_math(v) for v in obj]
+    if isinstance(obj, str):
+        return _normalize_math_in_string(obj)
+    return obj
+# ============================================================================
+
 
 def _parse_and_repair(raw_text: str):
     """
@@ -43,8 +84,11 @@ def _parse_and_repair(raw_text: str):
 
         # Step 4: Attempt to parse.
         parsed_data = json.loads(json_str)
-
         logger.debug("Validator: JSON parsed successfully.")
+
+        # Step 5 (NEW): Normalize legacy math fences across all strings.
+        parsed_data = _deep_normalize_math(parsed_data)
+
         return parsed_data
 
     except Exception as e:
