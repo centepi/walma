@@ -56,6 +56,16 @@ def build_creator_prompt(
         • If the source was a proof question, do NOT replace it with a numerical computation.
     """
 
+    # --- NEW SECTION: DIAGRAM DISCIPLINE ---
+    diagram_block = """
+    **DIAGRAM DISCIPLINE (No Phantom Figures)**
+    - Do **not** mention a “diagram/figure/picture” **unless** you actually include a `visual_data` object in the JSON.
+    - If you cannot (or should not) provide `visual_data`, rewrite the givens explicitly in text so the problem is fully solvable without any image.
+      Use neutral phrasing such as “Consider a two-component link with four signed crossings …” instead of “The diagram shows …”.
+    - When replacing visuals, encode necessary information textually (e.g., signed crossing sequence, incidence lists for arcs at crossings,
+      adjacency data, coordinates/parameters), preserving the same skill and step count.
+    """
+
     prompt = f"""
     {context_header.strip()}
 
@@ -72,6 +82,8 @@ def build_creator_prompt(
 
     {dedent(domain_skill_block).strip()}
 
+    {dedent(diagram_block).strip()}
+
     --- YOUR TASK ---
     Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
 
@@ -84,7 +96,7 @@ def build_creator_prompt(
           then produce **ONE** question with options inside the single part — **do not** create separate questions per option.
         - In this MCQ case, include inside the single part:
             * "choices": a list of 4–5 options, each as {{ "label": "A", "text": "<option text with LaTeX where needed>" }}.
-            * "correct_choice": the label of the correct option, e.g. "B".
+            * "correct_choice": the label of the correct option, e.g., "B".
             * Keep "solution_text" explaining why the correct option is right (and briefly why others are wrong).
             * Set "final_answer" to the **mathematical value or exact text** of the correct option (not just the letter),
               so computer algebra checks can still apply when appropriate (e.g., use "1/2" rather than "B").
@@ -96,6 +108,7 @@ def build_creator_prompt(
     7.  **Calculator Use**: Set 'calculator_required' appropriately.
     8.  **NO DRAWING REQUESTS**: Do not ask to "sketch/draw/plot"; convert to textual reasoning.
     9.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string.
+    10. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
 
     {dedent(keep_block).strip()}
 
@@ -171,6 +184,7 @@ def build_creator_prompt(
     **FINAL CHECK**:
     - If MCQ: exactly one part, include choices + correct_choice; final_answer equals the correct option’s value/text.
     - If non-MCQ: no choices; provide a clean final_answer.
+    - **If you mention any diagram/figure, the JSON must include `visual_data`; otherwise do not mention a diagram/figure at all.**
     - Ensure the JSON is valid.
     """
     return dedent(prompt).strip()
