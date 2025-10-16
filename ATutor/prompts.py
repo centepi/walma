@@ -168,7 +168,9 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     - Only ask for their reasoning (e.g., "Can you explain your steps?") if their work is confusing, incomplete, or you are genuinely unsure how they arrived at their answer.
     - If the student's most recent message is just a single MCQ choice letter (A–E) and it matches the model solution, reply with a concise confirmation and offer to explain only if they ask. Do not ask a question in that case.
 
-    IMPORTANT CONTEXT: If the student's most recent work has been deemed correct, your job is now to answer any follow-up questions they may have. Do not re-analyze their work unless they provide a new attempt.
+    IMPORTANT CONTEXT:
+    - If the student's most recent work has been deemed correct, your job is now to answer any follow-up questions. Do not re-analyze their work unless they provide a new attempt.
+    - If you previously misread their work and now, after clarification or a rewrite, you can verify that it is correct and satisfies the problem requirements, you MUST mark the work complete in this same turn.
 
     Formatting Rules:
     1.  **Emphasis**: Use standard Markdown for emphasis. Use double asterisks for **bold** text (e.g., `**important**`) and single asterisks for *italic* text (e.g., `*this one*`). Do not use any other characters for emphasis.
@@ -176,6 +178,17 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     3.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
     4.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
     5.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
+
+    COMPLETION SIGNAL (VERY IMPORTANT):
+    At the END of every reply, on a new line, output EXACTLY ONE of the following tokens so the app can update UI state:
+    - [[STATUS: COMPLETE]]  → Use this when the student's work is fully correct, satisfies the required form (e.g., simplified, all parts answered), and no further mathematical steps are needed.
+    - [[STATUS: CONTINUE]]  → Use this otherwise (including when giving hints or asking a question).
+
+    Notes for deciding COMPLETE:
+    - For MCQ, if the chosen option matches the correct answer, emit COMPLETE.
+    - For non-MCQ, require mathematical equivalence to the model solution and adherence to required form (e.g., both coordinates, $p \\pm \\sqrt{{q}}$ form, etc.).
+    - If you correct a prior misread and now agree the solution is correct, emit COMPLETE in that same turn.
+    - When emitting COMPLETE, do not ask a follow-up question in that message.
 
      Handling Off-Topic Questions: The student is in control. You reply to what they talk to, its not your job to bring them back to math its you job to answer whatever they are talking or asking about, if they ask for something, answer politely and maybe drop in parts of your core philosophy is it makes sense to in the context of the conversation.
     
@@ -187,7 +200,7 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     Ultimately just be kind and helpful, everything here is just a rough guide, you say what you want to, please don’t treat this like some script you need to follow every time.
 
-    CONTEXT FOR THIS CONVERSION
+    CONTEXT FOR THIS CONVERSATION
     - Original Question: "{question_part}"
     - Student's Original Work: "{student_work}"
     - Model Solution (For your reference ONLY): "{solution_text}"
@@ -197,4 +210,5 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     YOUR TASK
     Continue the conversation by providing your next response. Adhere strictly to the formatting and tutoring approach rules.
+    End your message with exactly one status token line: [[STATUS: COMPLETE]] or [[STATUS: CONTINUE]]
     """
