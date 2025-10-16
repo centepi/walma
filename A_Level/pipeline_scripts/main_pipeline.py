@@ -12,6 +12,7 @@ from . import firebase_uploader
 from . import content_checker
 from . import cas_validator              # CAS engine (SymPy-based)
 from . import checks_cas                 # NEW: build answer_spec from generated objects
+from . import structure_guard            # NEW: topicality/coherence screen
 
 logger = utils.setup_logger(__name__)
 
@@ -240,6 +241,8 @@ def _try_collapse_group_to_mcq(group, id_to_q):
     """
     If this group looks like an MCQ (several alpha leaves that read like options + a stem),
     return (True, synthetic_pair, mcq_reference_text). Otherwise (False, None, None).
+
+    CHANGE: Require explicit MCQ cues in the stem to avoid collapsing genuine multi-part problems.
     """
     alpha_pairs = _collect_alpha_leaf_pairs(group)
     # need 3..6 plausible options
@@ -255,11 +258,14 @@ def _try_collapse_group_to_mcq(group, id_to_q):
     main_id = _main_numeric_id(main_qid)
     stem_txt = ((id_to_q.get(main_id) or {}).get("content") or "").strip()
 
-    # Prefer a stem; if not present, decline MCQ collapse (we'd be missing the actual prompt)
+    # Prefer a stem; if not present, decline MCQ collapse
     if not stem_txt:
         return False, None, None
 
-    # If stem has MCQ cues, that's strong; otherwise still OK if options are clearly option-like
+    # NEW: Require explicit MCQ cues in the stem to avoid false positives
+    if not _STEM_MCQ_CUES.search(stem_txt):
+        return False, None, None
+
     # Build synthetic pair
     options_sorted = sorted(alpha_pairs, key=lambda t: t[2])  # by alpha
     options_lines = []
@@ -517,6 +523,22 @@ def run_full_pipeline(
                     if not generated_object:
                         logger.error(f"{base_name} | {qid} | Generation failed on attempt {attempt + 1}.")
                         continue
+
+                    # --- NEW: structural & relevance screening (cheap, before CAS/checker) ---
+                    ok_sr, reason_sr = structure_guard.screen_structure_and_relevance(
+                        gemini_checker_model,
+                        generated_object,
+                        full_reference_text
+                    )
+                    if not ok_sr:
+                        correction_feedback = (
+                            "Your previous question either drifted off-topic or combined multiple "
+                            "independent tasks. Regenerate ONE coherent question that stays within "
+                            "the same topic and tests the same skills. If the source was visual, "
+                            "describe it textually; do not invent an unrelated diagram. "
+                            f"Issue: {reason_sr}"
+                        )
+                        continue  # retry once with the correction feedback
 
                     # --- Build/attach a CAS answer_spec if possible (from final_answer etc.) ---
                     spec = checks_cas.build_answer_spec_from_generated(generated_object)
