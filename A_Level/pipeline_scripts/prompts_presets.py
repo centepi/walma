@@ -36,18 +36,41 @@ def build_creator_prompt(
 
     correction_block = f"\n{correction_prompt_section.strip()}\n" if correction_prompt_section else ""
 
+    # --- NEW SECTION: DOMAIN & SKILL LOCK ---
+    domain_skill_block = """
+    **DOMAIN & SKILL LOCK**
+    Before generating the new question, carefully infer the following from the original context:
+    - **Domain/Topic**: Identify the main mathematical area (e.g., topology, graph theory, linear algebra, calculus, statistics, etc.).
+    - **Core Skills**: Identify what kinds of reasoning or techniques were required (e.g., prove equivalence, construct counterexample, apply definition, compute derivative, solve system, interpret a graph, etc.).
+    - **Difficulty Level**: Match the level of reasoning, abstraction, and number of steps in the original. Do not simplify.
+    - **Structure Awareness**: If the original question used proof-style verbs (“Show that”, “Hence”, “Prove”), retain that proof-oriented nature. If it was computational, remain computational.
+    - **Visual Awareness**: If the original question relied on a diagram or visual representation, describe that structure clearly in text form (e.g., define a topological space, describe a network, or specify coordinates for a shape) rather than removing it.
+
+    You MUST:
+    - Keep the same domain and core skills.
+    - Match the original difficulty band (no trivialisation).
+    - Keep a similar number of reasoning or calculation steps.
+    - Never drift to unrelated topics. For example:
+        • If the source was topology, do NOT switch to geometry or trigonometry.
+        • If the source was graph theory, do NOT output calculus or algebra problems.
+        • If the source was a proof question, do NOT replace it with a numerical computation.
+    """
+
     prompt = f"""
     {context_header.strip()}
 
     You are an expert A-level Mathematics content creator. Your task is to create a NEW, ORIGINAL, and SELF-CONTAINED A-level question.
 
     {correction_block}
+
     --- CONTEXT: THE FULL ORIGINAL QUESTION (for skill + style only; do NOT copy) ---
     {full_reference_text}
 
     --- INSPIRATION: THE TARGET PART ---
     - Reference Part Content: "{target_part_content}"
     - Reference Part Solution (if available): "{(target_part_answer or '').strip()}"
+
+    {dedent(domain_skill_block).strip()}
 
     --- YOUR TASK ---
     Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.

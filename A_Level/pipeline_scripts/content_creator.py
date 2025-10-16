@@ -346,6 +346,83 @@ def _synthesize_answer_spec_if_missing(content_object: dict) -> dict:
 
 
 # -------------------------
+# Auto domain/skill anchoring (prompt-only; zero new deps)
+# -------------------------
+
+_VISUAL_CUES = re.compile(
+    r"\b(diagram|figure|graph|sketch|curve|axes|plot|locus|contour|surface|manifold|topology|homeomorph|open set|closed set|connected|compact|quotient|metric|basis|neighbourhood|neighborhood)\b",
+    re.IGNORECASE
+)
+
+# A small whitelist of math-y topic tokens that help anchor domain without being too prescriptive.
+_ANCHOR_TOKENS = [
+    # Topology / analysis-ish
+    "topology", "metric", "open set", "closed set", "connected", "compact",
+    "continuity", "homeomorphism", "quotient", "basis", "subspace",
+    "neighbourhood", "neighborhood", "accumulation point", "limit point",
+    # Graphs / visual maths
+    "graph", "axes", "locus", "contour", "surface", "curve",
+    # General (kept minimal)
+    "proof", "show that", "hence", "therefore",
+]
+
+def _extract_anchor_terms(*texts: str, limit: int = 8) -> list[str]:
+    """
+    Heuristic: keep distinctive, domain-signalling tokens from source text
+    to gently bias the generator. No NLP deps, minimal & safe.
+    """
+    joined = " ".join([t for t in texts if isinstance(t, str)])
+    low = joined.lower()
+
+    # Pull from whitelist if present
+    hits = []
+    for tk in _ANCHOR_TOKENS:
+        if tk in low:
+            hits.append(tk)
+
+    # Add a few long-ish alphabetic words that look mathy (fallback)
+    extra = []
+    for w in re.findall(r"[a-zA-Z][a-zA-Z\-]{4,}", low):
+        if w in hits:
+            continue
+        if any(c.isdigit() for c in w):
+            continue
+        # Avoid super-generic fillers
+        if w in {"which", "their", "therefore", "where", "given", "using", "hence", "since", "prove"}:
+            continue
+        extra.append(w)
+
+    # Dedup, preserve order, cap
+    out = []
+    for w in hits + extra:
+        if w not in out:
+            out.append(w)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _build_auto_context_header(full_reference_text: str, target_part_content: str) -> str:
+    """
+    Builds a tiny preface that locks domain/skill and visual intent for the model.
+    This is purely prompt-time guidance; no new validators or files.
+    """
+    visual_hint = bool(_VISUAL_CUES.search(f"{full_reference_text}\n{target_part_content}"))
+    tags = _extract_anchor_terms(full_reference_text, target_part_content, limit=8)
+
+    lines = []
+    lines.append("### AUTO DOMAIN & SKILL LOCK")
+    lines.append("- Stay in the SAME mathematical domain and subtopic as the source (do not switch topics).")
+    lines.append("- Match difficulty and number of reasoning steps as closely as possible.")
+    lines.append("- Preserve the specific skill(s) being assessed; change only surface parameters.")
+    if tags:
+        lines.append(f"- Source topic/skill cues: {', '.join(tags)}.")
+    if visual_hint:
+        lines.append("- The source appears VISUAL-HEAVY. Keep the SAME topic; if a diagram is needed, use a clear textual description and include 'visual_data' only if it helps. Do NOT replace with unrelated geometric triangles or unrelated algebra.")
+    return "\n".join(lines)
+
+
+# -------------------------
 # Main API
 # -------------------------
 def create_question(
@@ -380,9 +457,19 @@ def create_question(
         logger.info(f"Generating new question inspired by part '{target_part_id}'.")
         correction_prompt_section = ""
 
+    # ---- NEW: auto domain/skill anchoring header (merged with any global context header) ----
+    try:
+        auto_header = _build_auto_context_header(full_reference_text or "", target_part_content or "")
+    except Exception as e:
+        logger.debug("Auto-context header build failed (non-fatal): %s", e)
+        auto_header = ""
+
+    base_header = (getattr(settings, "GENERATION_CONTEXT_PROMPT", "") or "").strip()
+    effective_context_header = "\n\n".join([h for h in (base_header, auto_header) if h]).strip()
+
     # Build the prompt via shared presets (keeps behavior consistent across modules)
     prompt = build_creator_prompt(
-        context_header=getattr(settings, "GENERATION_CONTEXT_PROMPT", "").strip(),
+        context_header=effective_context_header,
         full_reference_text=full_reference_text,
         target_part_content=target_part_content,
         target_part_answer=target_part_answer,
