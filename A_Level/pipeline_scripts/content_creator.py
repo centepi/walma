@@ -350,7 +350,7 @@ def _synthesize_answer_spec_if_missing(content_object: dict) -> dict:
 # -------------------------
 
 _VISUAL_CUES = re.compile(
-    r"\b(diagram|figure|graph|sketch|curve|axes|plot|locus|contour|surface|manifold|topology|homeomorph|open set|closed set|connected|compact|quotient|metric|basis|neighbourhood|neighborhood)\b",
+    r"\b(diagram|figure|graph|sketch|curve|axes|plot|asymptote|locus|contour|surface|manifold|topology|homeomorph|open set|closed set|connected|compact|quotient|metric|basis|neighbourhood|neighborhood)\b",
     re.IGNORECASE
 )
 
@@ -418,7 +418,7 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
     if tags:
         lines.append(f"- Source topic/skill cues: {', '.join(tags)}.")
     if visual_hint:
-        lines.append("- The source appears VISUAL-HEAVY. Keep the SAME topic; if a diagram is needed, use a clear textual description and include 'visual_data' only if it helps. Do NOT replace with unrelated geometric triangles or unrelated algebra.")
+        lines.append("- The source appears VISUAL. For simple Cartesian cases, INCLUDE a 2D analytic graph via 'visual_data' (do not ask the student to draw). Avoid any non-graph shapes.")
     return "\n".join(lines)
 
 
