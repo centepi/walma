@@ -27,7 +27,7 @@ def build_creator_prompt(
         - Preserve the structure, intent, and verbs of the target part (e.g., "Show that", "Hence", "Find", "Prove").
         - Keep the mathematical *type* (same skill) and the same number of sub-reasoning steps.
         - Change only surface details (numbers, coefficients, simple function parameters) to keep it original.
-        - If the original required a sketch/diagram, convert that to a textual description (no drawing requests).
+        - If the original required a simple 2D graph (lines/curves on Cartesian axes), include it via `visual_data` (do not ask the student to draw).
         - Do NOT copy sentences verbatim. Keep it semantically equivalent but reworded.
         """
         if keep_structure
@@ -44,7 +44,7 @@ def build_creator_prompt(
     - **Core Skills**: Identify what kinds of reasoning or techniques were required (e.g., prove equivalence, construct counterexample, apply definition, compute derivative, solve system, interpret a graph, etc.).
     - **Difficulty Level**: Match the level of reasoning, abstraction, and number of steps in the original. Do not simplify.
     - **Structure Awareness**: If the original question used proof-style verbs (“Show that”, “Hence”, “Prove”), retain that proof-oriented nature. If it was computational, remain computational.
-    - **Visual Awareness**: If the original question relied on a diagram or visual representation, describe that structure clearly in text form (e.g., define a topological space, describe a network, or specify coordinates for a shape) rather than removing it.
+    - **Visual Awareness**: If the original question relies on a simple 2D graph on Cartesian axes, supply it via the `visual_data` object. If a visual is not a simple 2D graph, encode the givens textually instead of asking the student to draw.
 
     You MUST:
     - Keep the same domain and core skills.
@@ -58,12 +58,10 @@ def build_creator_prompt(
 
     # --- NEW SECTION: DIAGRAM DISCIPLINE ---
     diagram_block = """
-    **DIAGRAM DISCIPLINE (No Phantom Figures)**
+    **DIAGRAM DISCIPLINE (2D Graphs Only; No Phantom Figures)**
     - Do **not** mention a “diagram/figure/picture” **unless** you actually include a `visual_data` object in the JSON.
-    - If you cannot (or should not) provide `visual_data`, rewrite the givens explicitly in text so the problem is fully solvable without any image.
-      Use neutral phrasing such as “Consider a two-component link with four signed crossings …” instead of “The diagram shows …”.
-    - When replacing visuals, encode necessary information textually (e.g., signed crossing sequence, incidence lists for arcs at crossings,
-      adjacency data, coordinates/parameters), preserving the same skill and step count.
+    - Visuals are limited to simple **2D analytic graphs on Cartesian axes** (e.g., lines, quadratics, cubics, exponentials, trig, piecewise), plus optional labeled points and shaded regions bounded by graphs/axes.
+    - If a visual is not a simple 2D graph, **omit** `visual_data` and encode all necessary givens in text so the problem is fully solvable without any image.
     """
 
     prompt = f"""
@@ -103,10 +101,10 @@ def build_creator_prompt(
         - **Never** split MCQ options into separate parts or separate questions.
     3.  **Invent Values**: Use fresh numbers/functions/scenarios to avoid copying.
     4.  **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
-    5.  **Contextual Visuals Only**: Any 'visual_data' must aid understanding and must NOT encode the answer.
-    6.  **Include Visuals if Appropriate**: Only when the skill is inherently visual.
+    5.  **Contextual Visuals Only**: Any `visual_data` must aid understanding and must NOT encode the answer.
+    6.  **Include 2D Graphs When Applicable**: If a function/relation naturally benefits from a simple 2D analytic plot on Cartesian axes, include it in `visual_data` with reasonable axis ranges.
     7.  **Calculator Use**: Set 'calculator_required' appropriately.
-    8.  **NO DRAWING REQUESTS**: Do not ask to "sketch/draw/plot"; convert to textual reasoning.
+    8.  **NO DRAWING REQUESTS TO THE STUDENT**: Do not ask the student to "sketch/draw/plot." If a 2D graph is appropriate, you (the generator) provide it via `visual_data`.
     9.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string.
     10. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
 
