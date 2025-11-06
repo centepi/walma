@@ -102,7 +102,7 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
 
     - **CRITICAL RULE**: Do not rely on text matching. Evaluate mathematical equivalence.
         Examples:
-        - `$x=5$` and `$5=x$` are equivalent.
+        - `$10x=50$` and `$5=x$` are equivalent.
         - `$(x+1)^2$` and `$x^2 + 2x + 1$` are equivalent.
         - However, if the required answer is a coordinate, then `$x=2$` alone is not equivalent to `$(2,3)$` — it is incomplete.
     - Ensure the solution is simplified where required.
