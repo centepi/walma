@@ -7,10 +7,16 @@ import google.generativeai as genai
 from config import settings
 from . import utils
 from . import graph_utils
+from .universal_graph_renderer import render_graph
 from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
+from .dynamic_chart_plotter import dynamic_chart_plotter,validate_config
+import datetime
+import io
+import base64
+import matplotlib.pyplot as plt
 
 logger = utils.setup_logger(__name__)
 
@@ -507,7 +513,37 @@ def create_question(
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
-        graph_utils.process_and_sample_visual_data(visual_data)
+        # graph_utils.process_and_sample_visual_data(visual_data)
+        # fig = render_graph(visual_data)
+        # content_object['image'] = fig
+        issues = validate_config(visual_data)
+        if issues:
+            print("Validation Issues:")
+            for issue in issues:
+                print(f"  ⚠️  {issue}")
+        else:
+            print("✅ Configuration is valid!")
+            fig = dynamic_chart_plotter(visual_data)
+            # plt.show()
+            # Save plot to a BytesIO buffer in SVG format
+            buffer = io.BytesIO()
+            plt.savefig(buffer, format='svg')
+            plt.close()
+            
+            # Get SVG data from buffer
+            svg_data = buffer.getvalue().decode('utf-8')
+            buffer.close()
+            # Encode SVG to Base64
+            svg_base64 = base64.b64encode(svg_data.encode('utf-8')).decode('utf-8')
+
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # Define filename with timestamp
+            filename = f"file_{timestamp}.txt"
+
+            # Write something to the file
+            with open(filename, "w") as f:
+                f.write(svg_base64)
     else:
         logger.debug("No visual data generated for seed '%s'.", target_part_id)
 
