@@ -544,6 +544,7 @@ def create_question(
             # Write something to the file
             with open(filename, "w") as f:
                 f.write(svg_base64)
+            content_object['svg_image'] = svg_base64
     else:
         logger.debug("No visual data generated for seed '%s'.", target_part_id)
 
