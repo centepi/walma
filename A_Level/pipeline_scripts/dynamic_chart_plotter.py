@@ -396,61 +396,94 @@ def plot_histogram(ax: plt.Axes, graph: Dict[str, Any],
     function_registry[graph_id] = None
 
 
-def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any], 
-                 function_registry: Dict[str, Callable]) -> None:
+def plot_box_plot(
+    ax: plt.Axes,
+    graph: Dict[str, Any],
+    function_registry: Dict[str, Callable]
+) -> None:
     """
-    Plot box plot (box-and-whisker plot) with quartiles.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with five-number summary
-    function_registry : dict
-        Registry to store function objects
+    Plot a box-and-whisker chart from a five-number summary, but be forgiving of
+    missing/null values the model might produce.
     """
-    
-    graph_id = graph.get('id', 'unknown')
-    label = graph.get('label', '')
+    graph_id = graph.get("id", "unknown")
+    label = graph.get("label", "")
     color = get_color_cycle(graph_id)
-    
-    visual_features = graph.get('visual_features', {})
-    groups = visual_features.get('groups', ['Data'])
-    min_vals = visual_features.get('min_values', [])
-    q1_vals = visual_features.get('q1_values', [])
-    median_vals = visual_features.get('median_values', [])
-    q3_vals = visual_features.get('q3_values', [])
-    max_vals = visual_features.get('max_values', [])
-    outliers = visual_features.get('outliers', [])
-    
-    # Verify data lengths match
-    n_groups = len(groups)
-    if not all(len(v) == n_groups for v in [min_vals, q1_vals, median_vals, q3_vals, max_vals]):
-        print(f"⚠️ Data length mismatch in box plot '{graph_id}'")
+
+    vf = graph.get("visual_features", {}) or {}
+
+    groups = vf.get("groups") or ["Data"]
+    min_vals = vf.get("min_values") or []
+    q1_vals = vf.get("q1_values") or []
+    median_vals = vf.get("median_values") or []
+    q3_vals = vf.get("q3_values") or []
+    max_vals = vf.get("max_values") or []
+    outliers = vf.get("outliers") or []
+
+    cleaned_box_data = []
+    cleaned_labels = []
+
+    # walk through groups and build a safe row for each
+    for i, g in enumerate(groups):
+        row = [
+            min_vals[i] if i < len(min_vals) else None,
+            q1_vals[i] if i < len(q1_vals) else None,
+            median_vals[i] if i < len(median_vals) else None,
+            q3_vals[i] if i < len(q3_vals) else None,
+            max_vals[i] if i < len(max_vals) else None,
+        ]
+
+        # drop Nones
+        row_clean = [v for v in row if v is not None]
+
+        # if the model gave us nothing usable, skip this group
+        if not row_clean:
+            continue
+
+        # matplotlib's boxplot expects raw observations; we only have summary values.
+        # so: expand each available stat twice to make a tiny numeric dataset
+        synthetic = []
+        for v in row_clean:
+            synthetic.append(v)
+            synthetic.append(v)
+
+        cleaned_box_data.append(synthetic)
+        cleaned_labels.append(g)
+
+    # nothing usable? just return quietly
+    if not cleaned_box_data:
         return
-    
-    # Create box plot data structure
-    box_data = []
-    for i in range(n_groups):
-        box_data.append([min_vals[i], q1_vals[i], median_vals[i], q3_vals[i], max_vals[i]])
-    
-    # Plot using matplotlib's boxplot
-    bp = ax.boxplot(box_data, labels=groups, patch_artist=True, widths=0.6)
-    
-    # Customize box colors
-    for patch in bp['boxes']:
+
+    bp = ax.boxplot(
+        cleaned_box_data,
+        labels=cleaned_labels,
+        patch_artist=True,
+        widths=0.6,
+    )
+
+    for patch in bp["boxes"]:
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
-    
-    # Plot outliers if present
-    if outliers:
-        for outlier in outliers:
-            group_idx = groups.index(outlier.get('group', groups[0]))
-            ax.scatter(group_idx + 1, outlier['value'], color='red', s=100, 
-                      marker='o', zorder=5, label='Outliers' if outlier == outliers[0] else '')
-    
-    # Store as None for box plot data
+
+    # plot outliers if they are well-formed
+    for idx, out in enumerate(outliers):
+        gname = out.get("group")
+        val = out.get("value")
+        if gname in cleaned_labels and isinstance(val, (int, float)):
+            gidx = cleaned_labels.index(gname)
+            ax.scatter(
+                gidx + 1,
+                val,
+                color="red",
+                s=100,
+                marker="o",
+                zorder=5,
+                label="Outliers" if idx == 0 else "",
+            )
+
+    if label:
+        ax.set_title(label)
+
+    # box plot doesn't correspond to a callable function
     function_registry[graph_id] = None
 
 
