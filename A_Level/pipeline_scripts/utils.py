@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import datetime
+import sys
 from logging.handlers import RotatingFileHandler
 from typing import Tuple, Dict, Any, List
 from config import settings
@@ -12,9 +13,9 @@ from pdf2image import convert_from_path  # Use pdf2image instead of fitz
 
 def setup_logger(name, level_str=settings.LOG_LEVEL):
     """
-    Sets up a module logger with a console stream handler.
-    IMPORTANT: propagation is ON so messages also flow to the root,
-    where the per-run file handler is attached.
+    Sets up a module logger with a console stream handler that always prints
+    to stdout. We also disable propagation so messages don’t get lost if the
+    root logger has no handlers.
     """
     log_level = getattr(logging, level_str.upper(), logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)5s | %(name)s | %(message)s')
@@ -24,13 +25,13 @@ def setup_logger(name, level_str=settings.LOG_LEVEL):
 
     # Avoid duplicate console handlers on repeated imports
     if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
-        handler = logging.StreamHandler()
+        handler = logging.StreamHandler(stream=sys.stdout)
         handler.setFormatter(formatter)
         handler.setLevel(log_level)
         logger.addHandler(handler)
 
-    # Let messages bubble up to the root so the run file handler can capture them
-    logger.propagate = True
+    # Don’t bubble up — we already print to console here
+    logger.propagate = False
     return logger
 
 
