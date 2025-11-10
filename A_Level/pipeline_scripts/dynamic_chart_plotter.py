@@ -396,11 +396,67 @@ def plot_histogram(ax: plt.Axes, graph: Dict[str, Any],
     function_registry[graph_id] = None
 
 
+# def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any], 
+#                  function_registry: Dict[str, Callable]) -> None:
+#     """
+#     Plot box plot (box-and-whisker plot) with quartiles.
+    
+#     Parameters:
+#     -----------
+#     ax : matplotlib.axes.Axes
+#         The axes object to plot on
+#     graph : dict
+#         Graph configuration with five-number summary
+#     function_registry : dict
+#         Registry to store function objects
+#     """
+    
+#     graph_id = graph.get('id', 'unknown')
+#     label = graph.get('label', '')
+#     color = get_color_cycle(graph_id)
+    
+#     visual_features = graph.get('visual_features', {})
+#     groups = visual_features.get('groups', ['Data'])
+#     min_vals = visual_features.get('min_values', [])
+#     q1_vals = visual_features.get('q1_values', [])
+#     median_vals = visual_features.get('median_values', [])
+#     q3_vals = visual_features.get('q3_values', [])
+#     max_vals = visual_features.get('max_values', [])
+#     outliers = visual_features.get('outliers', [])
+    
+#     # Verify data lengths match
+#     n_groups = len(groups)
+#     if not all(len(v) == n_groups for v in [min_vals, q1_vals, median_vals, q3_vals, max_vals]):
+#         print(f"⚠️ Data length mismatch in box plot '{graph_id}'")
+#         return
+    
+#     # Create box plot data structure
+#     box_data = []
+#     for i in range(n_groups):
+#         box_data.append([min_vals[i], q1_vals[i], median_vals[i], q3_vals[i], max_vals[i]])
+    
+#     # Plot using matplotlib's boxplot
+#     bp = ax.boxplot(box_data, labels=groups, patch_artist=True, widths=0.6)
+    
+#     # Customize box colors
+#     for patch in bp['boxes']:
+#         patch.set_facecolor(color)
+#         patch.set_alpha(0.7)
+    
+#     # Plot outliers if present
+#     if outliers:
+#         for outlier in outliers:
+#             group_idx = groups.index(outlier.get('group', groups[0]))
+#             ax.scatter(group_idx + 1, outlier['value'], color='red', s=100, 
+#                       marker='o', zorder=5, label='Outliers' if outlier == outliers[0] else '')
+    
+#     # Store as None for box plot data
+#     function_registry[graph_id] = None
+
 def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any], 
                  function_registry: Dict[str, Callable]) -> None:
     """
     Plot box plot (box-and-whisker plot) with quartiles.
-    
     Parameters:
     -----------
     ax : matplotlib.axes.Axes
@@ -410,11 +466,10 @@ def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any],
     function_registry : dict
         Registry to store function objects
     """
-    
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
-    
+
     visual_features = graph.get('visual_features', {})
     groups = visual_features.get('groups', ['Data'])
     min_vals = visual_features.get('min_values', [])
@@ -423,33 +478,45 @@ def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any],
     q3_vals = visual_features.get('q3_values', [])
     max_vals = visual_features.get('max_values', [])
     outliers = visual_features.get('outliers', [])
-    
+
     # Verify data lengths match
     n_groups = len(groups)
     if not all(len(v) == n_groups for v in [min_vals, q1_vals, median_vals, q3_vals, max_vals]):
         print(f"⚠️ Data length mismatch in box plot '{graph_id}'")
         return
-    
+
     # Create box plot data structure
-    box_data = []
+    stats = []
     for i in range(n_groups):
-        box_data.append([min_vals[i], q1_vals[i], median_vals[i], q3_vals[i], max_vals[i]])
-    
-    # Plot using matplotlib's boxplot
-    bp = ax.boxplot(box_data, labels=groups, patch_artist=True, widths=0.6)
-    
-    # Customize box colors
+        q1, med, q3 = q1_vals[i], median_vals[i], q3_vals[i]
+        # Handle missing min/max: extend whiskers based on IQR
+        iqr = q3 - q1
+        whisker_low = min_vals[i] if min_vals[i] is not None else max(0, q1 - 1.5 * iqr)
+        whisker_high = max_vals[i] if max_vals[i] is not None else q3 + 1.5 * iqr
+
+        stats.append({
+            'label': groups[i],
+            'whislo': whisker_low,
+            'q1': q1,
+            'med': med,
+            'q3': q3,
+            'whishi': whisker_high,
+            'fliers': [o['value'] for o in outliers if o.get('group') == groups[i]],
+        })
+
+    bp = ax.bxp(stats, patch_artist=True, widths=0.6)
+
     for patch in bp['boxes']:
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
-    
+
+    ax.set_title(label)
     # Plot outliers if present
     if outliers:
         for outlier in outliers:
             group_idx = groups.index(outlier.get('group', groups[0]))
             ax.scatter(group_idx + 1, outlier['value'], color='red', s=100, 
                       marker='o', zorder=5, label='Outliers' if outlier == outliers[0] else '')
-    
     # Store as None for box plot data
     function_registry[graph_id] = None
 
