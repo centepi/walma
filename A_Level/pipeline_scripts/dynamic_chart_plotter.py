@@ -100,37 +100,160 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     plt.show()
     """
     
+    # # Validate input
+    # if not isinstance(config, dict):
+    #     raise TypeError("Config must be a dictionary")
+    
+    # # Create figure and axis
+    # fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # # Store function objects for later reference (e.g., for shaded regions)
+    # function_registry: Dict[str, Callable] = {}
+    
+    # # Support both 'charts' (new) and 'graphs' (legacy) keys
+    # charts = config.get('charts', config.get('graphs', []))
+    
+    # # Process charts
+    # for chart in charts:
+    #     plot_chart(ax, chart, function_registry)
+    
+    # # Process labeled points
+    # if 'labeled_points' in config:
+    #     for point in config['labeled_points']:
+    #         plot_labeled_point(ax, point)
+    
+    # # Process shaded regions
+    # if 'shaded_regions' in config:
+    #     for region in config['shaded_regions']:
+    #         plot_shaded_region(ax, region, function_registry)
+    
+    # # Set up the plot appearance
+    # setup_plot_appearance(ax, config)
+    
+    # return fig
     # Validate input
     if not isinstance(config, dict):
         raise TypeError("Config must be a dictionary")
     
-    # Create figure and axis
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Store function objects for later reference (e.g., for shaded regions)
-    function_registry: Dict[str, Callable] = {}
-    
     # Support both 'charts' (new) and 'graphs' (legacy) keys
     charts = config.get('charts', config.get('graphs', []))
     
-    # Process charts
-    for chart in charts:
-        plot_chart(ax, chart, function_registry)
+    # Determine layout type
+    layout_mode = config.get('layout', 'single')
     
-    # Process labeled points
-    if 'labeled_points' in config:
-        for point in config['labeled_points']:
-            plot_labeled_point(ax, point)
+    # Check for tables and their positioning
+    tables = [c for c in charts if c.get('type') == 'table']
+    non_tables = [c for c in charts if c.get('type') != 'table']
     
-    # Process shaded regions
-    if 'shaded_regions' in config:
-        for region in config['shaded_regions']:
-            plot_shaded_region(ax, region, function_registry)
+    # Determine subplot configuration
+    if layout_mode == 'composite' or tables:
+        fig, axes = create_composite_layout(config, tables, non_tables)
+    else:
+        # Standard single-chart layout
+        fig, ax = plt.subplots(figsize=(12, 8))
+        axes = {'main': ax}
     
-    # Set up the plot appearance
-    setup_plot_appearance(ax, config)
+    # Store function objects for later reference
+    function_registry: Dict[str, Callable] = {}
+    
+    # Process charts (non-tables)
+    if 'main' in axes:
+        for chart in non_tables:
+            plot_chart(axes['main'], chart, function_registry)
+        
+        # Process labeled points
+        if 'labeled_points' in config:
+            for point in config['labeled_points']:
+                plot_labeled_point(axes['main'], point)
+        
+        # Process shaded regions
+        if 'shaded_regions' in config:
+            for region in config['shaded_regions']:
+                plot_shaded_region(axes['main'], region, function_registry)
+        
+        # Set up the plot appearance for main chart
+        setup_plot_appearance(axes['main'], config)
+    
+    # Process tables
+    if 'table' in axes:
+        for table in tables:
+            plot_table(axes['table'], table)
+    
+    # Global title if specified
+    if 'title' in config and layout_mode == 'composite':
+        fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.98)
+    
+    plt.tight_layout()
     
     return fig
+
+def create_composite_layout(config: Dict[str, Any], 
+                            tables: List[Dict[str, Any]], 
+                            charts: List[Dict[str, Any]]) -> tuple:
+    """
+    Create figure with composite layout for charts and tables.
+    
+    Parameters:
+    -----------
+    config : dict
+        Full configuration
+    tables : list
+        List of table configurations
+    charts : list
+        List of chart configurations
+    
+    Returns:
+    --------
+    tuple
+        (figure, dict of axes)
+    """
+    
+    axes = {}
+    
+    # Determine positioning
+    if not tables:
+        # No tables, standard layout
+        fig, ax = plt.subplots(figsize=(12, 8))
+        axes['main'] = ax
+        return fig, axes
+    
+    if not charts:
+        # Only tables, no charts
+        fig, ax = plt.subplots(figsize=(12, 6))
+        axes['table'] = ax
+        return fig, axes
+    
+    # Determine table position from first table
+    position = tables[0].get('visual_features', {}).get('position', 'below_chart')
+    
+    if position == 'above_chart':
+        # Table on top, chart below
+        fig, (ax_table, ax_chart) = plt.subplots(2, 1, figsize=(12, 10), 
+                                                  gridspec_kw={'height_ratios': [1, 3]})
+        axes['table'] = ax_table
+        axes['main'] = ax_chart
+    
+    elif position == 'below_chart':
+        # Chart on top, table below
+        fig, (ax_chart, ax_table) = plt.subplots(2, 1, figsize=(12, 10), 
+                                                  gridspec_kw={'height_ratios': [3, 1]})
+        axes['main'] = ax_chart
+        axes['table'] = ax_table
+    
+    elif position == 'beside_chart':
+        # Side-by-side layout
+        fig, (ax_chart, ax_table) = plt.subplots(1, 2, figsize=(16, 8), 
+                                                  gridspec_kw={'width_ratios': [2, 1]})
+        axes['main'] = ax_chart
+        axes['table'] = ax_table
+    
+    else:  # 'standalone'
+        # Table only
+        fig, ax = plt.subplots(figsize=(12, 6))
+        axes['table'] = ax
+    
+    return fig, axes
+
 
 
 # ============================================================================
@@ -175,8 +298,214 @@ def plot_chart(ax: plt.Axes, chart: Dict[str, Any],
         plot_box_plot(ax, chart, function_registry)
     elif chart_type == 'cumulative':
         plot_cumulative_frequency(ax, chart, function_registry)
+    elif chart_type == 'table':
+        # Tables are handled separately in layout logic
+        # This is a no-op in single-axis plotting
+        pass
     else:
         raise ValueError(f"Unsupported chart type: {chart_type}")
+
+
+def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
+    """
+    Plot a table using matplotlib's table functionality.
+    
+    Parameters:
+    -----------
+    ax : matplotlib.axes.Axes
+        The axes object to plot the table on
+    table_config : dict
+        Table configuration containing headers, rows, and styling
+    
+    Example:
+    --------
+    table_config = {
+        "id": "t1",
+        "type": "table",
+        "visual_features": {
+            "headers": ["Class", "Frequency"],
+            "rows": [["0-10", "5"], ["10-20", "12"]],
+            "table_style": "striped"
+        }
+    }
+    """
+    
+    visual_features = table_config.get('visual_features', {})
+    headers = visual_features.get('headers', [])
+    rows = visual_features.get('rows', [])
+    table_style = visual_features.get('table_style', 'standard')
+    label = table_config.get('label', '')
+    
+    # Validate table data
+    if not rows:
+        print(f"⚠️ No rows found in table '{table_config.get('id', 'unknown')}'")
+        return
+    
+    # Check row consistency
+    # expected_cols = len(headers) if headers else len(rows[0])
+    # for i, row in enumerate(rows):
+    #     if len(row) != expected_cols:
+    #         print(f"⚠️ Row {i} has {len(row)} columns, expected {expected_cols}")
+    
+    # # Prepare table data (combine headers and rows)
+    # if headers:
+    #     table_data = [headers] + rows
+    #     cell_colors = get_table_colors(len(rows) + 1, table_style, has_header=True)
+    # else:
+    #     table_data = rows
+    #     cell_colors = get_table_colors(len(rows), table_style, has_header=False)
+
+    cleaned_headers = [clean_table_text(h) for h in headers] if headers else []
+    cleaned_rows = []
+    for row in rows:
+        cleaned_row = [clean_table_text(cell) for cell in row]
+        cleaned_rows.append(cleaned_row)
+    
+    # Prepare table data with cleaned text
+    if cleaned_headers:
+        table_data = [cleaned_headers] + cleaned_rows
+        num_table_rows = len(cleaned_rows) + 1
+        has_header = True
+    else:
+        table_data = cleaned_rows
+        num_table_rows = len(cleaned_rows)
+        has_header = False
+
+    # Determine expected column count
+    expected_cols = len(cleaned_headers) if headers else len(cleaned_rows)
+    
+    # Prepare table data
+    # if headers:
+    #     table_data = [headers] + rows
+    #     num_table_rows = len(rows) + 1
+    #     has_header = True
+    # else:
+    #     table_data = rows
+    #     num_table_rows = len(rows)
+    #     has_header = False
+    
+    # Generate colors with CORRECT column count
+    cell_colors = get_table_colors(num_table_rows, expected_cols,  # ✅ Pass num_cols!
+                                   table_style, has_header=has_header)
+    
+    # Turn off axis
+    ax.axis('off')
+    ax.axis('tight')
+    
+    # Create the table
+    mpl_table = ax.table(
+        cellText=table_data,
+        cellLoc='center',
+        loc='center',
+        cellColours=cell_colors,
+        colWidths=[1.0/expected_cols] * expected_cols
+    )
+    
+    # Style the table
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(10)
+    mpl_table.scale(1, 2)  # Scale row height for readability
+    
+    # Apply header styling if present
+    if headers:
+        for i in range(expected_cols):
+            cell = mpl_table[(0, i)]
+            cell.set_text_props(weight='bold', size=11)
+            cell.set_facecolor('#4472C4')
+            cell.set_text_props(color='white')
+            cell.set_edgecolor('black')
+            cell.set_linewidth(1.5)
+    
+    # Apply border styling to all cells
+    for key, cell in mpl_table.get_celld().items():
+        cell.set_edgecolor('black')
+        cell.set_linewidth(0.5 if table_style == 'minimal' else 1)
+    
+    # Add label/title if present
+    if label:
+        ax.set_title(label, fontsize=12, fontweight='bold', pad=10)
+
+
+def get_table_colors(num_rows: int, num_cols: int, style: str, 
+                     has_header: bool = False) -> List[List[str]]:
+    """
+    Generate cell colors based on table style.
+    
+    Parameters:
+    -----------
+    num_rows : int
+        Number of rows in the table (including header if present)
+    style : str
+        Table style: 'standard', 'striped', or 'minimal'
+    has_header : bool
+        Whether the first row is a header
+    
+    Returns:
+    --------
+    List[List[str]]
+        2D list of color codes for each cell
+    """
+    
+    colors = []
+    
+    # for i in range(num_rows):
+    #     if i == 0 and has_header:
+    #         # Header row (will be overridden in plot_table)
+    #         row_color = ['#4472C4'] * 10  # Placeholder
+    #     elif style == 'striped':
+    #         # Alternating row colors
+    #         row_color = ['#E7E6E6'] * 10 if (i - (1 if has_header else 0)) % 2 == 0 else ['white'] * 10
+    #     elif style == 'minimal':
+    #         # All white
+    #         row_color = ['white'] * 10
+    #     else:  # 'standard'
+    #         # Light gray
+    #         row_color = ['#F2F2F2'] * 10
+        
+    #     colors.append(row_color)
+
+    for i in range(num_rows):
+        if i == 0 and has_header:
+            row_color = ['#4472C4'] * num_cols  # ✅ Dynamic!
+        elif style == 'striped':
+            row_color = (['#E7E6E6'] * num_cols) 
+            # if is_even_row else (['white'] * num_cols)  # ✅ Dynamic!
+        elif style == 'minimal':
+            row_color = ['white'] * num_cols  # ✅ Dynamic!
+        else:  # 'standard'
+            row_color = ['#F2F2F2'] * num_cols  # ✅ Dynamic!
+        colors.append(row_color)
+    
+    return colors
+
+def latex_to_unicode(text: str) -> str:
+    """Convert LaTeX mathematical notation to Unicode equivalents."""
+    
+    latex_to_unicode_map = {
+        r'\le': '≤',
+        r'\leq': '≤',
+        r'\ge': '≥',
+        r'\geq': '≥',
+        r'\ne': '≠',
+        r'\times': '×',
+        r'\div': '÷',
+        r'\pm': '±',
+        # ... add others as needed
+    }
+    
+    text = str(text).replace('$', '')  # Remove math mode delimiters
+    for latex_cmd, unicode_char in latex_to_unicode_map.items():
+        text = text.replace(latex_cmd, unicode_char)
+    
+    return text
+
+
+def clean_table_text(text: str) -> str:
+    """Clean and normalize table cell text for safe rendering."""
+    text = str(text)
+    text = text.replace('\\\\', '\\')  # Handle double backslashes from JSON
+    text = latex_to_unicode(text)
+    return text.strip()
 
 
 # ============================================================================
@@ -970,6 +1299,40 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     issues.append(f"Cumulative frequency '{chart.get('id', i)}' missing boundaries or frequencies")
                 elif len(vf['upper_class_boundaries']) != len(vf['cumulative_frequencies']):
                     issues.append(f"Cumulative frequency '{chart.get('id', i)}': length mismatch")
+            elif chart.get('type') == 'table':
+                vf = chart.get('visual_features', {})
+                
+                # Check for rows
+                if 'rows' not in vf:
+                    issues.append(f"Table '{chart.get('id', i)}' missing 'rows' field")
+                    continue
+                
+                rows = vf['rows']
+                headers = vf.get('headers', [])
+                
+                # Validate row consistency
+                if rows:
+                    expected_cols = len(headers) if headers else len(rows[0])
+                    
+                    for row_idx, row in enumerate(rows):
+                        if len(row) != expected_cols:
+                            issues.append(
+                                f"Table '{chart.get('id', i)}' row {row_idx}: "
+                                f"expected {expected_cols} columns, got {len(row)}"
+                            )
+                
+                # Validate position and association
+                position = vf.get('position', 'standalone')
+                if position in ['above_chart', 'below_chart', 'beside_chart']:
+                    associated_id = vf.get('associated_chart_id')
+                    if associated_id:
+                        # Check if associated chart exists
+                        chart_ids = [c.get('id') for c in charts]
+                        if associated_id not in chart_ids:
+                            issues.append(
+                                f"Table '{chart.get('id', i)}' references "
+                                f"non-existent chart '{associated_id}'"
+                            )
     
     else:
         issues.append("'charts' or 'graphs' must be a list")

@@ -407,6 +407,81 @@ def build_creator_prompt(
         ]
     }}
 
+    
+    ---
+
+    ### **TYPE 8: TABLES**
+    Use this for displaying raw data, frequency distributions, two-way tables, function values, or summary statistics.
+
+    Structure:
+    
+    {{
+        "charts": [
+            {{
+                "id": "t1",
+                "type": "table",
+                "label": "Frequency Distribution",
+                "visual_features": {{
+                    "type": "table",
+                    "headers": ["Class Interval", "Frequency", "Cumulative Frequency"],
+                    "rows": [
+                        ["0-10", "5", "5"],
+                        ["10-20", "12", "17"],
+                        ["20-30", "18", "35"],
+                        ["30-40", "8", "43"]
+                    ],
+                    "table_style": "standard|striped|minimal",
+                    "position": "standalone|above_chart|below_chart|beside_chart",
+                    "associated_chart_id": "h1"  
+                }}
+            }}
+        ]
+    }}
+
+    
+    ---
+
+    ### **TYPE 9: COMPOSITE (CHART + TABLE)**
+    Use this when you need to display both a chart and its underlying data table together.
+
+    Structure:
+    
+    {{
+        "charts": [
+            {{
+                "id": "h1",
+                "type": "histogram",
+                "label": "Score Distribution",
+                "visual_features": {{
+                    "type": "histogram",
+                    "bins": [[0, 10], [10, 20], [20, 30], [30, 40]],
+                    "frequencies": [5, 12, 18, 8],
+                    "axes_range": {{"x_min": 0, "x_max": 40, "y_min": 0, "y_max": 20}}
+                }}
+            }},
+            {{
+                "id": "t1",
+                "type": "table",
+                "label": "Frequency Table",
+                "visual_features": {{
+                    "type": "table",
+                    "headers": ["Score Range", "Frequency"],
+                    "rows": [
+                        ["0-10", "5"],
+                        ["10-20", "12"],
+                        ["20-30", "18"],
+                        ["30-40", "8"]
+                    ],
+                    "table_style": "striped",
+                    "position": "below_chart",
+                    "associated_chart_id": "h1"
+                }}
+            }}
+        ],
+        "layout": "composite"  // Triggers multi-panel layout
+    }}
+
+
     **JSON TECHNICAL RULES**:
     - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{{...}}`, `\\frac{{...}}{{...}}`). **Do not escape the `$` characters** in math fences (`$begin:...$`, `$end:...$`).
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
