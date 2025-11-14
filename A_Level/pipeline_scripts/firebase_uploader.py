@@ -11,8 +11,6 @@ from . import utils
 
 logger = utils.setup_logger(__name__)
 
-# ---- XP mapping helpers (ensure XP fields on upload) ----
-
 XP_TABLE = {
     1: 35, 2: 45, 3: 60, 4: 75, 5: 95, 6: 115, 7: 140, 8: 165,
 }
@@ -62,29 +60,35 @@ def _db_or_raise():
         raise RuntimeError("Firestore client not available.")
     return db
 
+def _sanitize_visual_data_for_firestore(vd: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        vd = json.loads(json.dumps(vd))
+    except Exception:
+        vd = dict(vd)
+    charts = vd.get("charts") or vd.get("graphs")
+    if isinstance(charts, list):
+        for ch in charts:
+            if isinstance(ch, dict) and ch.get("type") == "table":
+                vf = ch.get("visual_features") or {}
+                headers = vf.get("headers") or []
+                rows = vf.get("rows") or []
+                new_rows = []
+                if isinstance(rows, list):
+                    for r in rows:
+                        if isinstance(r, dict):
+                            new_rows.append({str(k): str(v) for k, v in r.items()})
+                        elif isinstance(r, (list, tuple)) and headers and len(r) == len(headers):
+                            row_map = {str(headers[i]): str(r[i]) for i in range(len(headers))}
+                            new_rows.append(row_map)
+                        else:
+                            vals = r if isinstance(r, (list, tuple)) else [r]
+                            row_map = {str(i): str(v) for i, v in enumerate(vals)}
+                            new_rows.append(row_map)
+                vf["rows"] = new_rows
+                ch["visual_features"] = vf
+    return vd
 
-# -----------------------------
-# Upload progress/event tracker
-# -----------------------------
 class UploadTracker:
-    """
-    Centralizes all Firestore writes for a single upload.
-
-    Parent doc:  Users/{uid}/Uploads/{upload_id}
-      status:        "processing" | "complete" | "error"
-      startedAt:     timestamp
-      created_at:    timestamp (alias)
-      updated_at:    timestamp
-      completed_at:  timestamp (when complete/error)
-      last_message:  short human text (e.g. "Created Q 3c")
-      questionCount: int (live, incremented as questions are written)
-      resultUnitId:  string (id of the resulting Unit; synonyms also written)
-      unitId/unit_id: synonyms set on completion for legacy clients
-
-    Subcollection:  .../events/{autoId}
-      type, message, ts, and any extras (e.g. questionId)
-    """
-
     def __init__(self, uid: str, upload_id: str, *, db_client: Optional[firestore.Client] = None):
         self.uid = uid
         self.upload_id = upload_id
@@ -94,8 +98,6 @@ class UploadTracker:
                         .collection("Uploads")
                         .document(upload_id))
 
-    # ----- Lifecycle writes -----
-
     def start(
         self,
         *,
@@ -103,7 +105,6 @@ class UploadTracker:
         unit_name: Optional[str] = None,
         section: Optional[str] = None
     ) -> None:
-        """Create/merge the parent doc in a consistent 'processing' shape."""
         try:
             self.ref.set(
                 {
@@ -113,7 +114,6 @@ class UploadTracker:
                     "section": (section or "General"),
                     "questionCount": 0,
                     "last_message": "Starting…",
-                    # Use both fields so old/new clients agree on time
                     "startedAt": firestore.SERVER_TIMESTAMP,
                     "created_at": firestore.SERVER_TIMESTAMP,
                     "updated_at": firestore.SERVER_TIMESTAMP,
@@ -126,7 +126,6 @@ class UploadTracker:
             logger.error("UploadTracker start failed: %s", e)
 
     def heartbeat(self, *, message: Optional[str] = None) -> None:
-        """Optional: keep 'updated_at' fresh with a short message."""
         try:
             patch: Dict[str, Any] = {"updated_at": firestore.SERVER_TIMESTAMP}
             if message:
@@ -136,13 +135,12 @@ class UploadTracker:
             logger.debug("UploadTracker heartbeat failed: %s", e)
 
     def complete(self, *, result_unit_id: str, question_count: Optional[int] = None) -> None:
-        """Mark as complete. Write redundant fields for robust UI filtering."""
         try:
             patch: Dict[str, Any] = {
                 "status": "complete",
                 "resultUnitId": result_unit_id,
-                "unitId": result_unit_id,    # legacy/synonym
-                "unit_id": result_unit_id,   # legacy/synonym
+                "unitId": result_unit_id,
+                "unit_id": result_unit_id,
                 "last_message": "Done",
                 "completed_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP,
@@ -155,7 +153,6 @@ class UploadTracker:
             logger.error("UploadTracker complete failed: %s", e)
 
     def error(self, message: str) -> None:
-        """Mark as error. UI should hide or show as error depending on view."""
         try:
             self.ref.set(
                 {
@@ -171,8 +168,6 @@ class UploadTracker:
         except Exception as e:
             logger.error("UploadTracker error write failed: %s", e)
 
-    # ----- Progress events -----
-
     def event(
         self,
         *,
@@ -181,7 +176,6 @@ class UploadTracker:
         inc_question: bool = False,
         extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Append an event and update parent last_message / questionCount."""
         try:
             batch = self.db.batch()
 
@@ -203,8 +197,6 @@ class UploadTracker:
         except Exception as e:
             logger.error("UploadTracker event failed: %s", e)
 
-    # Convenience wrappers
-
     def event_question_created(
         self, *, label: str, index: Optional[int] = None, question_id: Optional[str] = None
     ) -> None:
@@ -215,11 +207,6 @@ class UploadTracker:
 
     def event_note(self, msg: str) -> None:
         self.event(type="note", message=msg)
-
-
-# -----------------------------
-# Existing content helpers
-# -----------------------------
 
 def upload_content(db_client, collection_path, document_id, data):
     if not db_client:
@@ -268,8 +255,11 @@ def upload_content(db_client, collection_path, document_id, data):
 
         if exists_snapshot is not None and not exists_snapshot.exists:
             payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
-            payload.setdefault("startedAt", firestore.SERVER_TIMESTAMP)  # alias for UI
+            payload.setdefault("startedAt", firestore.SERVER_TIMESTAMP)
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
+
+        if "visual_data" in payload and isinstance(payload["visual_data"], dict):
+            payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
 
         doc_ref.set(payload, merge=True)
         logger.debug("Firebase: uploaded '%s' → '%s'.", document_id, collection_path)
@@ -277,7 +267,6 @@ def upload_content(db_client, collection_path, document_id, data):
     except Exception as e:
         logger.error("Firebase: upload failed for '%s/%s' — %s", collection_path, document_id, e)
         return False
-
 
 def create_or_update_topic(db_client, topic_id):
     if not db_client:
