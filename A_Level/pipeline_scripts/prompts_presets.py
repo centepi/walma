@@ -144,8 +144,7 @@ def build_creator_prompt(
 
     **'visual_data' STRUCTURE - COMPREHENSIVE GUIDE**:
 
-    The 'visual_data' object adapts its structure based on the chart type being visualized. Always include a 'charts' array (not 'graphs' for non-explicit-function charts). Choose ONE of the following chart type structures:
-
+    The 'visual_data' object adapts its structure based on the chart type being visualized. Always include a 'charts' array (not 'graphs' for non-explicit-function charts). Your `visual_data` MAY contain one **or more** chart objects. If your question text refers to multiple diagrams/graphs, you MUST include multiple chart objects in the `charts` array. Choose the appropriate structure for each chart object you include.
     ---
 
     ### **TYPE 1: EXPLICIT MATHEMATICAL FUNCTIONS (y = f(x))**
