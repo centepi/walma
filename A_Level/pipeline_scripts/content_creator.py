@@ -431,6 +431,7 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
         "If the diagram they use is not one listed that you can make, "
         "then you must remake the question as close to the topic as possible "
         "without needing the visual element."
+        "Most importantly, if you reference any visual element you MUST include its respective 'visual_data' object."
     )
     return "\n".join(lines)
 
