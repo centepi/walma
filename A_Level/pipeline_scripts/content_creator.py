@@ -422,7 +422,16 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
     if tags:
         lines.append(f"- Source topic/skill cues: {', '.join(tags)}.")
     if visual_hint:
-        lines.append("- The source appears VISUAL-HEAVY. Keep the SAME topic; if a diagram is needed, use a clear textual description and include 'visual_data' only if it helps. Do NOT replace with unrelated geometric triangles or unrelated algebra.")
+        lines.append(
+        "- The source appears VISUAL-HEAVY. "
+        "If the diagram used in the question is one listed that you can make, "
+        "then include 'visual_data'. "
+        "If you ever write a question and reference any visual element, "
+        "it must be the case that you also produce that 'visual_data'. "
+        "If the diagram they use is not one listed that you can make, "
+        "then you must remake the question as close to the topic as possible "
+        "without needing the visual element."
+    )
     return "\n".join(lines)
 
 
