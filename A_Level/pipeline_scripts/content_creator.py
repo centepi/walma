@@ -349,7 +349,6 @@ def _synthesize_answer_spec_if_missing(content_object: dict) -> dict:
         logger.debug("CAS: synthesize skipped due to error: %s", e)
         return content_object
 
-
 # -------------------------
 # Auto domain/skill anchoring (prompt-only; zero new deps)
 # -------------------------
@@ -423,7 +422,17 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
     if tags:
         lines.append(f"- Source topic/skill cues: {', '.join(tags)}.")
     if visual_hint:
-        lines.append("- The source appears VISUAL-HEAVY. Keep the SAME topic; if a diagram is needed, use a clear textual description and include 'visual_data' only if it helps. Do NOT replace with unrelated geometric triangles or unrelated algebra.")
+        lines.append(
+        "- The source appears VISUAL-HEAVY. "
+        "If the diagram used in the question is one listed that you can make, "
+        "then include 'visual_data'. "
+        "If you ever write a question and reference any visual element, "
+        "it must be the case that you also produce that 'visual_data'. "
+        "If the diagram they use is not one listed that you can make, "
+        "then you must remake the question as close to the topic as possible "
+        "without needing the visual element."
+        "Most importantly, if you reference any visual element you MUST include its respective 'visual_data' object."
+    )
     return "\n".join(lines)
 
 
@@ -512,9 +521,6 @@ def create_question(
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
-        # graph_utils.process_and_sample_visual_data(visual_data)
-        # fig = render_graph(visual_data)
-        # content_object['image'] = fig
         issues = validate_config(visual_data)
         if issues:
             print("Validation Issues:")
@@ -522,28 +528,36 @@ def create_question(
                 print(f"  ⚠️  {issue}")
         else:
             print("✅ Configuration is valid!")
-            fig = dynamic_chart_plotter(visual_data)
-            # plt.show()
-            # Save plot to a BytesIO buffer in SVG format
-            buffer = io.BytesIO()
-            plt.savefig(buffer, format='svg')
-            plt.close()
-            
-            # Get SVG data from buffer
-            svg_data = buffer.getvalue().decode('utf-8')
-            buffer.close()
-            # Encode SVG to Base64
-            svg_base64 = base64.b64encode(svg_data.encode('utf-8')).decode('utf-8')
 
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Decide if this visual is table-only; if so, skip SVG generation
+            charts = []
+            if isinstance(visual_data, dict):
+                charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
 
-            # Define filename with timestamp
-            filename = f"file_{timestamp}.txt"
+            has_non_table = any(
+                str(c.get("type", "")).strip().lower() != "table"
+                for c in charts
+            )
+            has_only_table = bool(charts) and not has_non_table
 
-            # Write something to the file
-            with open(filename, "w") as f:
-                f.write(svg_base64)
-            content_object['svg_image'] = svg_base64
+            if has_only_table:
+                logger.debug(
+                    "Visual data for seed '%s' is table-only; skipping SVG generation.",
+                    target_part_id,
+                )
+            else:
+                # Generate SVG diagram for non-table charts (functions, histograms, box plots, etc.)
+                fig = dynamic_chart_plotter(visual_data)
+
+                buffer = io.BytesIO()
+                plt.savefig(buffer, format="svg")
+                plt.close()
+
+                svg_data = buffer.getvalue().decode("utf-8")
+                buffer.close()
+
+                svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+                content_object["svg_image"] = svg_base64
     else:
         logger.debug("No visual data generated for seed '%s'.", target_part_id)
 
