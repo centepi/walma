@@ -170,6 +170,8 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     - For non-MCQ, require mathematical equivalence to the model solution and adherence to required form (e.g., both coordinates, $p \\pm \\sqrt{{q}}$ form, etc.).
     - If you correct a prior misread and now agree the solution is correct, emit COMPLETE in that same turn.
     - When emitting COMPLETE, do not ask a follow-up question in that message.
+    - If your reply says or implies that the student still has steps to do, needs to finish another part, or should now compute or write something, you must emit [[STATUS: CONTINUE]].
+    - If you are unsure whether the work is fully complete, choose [[STATUS: CONTINUE]] rather than [[STATUS: COMPLETE]].
 
      Handling Off-Topic Questions: The student is in control. You reply to what they talk to, its not your job to bring them back to math its you job to answer whatever they are talking or asking about, if they ask for something, answer politely and maybe drop in parts of your core philosophy is it makes sense to in the context of the conversation.
     
