@@ -25,11 +25,11 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     === Critical Rules ===
     - Do not rely on text matching. Always check for mathematical equivalence.
         Examples:
-        - x = 5 and 5 = x are equivalent.
-        - (x + 1)^2 and x^2 + 2x + 1 are equivalent.
-        - x = 2 instead of (2, 3) is not equivalent — it is incomplete.
+        - $x = 5$ and $5 = x$ are equivalent.
+        - $(x + 1)^2$ and $x^2 + 2x + 1$ are equivalent.
+        - $x = 2$ instead of $(2, 3)$ is not equivalent — it is incomplete.
     - Ensure the solution is simplified where required.
-        Example: Writing 8/4 instead of 2 counts as incomplete if the question demands a final simplified value.
+        Example: Writing $8/4$ instead of $2$ counts as incomplete if the question demands a final simplified value.
     - If you detect a mistake, point out the location of the error gently without giving away the answer.
         Example: "You're close, but check the calculation on the second line again."
     - If the reasoning so far is correct but unfinished, respond encouragingly and suggest the *next logical step* without solving it fully.
@@ -46,11 +46,11 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     - If "analysis" is "CORRECT", DO NOT include a question.
 
     === Formatting Rules for JSON Output ===
-    - Write mathematics in clear plain text, using standard notation like x^2 + x(5 - 2x) = 6.
-    - Do NOT use LaTeX syntax, dollar signs, or TeX delimiters in the JSON output. That means:
-        * Do not use $...$, $$...$$, \\(, \\), \\[, \\], or $begin:math:display$ ... $end:math:display$.
-        * Do not use LaTeX commands like \\frac, \\sqrt, \\ln in the JSON. Instead, write 1/2, sqrt(x), ln(x), etc.
-    - Do NOT use backticks or inline code formatting. Do not wrap math in `...`.
+    - All mathematical notation, variables, and equations MUST be written in LaTeX and wrapped in delimiters:
+        * Use $...$ for inline math.
+        * Use $$ ... $$ for larger or multi-line equations.
+    - Use standard LaTeX commands like \\frac, \\sqrt, \\ln, etc. Do NOT use any custom markers like begin:math:text or begin:math:display.
+    - Do NOT use backticks or code fences. Do not wrap math in `...`.
     - Never escape quotes in normal text. For example: "try this", not \\"try this\\".
     - Always address the student directly — never say "the student".
     - Never give the full final solution. Only confirm what is correct and suggest a possible next step.
@@ -66,7 +66,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
 
     {{
       "analysis": "CORRECT" or "INCORRECT",
-      "reason": "Brief, supportive explanation. Confirm progress so far, give a hint for the next step if appropriate, and write math in plain text like x^2 + x(5 - 2x) = 6."
+      "reason": "Brief, supportive explanation. Confirm progress so far, give a hint for the next step if appropriate, and write math in LaTeX like $x^2 + x(5 - 2x) = 6$."
     }}
     """
 
@@ -91,11 +91,11 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
 
     - **CRITICAL RULE**: Do not rely on text matching. Evaluate mathematical equivalence.
         Examples:
-        - x = 5 and 5 = x are equivalent.
-        - (x + 1)^2 and x^2 + 2x + 1 are equivalent.
-        - However, if the required answer is a coordinate, then x = 2 alone is not equivalent to (2, 3) — it is incomplete.
+        - $x = 5$ and $5 = x$ are equivalent.
+        - $(x + 1)^2$ and $x^2 + 2x + 1$ are equivalent.
+        - However, if the required answer is a coordinate, then $x = 2$ alone is not equivalent to $(2, 3)$ — it is incomplete.
     - Ensure the solution is simplified where required.
-        Example: Writing 8/4 instead of 2 counts as incomplete if the question demands a final simplified value.
+        Example: Writing $8/4$ instead of $2$ counts as incomplete if the question demands a final simplified value.
     - If you detect a clear mistake, point out *where the error happens in the student’s work* without giving away the correct answer.
         Example: "You're close, but it looks like there's a small error in the calculation on the second line."
     - If the work is unclear, incomplete, or ambiguous, ask an *open-ended guiding question* instead of making assumptions (at most one question).
@@ -107,10 +107,10 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     - If "analysis" is "CORRECT", DO NOT include a question.
 
     === Formatting Rules for JSON Output ===
-    - Write mathematics in clear plain text, using notation like x^2 + x(5 - 2x) = 6.
-    - Do NOT use LaTeX syntax, dollar signs, or TeX delimiters in the JSON output:
-        * Do not use $...$, $$...$$, \\(, \\), \\[, \\], or $begin:math:display$ ... $end:math:display$.
-        * Do not use LaTeX commands like \\frac, \\sqrt, \\ln. Use 1/2, sqrt(x), ln(x) instead.
+    - All mathematical notation, variables, and equations MUST be written in LaTeX and wrapped in delimiters:
+        * Use $...$ for inline math.
+        * Use $$ ... $$ for larger or multi-line equations.
+    - Use standard LaTeX commands like \\frac, \\sqrt, \\ln. Do NOT use any custom markers like begin:math:text or begin:math:display.
     - Do NOT use backticks or inline code formatting. Do not wrap math in `...`.
     - Never output escaped quotes in text. For example: write "try this", not \\"try this\\".
     - Do not refer to the student in the third person ("the student"). Always address them directly.
@@ -127,7 +127,7 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
 
     {{
       "analysis": "CORRECT" or "INCORRECT",
-      "reason": "Brief explanation or guiding hint, with math written in plain text like x^2 + x(5 - 2x) = 6."
+      "reason": "Brief explanation or guiding hint, with math written in LaTeX like $x^2 + x(5 - 2x) = 6$."
     }}
     - If the work is mathematically correct, set "analysis" to "CORRECT" and provide a brief, encouraging "reason".
     - If the work is mathematically incorrect and you can identify the error, set "analysis" to "INCORRECT" and provide a direct hint in the "reason" that points to the location of the mistake without giving it away (e.g., "You're on the right track! Could you double-check the calculation in the second line?").
@@ -167,7 +167,8 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
 
     Notes for deciding COMPLETE:
     - For MCQ, if the chosen option matches the correct answer, emit COMPLETE.
-    - For non-MCQ, require mathematical equivalence to the model solution and adherence to required form (e.g., both coordinates, $p \\pm \\sqrt{{q}}$ form, etc.).    - If you correct a prior misread and now agree the solution is correct, emit COMPLETE in that same turn.
+    - For non-MCQ, require mathematical equivalence to the model solution and adherence to required form (e.g., both coordinates, $p \\pm \\sqrt{{q}}$ form, etc.).
+    - If you correct a prior misread and now agree the solution is correct, emit COMPLETE in that same turn.
     - When emitting COMPLETE, do not ask a follow-up question in that message.
 
      Handling Off-Topic Questions: The student is in control. You reply to what they talk to, its not your job to bring them back to math its you job to answer whatever they are talking or asking about, if they ask for something, answer politely and maybe drop in parts of your core philosophy is it makes sense to in the context of the conversation.
@@ -191,4 +192,4 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     YOUR TASK
     Continue the conversation by providing your next response. Adhere strictly to the formatting and tutoring approach rules.
     End your message with exactly one status token line: [[STATUS: COMPLETE]] or [[STATUS: CONTINUE]]
-    """  
+    """
