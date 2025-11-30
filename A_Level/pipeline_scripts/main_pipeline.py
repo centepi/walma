@@ -534,8 +534,7 @@ def run_full_pipeline(
                         correction_feedback = (
                             "Your previous question either drifted off-topic or combined multiple "
                             "independent tasks. Regenerate ONE coherent question that stays within "
-                            "the same topic and tests the same skills. If the source was visual, "
-                            "describe it textually; do not invent an unrelated diagram. "
+                            "the same topic and tests the same skills."
                             f"Issue: {reason_sr}"
                         )
                         continue  # retry once with the correction feedback

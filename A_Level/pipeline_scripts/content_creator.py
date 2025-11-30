@@ -354,7 +354,7 @@ def _synthesize_answer_spec_if_missing(content_object: dict) -> dict:
 # -------------------------
 
 _VISUAL_CUES = re.compile(
-    r"\b(diagram|figure|graph|sketch|curve|axes|plot|locus|contour|surface|manifold|topology|homeomorph|open set|closed set|connected|compact|quotient|metric|basis|neighbourhood|neighborhood)\b",
+    r"\b(diagram|figure|graph|sketch|curve|axes|plot|asymptote|locus|contour|surface|manifold|topology|homeomorph|open set|closed set|connected|compact|quotient|metric|basis|neighbourhood|neighborhood)\b",
     re.IGNORECASE
 )
 
@@ -433,6 +433,7 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
         "without needing the visual element."
         "Most importantly, if you reference any visual element you MUST include its respective 'visual_data' object."
     )
+        lines.append("- The source appears VISUAL. For simple Cartesian cases, INCLUDE a 2D analytic graph via 'visual_data' (do not ask the student to draw). Avoid any non-graph shapes.")
     return "\n".join(lines)
 
 

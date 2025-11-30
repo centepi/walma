@@ -5,9 +5,11 @@ import re
 import requests
 import google.generativeai as genai
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
 from dotenv import load_dotenv
+import asyncio
 
 # Prompts for tutor features
 from prompts import get_analysis_prompt, get_chat_prompt, get_help_prompt
@@ -249,10 +251,50 @@ async def chat(request: ChatRequest):
         print(f"🤖 AI Reply (clean): {ai_reply}")
         print(f"📌 Completion flag: {complete}")
 
+        # (Optional) could add capabilities here later without breaking old apps
         return {"status": "success", "reply": ai_reply, "complete": complete}
     except Exception as e:
         print(f"❌ Error in chat endpoint: {e}")
         return {"status": "error", "message": f"Failed in chat endpoint: {e}"}
+
+# --- Streaming chat endpoint (new, additive) ---
+@app.post("/chat-stream")
+async def chat_stream(request: ChatRequest):
+    """
+    Streaming version of /chat. This is ADDITIVE: existing apps can keep using /chat.
+    New apps can call /chat-stream to get tokens as they are generated.
+    """
+    print(f"💬 (stream) Received chat request. History has {len(request.conversation_history)} messages.")
+
+    formatted_history = "\n".join(
+        [f"{'Student' if msg.is_user else 'Tutor'}: {msg.text}" for msg in request.conversation_history]
+    )
+
+    prompt = get_chat_prompt(
+        question_part=request.question_part,
+        student_work=request.student_work,
+        solution_text=request.solution_text,
+        formatted_history=formatted_history,
+    )
+
+    async def event_generator():
+        try:
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            # Gemini supports streaming with stream=True
+            stream = model.generate_content(prompt, stream=True)
+            for chunk in stream:
+                if chunk.text:
+                    # send each chunk immediately
+                    yield chunk.text
+                    # tiny pause helps some hosts flush output
+                    await asyncio.sleep(0)
+        except Exception as e:
+            print(f"❌ Error in chat-stream endpoint: {e}")
+            # send some marker to the client
+            yield "\n[stream-error]\n"
+
+    # plain text streaming; client can rebuild and then strip [[STATUS: ...]] at the end
+    return StreamingResponse(event_generator(), media_type="text/plain")
 
 # ---- Mount feature routers (leaderboard & profile) ----
 app.include_router(leaderboard_router)
