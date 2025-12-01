@@ -438,12 +438,20 @@ def _run_pipeline_background(
 
         # ---- Finalize parent doc
         created_count = len(result.get("created") or [])
-        tracker.complete(result_unit_id=upload_id)
-        # ensure final count is correct
-        firebase_uploader.upload_content(db_client, f"Users/{uid}/Uploads", upload_id, {
-            "status": "complete",
-            "questionCount": created_count,
-        })
+
+        # Write correct final status + questionCount
+        tracker.complete(result_unit_id=upload_id, question_count=created_count)
+
+        # (Optional but harmless) ensure questionCount is definitely synced
+        firebase_uploader.upload_content(
+            db_client,
+            f"Users/{uid}/Uploads",
+            upload_id,
+            {
+                "status": "complete",
+                "questionCount": created_count,
+            }
+        )
 
     except Exception as e:
         # Never re-raise from background task; log and mark error instead
