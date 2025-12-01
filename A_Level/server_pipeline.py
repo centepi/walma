@@ -227,7 +227,7 @@ def _process_questions_only_job(
 ) -> Dict[str, Any]:
     """
     Generate and upload questions for a single questions-only 'job', returning a run summary.
-    Writes to: Users/{uid}/Uploads/{upload_id}/Questions/{questionId}
+    Writes questions to: Users/{uid}/Uploads/{upload_id}/Questions/{autoId}
     """
     # Init clients/models
     db_client = firebase_uploader.initialize_firebase()
@@ -439,18 +439,27 @@ def _run_pipeline_background(
         # ---- Finalize parent doc
         created_count = len(result.get("created") or [])
 
-        # Write correct final status + questionCount
-        tracker.complete(result_unit_id=upload_id, question_count=created_count)
+        # At this point, questionCount has already been incremented once
+        # per created question via tracker.event_question_created.
+        # For appends to an existing upload, this preserves the previous count.
+        tracker.complete(result_unit_id=upload_id)
 
-        # (Optional but harmless) ensure questionCount is definitely synced
+        # Ensure final status is “complete” without clobbering questionCount.
         firebase_uploader.upload_content(
             db_client,
             f"Users/{uid}/Uploads",
             upload_id,
             {
                 "status": "complete",
-                "questionCount": created_count,
+                # DO NOT write questionCount here; tracker already maintains it.
             }
+        )
+
+        logger.info(
+            "Background job complete for uid=%s upload=%s (created %d questions)",
+            uid,
+            upload_id,
+            created_count,
         )
 
     except Exception as e:
@@ -497,7 +506,7 @@ def process_user_upload(
     Accept PDFs/images, enqueue processing, and immediately return 202.
     The background task writes to:
       - Users/{uid}/Uploads/{upload_id} (status, questionCount, folderId, labels)
-      - Users/{uid}/Uploads/{upload_id}/Questions/{questionId}
+      - Users/{uid}/Uploads/{upload_id}/Questions/{autoId}
       - Users/{uid}/Uploads/{upload_id}/events/{autoId}
     """
     if not files:
