@@ -402,13 +402,16 @@ def upload_content(db_client, collection_path, document_id, data):
             payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
 
         doc_ref.set(payload, merge=True)
-        logger.debug(
-            "Firebase: uploaded '%s' → '%s' (doc_id=%s, is_users_collection=%s).",
-            document_id,
+
+        # 🔊 DEBUG: loud log showing exactly what was written
+        logger.info(
+            "Firebase upload_content: path='%s', is_users_collection=%s, doc_id='%s', logical_id='%s'",
             collection_path,
-            doc_ref.id,
             is_users_collection,
+            doc_ref.id,
+            document_id,
         )
+
         return True
     except Exception as e:
         logger.error("Firebase: upload failed for '%s/%s' — %s", collection_path, document_id, e)
