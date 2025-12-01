@@ -227,7 +227,13 @@ def _process_questions_only_job(
 ) -> Dict[str, Any]:
     """
     Generate and upload questions for a single questions-only 'job', returning a run summary.
-    Writes questions to: Users/{uid}/Uploads/{upload_id}/Questions/{autoId}
+
+    Writes questions to:
+      Users/{uid}/Uploads/{upload_id}/Questions/{questionIdString}
+
+    The `questionIdString` is derived from the original parsed ID (e.g. "1", "1a", "3mcq")
+    and is passed as `document_id` into `firebase_uploader.upload_content`, which for
+    `Users/...` paths will honour that ID as the Firestore document ID.
     """
     # Init clients/models
     db_client = firebase_uploader.initialize_firebase()
@@ -393,6 +399,16 @@ def _run_pipeline_background(
     """
     Executes the heavy work after the HTTP request has returned 202.
     Cleans up temp files when done.
+
+    Parent doc:
+      Users/{uid}/Uploads/{upload_id}
+
+    Question docs:
+      Users/{uid}/Uploads/{upload_id}/Questions/{questionIdString}
+
+    `UploadTracker` maintains `questionCount` by incrementing once per created
+    question; we do **not** overwrite `questionCount` at the end, so appends
+    to an existing upload preserve the previous count and add on top.
     """
     db_client = firebase_uploader.initialize_firebase()
     tracker = UploadTracker(uid, upload_id)  # fresh instance in background worker
@@ -504,9 +520,10 @@ def process_user_upload(
 ):
     """
     Accept PDFs/images, enqueue processing, and immediately return 202.
+
     The background task writes to:
       - Users/{uid}/Uploads/{upload_id} (status, questionCount, folderId, labels)
-      - Users/{uid}/Uploads/{upload_id}/Questions/{autoId}
+      - Users/{uid}/Uploads/{upload_id}/Questions/{questionIdString}
       - Users/{uid}/Uploads/{upload_id}/events/{autoId}
     """
     if not files:

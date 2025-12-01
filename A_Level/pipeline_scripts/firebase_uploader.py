@@ -309,55 +309,39 @@ def upload_content(db_client, collection_path, document_id, data):
     Write a question/lesson doc to Firestore.
 
     Behaviour:
-    - For *user-upload questions* (paths like
-      `Users/{uid}/Uploads/{uploadId}/Questions`), we ALWAYS create a new
-      Firestore document with an auto-ID so appending to an existing unit
-      never overwrites an existing question.
-    - For other `Users/...` docs (e.g. `Users/{uid}/Uploads/{uploadId}`),
-      we always use the PROVIDED `document_id` and ignore WRITE_MODE.
-    - For non-Users collections (e.g. `Topics`), we keep the original
-      WRITE_MODE / preserve behaviour.
+    - For any `Users/...` path (including
+      `Users/{uid}/Uploads/{uploadId}` AND
+      `Users/{uid}/Uploads/{uploadId}/Questions`), we **always use the
+      PROVIDED `document_id`** and never do auto-ID or `WRITE_MODE`
+      skipping. The caller (pipeline) is responsible for making the
+      `document_id` unique when appending questions.
+    - For non-`Users/...` collections (e.g. `Topics`), we keep the
+      original `WRITE_MODE` / "preserve" behaviour: if `WRITE_MODE` is
+      "preserve" and the doc already exists, we skip writing.
     """
     if not db_client:
         logger.error("Firebase: client not available; cannot upload '%s/%s'.", collection_path, document_id)
         return False
+
     try:
         segments = collection_path.split("/")
-
-        is_user_upload_question = (
-            len(segments) >= 5
-            and segments[0] == "Users"
-            and segments[2] == "Uploads"
-            and segments[-1] == "Questions"
-        )
         is_users_collection = segments[0] == "Users"
 
-        # ---- Strategy selection ----
-        if is_user_upload_question:
-            # Always append with auto-ID for questions
-            col_ref = db_client.collection(collection_path)
-            doc_ref = col_ref.document()  # auto ID
-            exists_snapshot = None
-            logger.debug(
-                "Firebase: user-upload QUESTION path '%s' — using auto doc id '%s' (source_id=%s)",
-                collection_path,
-                doc_ref.id,
-                document_id,
-            )
-        elif is_users_collection:
-            # Any other Users/... doc (e.g. upload parent) → fixed doc id, no preserve
+        if is_users_collection:
+            # 🔒 Always honour the provided document_id for all Users/... docs.
             doc_ref = db_client.collection(collection_path).document(document_id)
             exists_snapshot = None
             logger.debug(
-                "Firebase: Users path '%s' — using fixed doc id '%s' (no preserve).",
+                "Firebase: Users path '%s' — using provided doc id '%s'.",
                 collection_path,
                 document_id,
             )
         else:
-            # Non-user collections keep WRITE_MODE semantics
+            # Non-user collections keep WRITE_MODE semantics (e.g. Topics)
             doc_ref = db_client.collection(collection_path).document(document_id)
             mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
             exists_snapshot = None
+
             if mode == "preserve":
                 try:
                     exists_snapshot = doc_ref.get()
@@ -419,11 +403,11 @@ def upload_content(db_client, collection_path, document_id, data):
 
         doc_ref.set(payload, merge=True)
         logger.debug(
-            "Firebase: uploaded '%s' → '%s' (doc_id=%s, is_user_upload_question=%s).",
+            "Firebase: uploaded '%s' → '%s' (doc_id=%s, is_users_collection=%s).",
             document_id,
             collection_path,
             doc_ref.id,
-            is_user_upload_question,
+            is_users_collection,
         )
         return True
     except Exception as e:
