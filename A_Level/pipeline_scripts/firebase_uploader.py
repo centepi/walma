@@ -15,28 +15,19 @@ XP_TABLE = {
     1: 35, 2: 45, 3: 60, 4: 75, 5: 95, 6: 115, 7: 140, 8: 165,
 }
 
-
 def marks_to_difficulty(marks) -> int:
     try:
         m = int(marks or 0)
     except Exception:
         m = 0
-    if m <= 2:
-        return 1
-    if m == 3:
-        return 2
-    if m == 4:
-        return 3
-    if m == 5:
-        return 4
-    if m == 6:
-        return 5
-    if m == 7:
-        return 6
-    if m == 8:
-        return 7
+    if m <= 2: return 1
+    if m == 3: return 2
+    if m == 4: return 3
+    if m == 5: return 4
+    if m == 6: return 5
+    if m == 7: return 6
+    if m == 8: return 7
     return 8
-
 
 def initialize_firebase():
     if not firebase_admin._apps:
@@ -63,7 +54,6 @@ def initialize_firebase():
         logger.error("Firebase client error — %s", e)
         return None
 
-
 def _db_or_raise():
     db = initialize_firebase()
     if not db:
@@ -73,8 +63,8 @@ def _db_or_raise():
 
 def _sanitize_visual_data_for_firestore(vd: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Normalize visual_data.tables so that all row keys are strings.
-    This prevents Firestore from complaining about mixed key types.
+    Normalize visual_data so that any table-like structures are stored as
+    simple dicts/lists with string keys, which Firestore is happy with.
     """
     try:
         vd = json.loads(json.dumps(vd))
@@ -133,9 +123,9 @@ class UploadTracker:
         self.db: firestore.Client = db_client or _db_or_raise()
         self.ref = (
             self.db.collection("Users")
-            .document(uid)
-            .collection("Uploads")
-            .document(upload_id)
+                   .document(uid)
+                   .collection("Uploads")
+                   .document(upload_id)
         )
 
     # ----- Lifecycle writes -----
@@ -145,54 +135,67 @@ class UploadTracker:
         *,
         folder_id: Optional[str] = None,
         unit_name: Optional[str] = None,
-        section: Optional[str] = None,
+        section: Optional[str] = None
     ) -> None:
         """
         Create/merge the parent doc in a consistent 'processing' shape.
 
-        IMPORTANT for appending:
-        - If the doc already exists and has questionCount, we KEEP that value
-          so new runs add on top instead of resetting to 0.
+        IMPORTANT:
+        - If this upload already exists, we DO NOT reset questionCount to 0.
+          That way appending new questions keeps the old count and can
+          increment from there.
         """
         try:
             try:
                 snap = self.ref.get()
-                exists = snap.exists
-                existing_count = snap.get("questionCount") if exists else None
-            except Exception:
-                exists = False
-                existing_count = None
+                existing = snap.to_dict() if snap.exists else {}
+            except Exception as e:
+                logger.warning(
+                    "UploadTracker[%s/%s] start: could not read existing doc — %s",
+                    self.uid, self.upload_id, e
+                )
+                snap = None
+                existing = {}
 
-            base_count = existing_count if isinstance(existing_count, int) else 0
+            existing_qc = None
+            if isinstance(existing, dict):
+                qc = existing.get("questionCount")
+                if isinstance(qc, int):
+                    existing_qc = qc
 
             data: Dict[str, Any] = {
                 "status": "processing",
-                "folderId": (folder_id or None),
-                "unitName": (unit_name or "Upload"),
-                "section": (section or "General"),
-                "questionCount": base_count,
+                "folderId": folder_id or existing.get("folderId") or None,
+                "unitName": unit_name or existing.get("unitName") or "Upload",
+                "section": section or existing.get("section") or "General",
                 "last_message": "Starting…",
                 "updated_at": firestore.SERVER_TIMESTAMP,
                 "pipeline_ver": 1,
             }
 
-            # Only set created_at/startedAt the first time
-            if not exists:
-                data["startedAt"] = firestore.SERVER_TIMESTAMP
+            # Only initialise questionCount for brand-new uploads
+            if existing_qc is None:
+                data["questionCount"] = 0
+
+            # Initialise timestamps only if missing (for existing uploads we keep them)
+            if not existing.get("created_at"):
                 data["created_at"] = firestore.SERVER_TIMESTAMP
+            if not existing.get("startedAt"):
+                data["startedAt"] = firestore.SERVER_TIMESTAMP
 
             self.ref.set(data, merge=True)
             logger.info(
-                "UploadTracker[%s/%s] start (exists=%s, base_count=%s)",
+                "UploadTracker[%s/%s] start (exists=%s, existing_qc=%s)",
                 self.uid,
                 self.upload_id,
-                exists,
-                base_count,
+                bool(existing),
+                existing_qc,
             )
         except Exception as e:
             logger.error("UploadTracker start failed: %s", e)
 
     def heartbeat(self, *, message: Optional[str] = None) -> None:
+        """Optional: keep 'updated_at' fresh with a short message."""
         try:
             patch: Dict[str, Any] = {"updated_at": firestore.SERVER_TIMESTAMP}
             if message:
@@ -202,12 +205,13 @@ class UploadTracker:
             logger.debug("UploadTracker heartbeat failed: %s", e)
 
     def complete(self, *, result_unit_id: str, question_count: Optional[int] = None) -> None:
+        """Mark as complete. Write redundant fields for robust UI filtering."""
         try:
             patch: Dict[str, Any] = {
                 "status": "complete",
                 "resultUnitId": result_unit_id,
-                "unitId": result_unit_id,
-                "unit_id": result_unit_id,
+                "unitId": result_unit_id,    # legacy/synonym
+                "unit_id": result_unit_id,   # legacy/synonym
                 "last_message": "Done",
                 "completed_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP,
@@ -217,15 +221,13 @@ class UploadTracker:
             self.ref.set(patch, merge=True)
             logger.info(
                 "UploadTracker[%s/%s] complete (unit %s, question_count=%s)",
-                self.uid,
-                self.upload_id,
-                result_unit_id,
-                question_count,
+                self.uid, self.upload_id, result_unit_id, question_count
             )
         except Exception as e:
             logger.error("UploadTracker complete failed: %s", e)
 
     def error(self, message: str) -> None:
+        """Mark as error. UI should hide or show as error depending on view."""
         try:
             self.ref.set(
                 {
@@ -237,7 +239,10 @@ class UploadTracker:
                 },
                 merge=True,
             )
-            logger.warning("UploadTracker[%s/%s] error: %s", self.uid, self.upload_id, message)
+            logger.warning(
+                "UploadTracker[%s/%s] error: %s",
+                self.uid, self.upload_id, message
+            )
         except Exception as e:
             logger.error("UploadTracker error write failed: %s", e)
 
@@ -277,11 +282,7 @@ class UploadTracker:
     # Convenience wrappers
 
     def event_question_created(
-        self,
-        *,
-        label: str,
-        index: Optional[int] = None,
-        question_id: Optional[str] = None,
+        self, *, label: str, index: Optional[int] = None, question_id: Optional[str] = None
     ) -> None:
         extra: Dict[str, Any] = {}
         if index is not None:
@@ -292,7 +293,7 @@ class UploadTracker:
             type="questionCreated",
             message=f"Created Q {label}",
             inc_question=True,
-            extra=extra,
+            extra=extra
         )
 
     def event_note(self, msg: str) -> None:
@@ -302,45 +303,40 @@ class UploadTracker:
 # -----------------------------
 # Existing content helpers
 # -----------------------------
+
 def upload_content(db_client, collection_path, document_id, data):
     """
-    Generic uploader used by both the A_Level pipeline and user uploads.
+    Write a question/lesson doc to Firestore.
 
-    CHANGE for user uploads:
-      - For collection_path like "Users/{uid}/Uploads/{uploadId}/Questions",
-        we always APPEND with a NEW auto document ID.
-      - We ignore WRITE_MODE="preserve" in that case so appends actually work
-        when re-using the same unit/uploadId.
+    CHANGE:
+    - For user uploads (`Users/{uid}/Uploads/{uploadId}/Questions`), we **always**
+      create a NEW Firestore document (auto ID) so appending to an existing unit
+      really adds a new question instead of silently skipping due to preserve mode.
+    - For everything else (e.g. Topics), keep the old behaviour with WRITE_MODE.
     """
     if not db_client:
-        logger.error(
-            "Firebase: client not available; cannot upload '%s/%s'.",
-            collection_path,
-            document_id,
-        )
+        logger.error("Firebase: client not available; cannot upload '%s/%s'.", collection_path, document_id)
         return False
     try:
-        mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
+        is_user_upload = collection_path.startswith("Users/")
 
-        # Detect user-upload questions path
-        is_user_upload_questions = (
-            collection_path.startswith("Users/")
-            and "/Uploads/" in collection_path
-            and collection_path.endswith("/Questions")
-        )
-
-        if is_user_upload_questions:
-            # Always append: ignore preserve, use auto-generated doc ID
-            doc_ref = db_client.collection(collection_path).document()
+        # Choose document ref strategy
+        if is_user_upload:
+            # Always a fresh auto-ID document for user uploads (appending allowed).
+            col_ref = db_client.collection(collection_path)
+            doc_ref = col_ref.document()  # auto ID
+            mode = "overwrite"
             exists_snapshot = None
             logger.debug(
-                "Firebase: user-upload append mode; new doc under '%s' (logical id '%s').",
+                "Firebase: user-upload path '%s' — using auto doc id '%s' (source_id=%s)",
                 collection_path,
+                doc_ref.id,
                 document_id,
             )
         else:
-            # Original behaviour: respect WRITE_MODE for Topics / other roots
+            # Existing behaviour for non-user collections (Topics, etc.)
             doc_ref = db_client.collection(collection_path).document(document_id)
+            mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
             exists_snapshot = None
             if mode == "preserve":
                 try:
@@ -390,40 +386,39 @@ def upload_content(db_client, collection_path, document_id, data):
         if "xp_curve_version" not in payload:
             payload["xp_curve_version"] = 1
 
+        # Only apply the "created_at/startedAt" auto-fill when we just checked non-existence
         if exists_snapshot is not None and not exists_snapshot.exists:
             payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
             payload.setdefault("startedAt", firestore.SERVER_TIMESTAMP)
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
+        # Sanitize visual_data (tables) for Firestore if present
         if "visual_data" in payload and isinstance(payload["visual_data"], dict):
-            payload["visual_data"] = _sanitize_visual_data_for_firestore(
-                payload["visual_data"]
-            )
+            payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
 
         doc_ref.set(payload, merge=True)
-        logger.debug("Firebase: uploaded '%s' → '%s'.", document_id, collection_path)
+        logger.debug(
+            "Firebase: uploaded '%s' → '%s' (doc_id=%s, is_user_upload=%s).",
+            document_id,
+            collection_path,
+            doc_ref.id,
+            is_user_upload,
+        )
         return True
     except Exception as e:
-        logger.error(
-            "Firebase: upload failed for '%s/%s' — %s",
-            collection_path,
-            document_id,
-            e,
-        )
+        logger.error("Firebase: upload failed for '%s/%s' — %s", collection_path, document_id, e)
         return False
 
 
 def create_or_update_topic(db_client, topic_id):
     if not db_client:
-        logger.error(
-            "Firebase: client not available; cannot ensure topic '%s'.", topic_id
-        )
+        logger.error("Firebase: client not available; cannot ensure topic '%s'.", topic_id)
         return False
 
     metadata = settings.TOPIC_METADATA.get(topic_id)
     if not metadata:
-        base = re.sub(r"[_\-]+", " ", topic_id).strip()
-        base = re.sub(r"\s+", " ", base)
+        base = re.sub(r'[_\-]+', ' ', topic_id).strip()
+        base = re.sub(r'\s+', ' ', base)
         default_title = base.title()
         metadata = {"topicName": default_title, "section": "A"}
         logger.debug("Firebase: no metadata for '%s'. Defaults %s", topic_id, metadata)
@@ -441,7 +436,5 @@ def create_or_update_topic(db_client, topic_id):
         logger.info("Firebase: topic ensured '%s'.", topic_id)
         return True
     except Exception as e:
-        logger.error(
-            "Firebase: failed to ensure topic '%s' — %s", topic_id, e
-        )
+        logger.error("Firebase: failed to ensure topic '%s' — %s", topic_id, e)
         return False
