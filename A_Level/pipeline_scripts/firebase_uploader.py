@@ -308,36 +308,40 @@ def upload_content(db_client, collection_path, document_id, data):
     """
     Write a question/lesson doc to Firestore.
 
-    CHANGE:
-    - For user uploads (`Users/{uid}/Uploads/{uploadId}/Questions`), we **always**
-      create a NEW Firestore document (auto ID) so appending to an existing unit
-      really adds a new question instead of silently skipping due to preserve mode.
-    - For everything else (e.g. Topics), keep the old behaviour with WRITE_MODE.
+    FIXED (Dec 1 2025):
+    - For user uploads (`Users/{uid}/Uploads/{uploadId}/Questions`),
+      we now ALWAYS use the PROVIDED `document_id`
+      instead of generating auto-IDs.
+
+      This ensures questionId == Firestore docId,
+      which the iOS app requires.
     """
     if not db_client:
         logger.error("Firebase: client not available; cannot upload '%s/%s'.", collection_path, document_id)
         return False
+
     try:
         is_user_upload = collection_path.startswith("Users/")
 
-        # Choose document ref strategy
+        # -------------------------------
+        # FIXED BEHAVIOUR FOR USER UPLOADS
+        # -------------------------------
         if is_user_upload:
-            # Always a fresh auto-ID document for user uploads (appending allowed).
-            col_ref = db_client.collection(collection_path)
-            doc_ref = col_ref.document()  # auto ID
-            mode = "overwrite"
+            # Use EXACT document_id passed in: e.g. "2", "1a", "3c", "2mcq"
+            doc_ref = db_client.collection(collection_path).document(document_id)
             exists_snapshot = None
             logger.debug(
-                "Firebase: user-upload path '%s' — using auto doc id '%s' (source_id=%s)",
+                "Firebase: user-upload path '%s' — using FIXED doc id '%s'.",
                 collection_path,
-                doc_ref.id,
                 document_id,
             )
+
         else:
-            # Existing behaviour for non-user collections (Topics, etc.)
+            # Non-user uploads keep the existing behaviour
             doc_ref = db_client.collection(collection_path).document(document_id)
             mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
             exists_snapshot = None
+
             if mode == "preserve":
                 try:
                     exists_snapshot = doc_ref.get()
@@ -386,17 +390,17 @@ def upload_content(db_client, collection_path, document_id, data):
         if "xp_curve_version" not in payload:
             payload["xp_curve_version"] = 1
 
-        # Only apply the "created_at/startedAt" auto-fill when we just checked non-existence
         if exists_snapshot is not None and not exists_snapshot.exists:
             payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
             payload.setdefault("startedAt", firestore.SERVER_TIMESTAMP)
+
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
-        # Sanitize visual_data (tables) for Firestore if present
         if "visual_data" in payload and isinstance(payload["visual_data"], dict):
             payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
 
         doc_ref.set(payload, merge=True)
+
         logger.debug(
             "Firebase: uploaded '%s' → '%s' (doc_id=%s, is_user_upload=%s).",
             document_id,
@@ -404,11 +408,12 @@ def upload_content(db_client, collection_path, document_id, data):
             doc_ref.id,
             is_user_upload,
         )
+
         return True
+
     except Exception as e:
         logger.error("Firebase: upload failed for '%s/%s' — %s", collection_path, document_id, e)
         return False
-
 
 def create_or_update_topic(db_client, topic_id):
     if not db_client:

@@ -615,8 +615,14 @@ def run_full_pipeline(
                     )
 
                     # Upload via uploader
-                    collection_path = f"{collection_root}/{base_name}/Questions"
-                    ok = firebase_uploader.upload_content(db_client, collection_path, new_question_id, new_question_object)
+                    # --- USER UPLOAD TARGET PATH ---
+                    collection_path = f"Users/{uid}/Uploads/{upload_id}/Questions"
+                    ok = firebase_uploader.upload_content(
+                        db_client,
+                        collection_path,
+                        new_question_id,
+                        new_question_object
+                    )
                     if ok:
                         job_summary["uploaded_ok"] += 1
                         run_report["totals"]["uploaded_ok"] += 1
