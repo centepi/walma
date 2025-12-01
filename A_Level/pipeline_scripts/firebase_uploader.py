@@ -309,15 +309,19 @@ def upload_content(db_client, collection_path, document_id, data):
     Write a question/lesson doc to Firestore.
 
     Behaviour:
-    - For any `Users/...` path (including
-      `Users/{uid}/Uploads/{uploadId}` AND
-      `Users/{uid}/Uploads/{uploadId}/Questions`), we **always use the
-      PROVIDED `document_id`** and never do auto-ID or `WRITE_MODE`
-      skipping. The caller (pipeline) is responsible for making the
-      `document_id` unique when appending questions.
+    - For *user-upload questions* (paths like
+      `Users/{uid}/Uploads/{uploadId}/Questions`), we:
+          • treat `document_id` as the *logical* question id (e.g. "1",
+            "1a", "2mcq"), and
+          • create a UNIQUE Firestore doc id:
+              first try `document_id`, then `document_id-1`,
+              `document_id-2`, ... until a free id is found.
+        This guarantees that appending the same homework again creates
+        additional docs instead of overwriting the existing one.
+    - For other `Users/...` docs (e.g. `Users/{uid}/Uploads/{uploadId}`),
+      we always use the PROVIDED `document_id` and ignore WRITE_MODE.
     - For non-`Users/...` collections (e.g. `Topics`), we keep the
-      original `WRITE_MODE` / "preserve" behaviour: if `WRITE_MODE` is
-      "preserve" and the doc already exists, we skip writing.
+      original `WRITE_MODE` / "preserve" behaviour.
     """
     if not db_client:
         logger.error("Firebase: client not available; cannot upload '%s/%s'.", collection_path, document_id)
@@ -325,14 +329,61 @@ def upload_content(db_client, collection_path, document_id, data):
 
     try:
         segments = collection_path.split("/")
+
+        is_user_upload_question = (
+            len(segments) >= 5
+            and segments[0] == "Users"
+            and segments[2] == "Uploads"
+            and segments[-1] == "Questions"
+        )
         is_users_collection = segments[0] == "Users"
 
-        if is_users_collection:
-            # 🔒 Always honour the provided document_id for all Users/... docs.
+        doc_ref = None
+        exists_snapshot = None
+        logical_id = document_id
+
+        if is_user_upload_question:
+            # --------- VERSIONED IDS FOR QUESTIONS ----------
+            col_ref = db_client.collection(collection_path)
+            base_id = str(document_id or "q").strip() or "q"
+            candidate_id = base_id
+            suffix = 0
+
+            while True:
+                try:
+                    probe_ref = col_ref.document(candidate_id)
+                    snap = probe_ref.get()
+                    if not snap.exists:
+                        # free id
+                        doc_ref = probe_ref
+                        break
+                    # otherwise bump suffix and try again
+                    suffix += 1
+                    candidate_id = f"{base_id}-{suffix}"
+                except Exception as e:
+                    # On any probe error, fall back to current candidate_id
+                    logger.warning(
+                        "Firebase: existence probe failed for '%s/%s' (%s); using candidate id.",
+                        collection_path,
+                        candidate_id,
+                        e,
+                    )
+                    doc_ref = col_ref.document(candidate_id)
+                    break
+
+            logger.debug(
+                "Firebase: user-upload QUESTION path '%s' — logical_id='%s', chosen doc id='%s'.",
+                collection_path,
+                logical_id,
+                doc_ref.id,
+            )
+
+        elif is_users_collection:
+            # Any other Users/... doc (e.g. upload parent) → fixed doc id
             doc_ref = db_client.collection(collection_path).document(document_id)
             exists_snapshot = None
             logger.debug(
-                "Firebase: Users path '%s' — using provided doc id '%s'.",
+                "Firebase: Users path '%s' — using fixed doc id '%s'.",
                 collection_path,
                 document_id,
             )
@@ -397,21 +448,22 @@ def upload_content(db_client, collection_path, document_id, data):
 
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
+        # For user-upload questions, optionally record the logical id
+        if is_user_upload_question:
+            payload.setdefault("logical_question_id", logical_id)
+
         # Sanitize visual_data (tables) for Firestore if present
         if "visual_data" in payload and isinstance(payload["visual_data"], dict):
             payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
 
         doc_ref.set(payload, merge=True)
-
-        # 🔊 DEBUG: loud log showing exactly what was written
         logger.info(
-            "Firebase upload_content: path='%s', is_users_collection=%s, doc_id='%s', logical_id='%s'",
+            "Firebase upload_content: path='%s', is_user_upload_question=%s, doc_id='%s', logical_id='%s'",
             collection_path,
-            is_users_collection,
+            is_user_upload_question,
             doc_ref.id,
-            document_id,
+            logical_id,
         )
-
         return True
     except Exception as e:
         logger.error("Firebase: upload failed for '%s/%s' — %s", collection_path, document_id, e)
