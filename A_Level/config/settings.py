@@ -44,7 +44,7 @@ if not GOOGLE_API_KEY:
     print("Content generation will fail. Ensure .env is in the project root and contains your key.")
 
 # DEFAULT TO GEMINI FLASH — overrideable in Railway via env
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash-002")
 
 
 # --- Firebase Configuration ---
