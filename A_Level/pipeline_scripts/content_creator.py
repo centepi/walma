@@ -1,4 +1,3 @@
-# pipeline_scripts/content_creator.py
 import os
 import re
 import json
@@ -12,7 +11,6 @@ from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
 from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config 
-# --- NEW IMPORT ---
 from . import firestore_sanitizer 
 
 import datetime
@@ -536,10 +534,13 @@ def create_question(
         else:
             print("✅ Configuration is valid!")
             
-            # --- APPLY FIRESTORE SANITIZER ---
-            visual_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
-            content_object["visual_data"] = visual_data
-            # ---------------------------------
+            # --- FIX: Split path for upload vs plot ---
+            # 1. Sanitize for Firestore (strings)
+            sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
+            content_object["visual_data"] = sanitized_data
+            
+            # 2. Use ORIGINAL visual_data (numbers) for logic and plotting
+            # -------------------------------------------------------------
 
             # Decide if this visual is table-only; if so, skip SVG generation
             charts = []
@@ -558,7 +559,7 @@ def create_question(
                     target_part_id,
                 )
             else:
-                # Generate SVG diagram for non-table charts (functions, histograms, box plots, etc.)
+                # Generate SVG diagram using ORIGINAL numeric data
                 fig = dynamic_chart_plotter(visual_data)
 
                 buffer = io.BytesIO()
