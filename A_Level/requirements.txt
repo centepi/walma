@@ -1,5 +1,5 @@
 firebase-admin
-google-generativeai
+google-generativeai>=0.7.2
 numpy
 pdf2image
 pdfplumber
