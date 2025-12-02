@@ -24,7 +24,10 @@ def initialize_gemini_client():
     """Initializes the Gemini client with the API key."""
     try:
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        logger.info("Content Creator's Gemini client initialized successfully.")
+        logger.info(
+            "Content Creator's Gemini client initialized successfully. Using model: %s",
+            settings.GEMINI_MODEL_NAME,
+        )
         return genai.GenerativeModel(settings.GEMINI_MODEL_NAME)
     except Exception as e:
         logger.error(f"Failed to initialize Content Creator's Gemini client: {e}")
