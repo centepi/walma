@@ -43,8 +43,9 @@ if not GOOGLE_API_KEY:
     print(f"Warning: GOOGLE_API_KEY not found. Looked for .env at: {ENV_PATH}")
     print("Content generation will fail. Ensure .env is in the project root and contains your key.")
 
-# FORCE specific version - ignoring environment variables to fix 404 error
-GEMINI_MODEL_NAME = "gemini-1.5-flash-002"
+# TARGET MODEL: Standard Flash
+# Note: This REQUIRES google-generativeai >= 0.7.2 installed on the server.
+GEMINI_MODEL_NAME = "gemini-1.5-flash"
 
 
 # --- Firebase Configuration ---
@@ -125,6 +126,22 @@ TOPIC_METADATA = {
         "status": "active",
     },
 }
+
+# --- DIAGNOSTIC BLOCK ---
+# This runs on import to help debug 404 errors by proving which library version is active.
+try:
+    import google.generativeai as genai
+    print(f"\n[DIAGNOSTIC] google-generativeai library version: {genai.__version__}")
+    print(f"[DIAGNOSTIC] Targeted Model: {GEMINI_MODEL_NAME}")
+    
+    # Simple check: If version is older than 0.7.2, warn immediately
+    parts = genai.__version__.split('.')
+    if len(parts) >= 2 and int(parts[0]) == 0 and int(parts[1]) < 7:
+         print(f"[DIAGNOSTIC] ⚠️ CRITICAL: Library version is too old for Gemini 1.5 Flash. Update requirements.txt to >=0.7.2")
+    
+except Exception as e:
+    print(f"\n[DIAGNOSTIC] Error checking library version: {e}")
+# ------------------------
 
 
 if __name__ == "__main__":
