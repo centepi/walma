@@ -47,7 +47,7 @@ if not GOOGLE_API_KEY:
     print("Content generation will fail. Ensure .env is in the project root and contains your key.")
 
 # IMPORTANT: default to Flash, but allow override via env
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "models/gemini-1.5-flash")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
 
 # --- Firebase Configuration ---
 FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.path.join(A_LEVEL_DIR, "config", "firebase_service_account.json")
