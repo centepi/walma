@@ -45,7 +45,7 @@ if not GOOGLE_API_KEY:
 
 # TARGET MODEL: Standard Flash
 # Note: This REQUIRES google-generativeai >= 0.7.2 installed on the server.
-GEMINI_MODEL_NAME = "gemini-1.5-flash"
+GEMINI_MODEL_NAME = "gemini-2.5-flash"
 
 
 # --- Firebase Configuration ---
