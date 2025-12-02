@@ -11,7 +11,10 @@ from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
-from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config  # <-- no alias
+from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config 
+# --- NEW IMPORT ---
+from . import firestore_sanitizer 
+
 import datetime
 import io
 import base64
@@ -532,6 +535,11 @@ def create_question(
                 print(f"  ⚠️  {issue}")
         else:
             print("✅ Configuration is valid!")
+            
+            # --- APPLY FIRESTORE SANITIZER ---
+            visual_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
+            content_object["visual_data"] = visual_data
+            # ---------------------------------
 
             # Decide if this visual is table-only; if so, skip SVG generation
             charts = []
