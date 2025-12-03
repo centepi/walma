@@ -24,6 +24,9 @@ from pipeline_scripts.main_pipeline import (
 from pipeline_scripts.firebase_uploader import UploadTracker   # <-- live progress
 from config import settings
 
+# --- NEW IMPORT: Text-to-Drill Manager ---
+from pipeline_scripts.text_gen_pipeline import drill_runner
+
 logger = utils.setup_logger(__name__)
 
 app = FastAPI(title="Alma Pipeline Server", version="1.5.0")
@@ -580,3 +583,73 @@ def process_user_upload(
 
     # 202 with an empty 'created' list so the iOS client can decode PipelineResult safely
     return JSONResponse({"created": []}, status_code=202)
+
+
+# --- NEW ENDPOINT: Text-to-Drill ---
+
+@app.post("/api/user-uploads/process-text")
+def process_text_drill(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    topic: str = Form(..., description="Topic of the questions"),
+    course: str = Form(..., description="Target course (A-Level, GCSE, etc)"),
+    difficulty: str = Form(..., description="Difficulty level description"),
+    count: int = Form(3, description="Number of questions to generate"),
+    question_type: str = Form("Standard", description="Type of question"),
+    additional_details: str = Form("", description="Extra instructions"),
+    upload_id: Optional[str] = Form(None, description="Client-side upload id"),
+    folder_id: Optional[str] = Form(None, description="Target folder id"),
+    unit_name: Optional[str] = Form(None, description="Unit name"),
+    section: Optional[str] = Form(None, description="Section"),
+):
+    """
+    Phase 1: Text-to-Drill Endpoint.
+    Generates questions directly from text parameters, skipping PDF analysis.
+    """
+    
+    # 1. Auth: Ensure the user is logged in
+    uid = _require_uid_from_request(request)
+
+    # 2. Safety Limit
+    if count > 10:
+        raise HTTPException(status_code=400, detail="Max 10 questions per batch.")
+
+    # 3. Setup IDs
+    # If the app didn't send an ID, make a timestamp one.
+    # Sanitize it so Firestore doesn't crash on slashes.
+    raw_upload_id = upload_id or utils.make_timestamp()
+    upload_id = _sanitize_doc_id(raw_upload_id)
+    
+    # Default title if user didn't provide one
+    safe_unit_name = (unit_name or f"{topic} Drill").strip()
+
+    # 4. Initialize Tracker
+    # This creates the document in Firestore with status="processing"
+    # so the App sees the "Loading" bar immediately.
+    tracker = UploadTracker(uid, upload_id)
+    tracker.start(
+        folder_id=(folder_id or "").strip(),
+        unit_name=safe_unit_name,
+        section=(section or "General").strip()
+    )
+    tracker.event_note("Queued Drill...")
+
+    # 5. Start Background Job
+    # This runs the 'Manager' script we just made, without making the user wait.
+    background_tasks.add_task(
+        drill_runner.run_text_drill_background,
+        uid=uid,
+        upload_id=upload_id,
+        topic=topic,
+        course=course,
+        difficulty=difficulty,
+        quantity=count,
+        question_type=question_type,
+        additional_details=additional_details,
+        folder_id=folder_id or "",
+        unit_name=safe_unit_name
+    )
+
+    # 6. Return Success
+    # 202 Accepted means "We started working on it".
+    return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)
