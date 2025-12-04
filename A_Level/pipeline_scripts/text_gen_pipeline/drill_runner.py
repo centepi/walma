@@ -16,12 +16,12 @@ logger = utils.setup_logger(__name__)
 # --- Task State Class ---
 # This tracks the life of a single question in the batch
 class DrillTask:
-    def __init__(self, topic, course, difficulty, question_type, details, question_num):
+    def __init__(self, topic, course, difficulty, details, question_num):
         self.input_data = {
             "topic": topic, 
             "course": course, 
             "difficulty": difficulty,
-            "question_type": question_type, 
+            # question_type removed
             "additional_details": details
         }
         self.question_num = str(question_num)
@@ -93,7 +93,7 @@ def run_text_drill_background(
     course: str,
     difficulty: str,
     quantity: int = 3,
-    question_type: str = "Standard",
+    # question_type removed
     additional_details: str = "",
     folder_id: str = "",
     unit_name: str = ""
@@ -119,7 +119,7 @@ def run_text_drill_background(
 
     # 2. Prepare Tasks
     tasks = [
-        DrillTask(topic, course, difficulty, question_type, additional_details, i+1) 
+        DrillTask(topic, course, difficulty, additional_details, i+1) 
         for i in range(quantity)
     ]
     

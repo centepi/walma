@@ -595,7 +595,7 @@ def process_text_drill(
     course: str = Form(..., description="Target course (A-Level, GCSE, etc)"),
     difficulty: str = Form(..., description="Difficulty level description"),
     count: int = Form(3, description="Number of questions to generate"),
-    question_type: str = Form("Standard", description="Type of question"),
+    # question_type removed
     additional_details: str = Form("", description="Extra instructions"),
     upload_id: Optional[str] = Form(None, description="Client-side upload id"),
     folder_id: Optional[str] = Form(None, description="Target folder id"),
@@ -644,7 +644,7 @@ def process_text_drill(
         course=course,
         difficulty=difficulty,
         quantity=count,
-        question_type=question_type,
+        # question_type removed
         additional_details=additional_details,
         folder_id=folder_id or "",
         unit_name=safe_unit_name

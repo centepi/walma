@@ -1,3 +1,5 @@
+# pipeline_scripts/text_gen_pipeline/drill_prompts.py
+
 from textwrap import dedent
 
 def build_text_drill_prompt(
@@ -5,7 +7,7 @@ def build_text_drill_prompt(
     topic: str,
     course: str,
     difficulty: str,
-    question_type: str = "Standard",
+    # question_type removed as requested
     additional_details: str = "",
     correction_prompt_section: str = ""
 ) -> str:
@@ -367,8 +369,7 @@ def build_text_drill_prompt(
     
     --- USER SPECIFICATIONS ---
     - **Course/Level**: {course} (Ensure notation and scope match this level exactly).
-    - **Difficulty**: {difficulty} (1=Basic Recall, 5=Olympiad/Challenge).
-    - **Question Style**: {question_type} (e.g., Word Problem, Pure Calculation, Proof).
+    - **Difficulty**: {difficulty} (Scale: Introductory -> Easy -> Medium -> Hard -> Challenge).
     - **Specific Details**: "{additional_details}"
     
     --- CONTENT GUIDELINES ---
