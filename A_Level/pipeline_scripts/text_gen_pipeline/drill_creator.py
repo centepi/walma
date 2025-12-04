@@ -39,7 +39,7 @@ def create_drill_question(
     topic = task_input.get("topic")
     course = task_input.get("course")
     difficulty = task_input.get("difficulty")
-    question_type = task_input.get("question_type")
+    # question_type is available in input but NOT used in the prompt anymore
     details = task_input.get("additional_details", "")
 
     # 1. Build Prompt
@@ -47,7 +47,7 @@ def create_drill_question(
         topic=topic,
         course=course,
         difficulty=difficulty,
-        question_type=question_type,
+        # question_type removed to match the updated drill_prompts.py signature
         additional_details=details,
         correction_prompt_section=correction_feedback
     )
