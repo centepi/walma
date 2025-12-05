@@ -63,12 +63,28 @@ def _normalize_text_basics(s: str) -> str:
     )
 
 def _fix_inside_math(body: str) -> str:
+    """
+    Fix common TeX issues *inside* a math segment, without touching delimiters.
+    """
     # sqrt(...) -> \sqrt{...}
     body = _SQRT_PAREN_RE.sub(lambda m: r"\sqrt{" + m.group(1).strip() + "}", body)
     # bare 'frac{' -> '\frac{'
     body = _FRAC_MISSING_BS_RE.sub(lambda m: (m.group(1) + r"\frac{"), body)
     # functions -> \sin, \cos, ...
     body = _FUNCS_RE.sub(lambda m: "\\" + m.group(1), body)
+
+    # --- EXTRA REPAIRS FOR RARE "JOINED WORD" GLITCHES ---
+    # Sometimes the model emits things like "nablatimes" instead of "\nabla \times"
+    # or "nablacdot" instead of "\nabla \cdot", and "mathbfF" instead of "\mathbf{F}".
+    # These only apply inside math and don't affect already-correct TeX.
+
+    # nablatimes -> \nabla \times
+    body = re.sub(r"\bnablatimes\b", r"\\nabla \\times", body)
+    # nablacdot -> \nabla \cdot
+    body = re.sub(r"\bnablacdot\b", r"\\nabla \\cdot", body)
+    # mathbfX -> \mathbf{X}  (single-letter bold vectors like r, F)
+    body = re.sub(r"\bmathbf([A-Za-z])\b", r"\\mathbf{\1}", body)
+
     return body
 
 def _process_math_segment(seg: str) -> str:
