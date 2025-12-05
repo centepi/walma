@@ -164,7 +164,7 @@ def build_text_drill_prompt(
                     }, // Optional
                     "axes_range": {
                         "x_min": 20,
-                        "x_max": 60,
+                        "x_max": 60},
                         "y_min": 20000,
                         "y_max": 90000
                     }
@@ -354,7 +354,7 @@ def build_text_drill_prompt(
     }
 
     **JSON TECHNICAL RULES**:
-    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{...}`, `\\frac{...}{...}`). **Do not escape the `$` characters** in math fences (`$begin:...$`, `$end:...$`).
+    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{...}`, `\\frac{...}{...}`). **Do not escape the `$` characters** in math fences.
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
     - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
     """
@@ -401,7 +401,7 @@ def build_text_drill_prompt(
     
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
-    - Use `$begin:math:text$...$end:math:text$` for inline math and `$begin:math:display$...$end:math:display$` for display math. `$...$` and `$$...$$` are also accepted. **Do not put a backslash before `$begin:` or `$end:` and do not wrap these fences in extra `$` or backticks.**
+    - Use `$...$` for inline math and either `$$...$$` or `\$begin:math:display$\.\.\.\\$end:math:display$` for display math. Do **not** invent any custom markers like “begin : math : text”.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
