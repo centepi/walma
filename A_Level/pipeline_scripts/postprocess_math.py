@@ -36,27 +36,14 @@ def _canon_custom_fences(s: str) -> str:
     return s
 
 
-# --- Extra wrappers to strip: backticks around display math like `$$ ... $$` ---
-_BACKTICK_DISPLAY_RE = re.compile(
-    r"`\s*(\$\$[\s\S]*?\$\$|\\$begin:math:display$\[\\s\\S\]\*\?\\\\$end:math:display$)\s*`", re.DOTALL
-)
-
-
-def _strip_backtick_wrapped_math(s: str) -> str:
-    """
-    Remove Markdown backticks that wrap display math:
-    `$$ ... $$` -> $$ ... $$
-    `$begin:math:display$ \.\.\. $end:math:display$` -> \[ ... \]
-    """
-    if not isinstance(s, str) or "`" not in s:
-        return s
-    return _BACKTICK_DISPLAY_RE.sub(r"\1", s)
-
-
 # --- Regex building blocks ---
 # Order matters: longer/multiline blocks first, then single-line
 _MATH_SEG_RE = re.compile(
-    r"(\$\$[\s\S]*?\$\$|\\$begin:math:display$\[\\s\\S\]\*\?\\\\$end:math:display$|\\$begin:math:text$\[\\s\\S\]\*\?\\\\$end:math:text$|\$[^$]*\$|`[^`]*`)",
+    r"(\$\$[\s\S]*?\$\$"      # $$ ... $$
+    r"|\\\[[\s\S]*?\\\]"      # \[ ... \]
+    r"|\\\([\s\S]*?\\\)"      # \( ... \)
+    r"|\$[^$]*\$"             # $ ... $
+    r"|`[^`]*`)",             # ` ... ` (legacy inline math)
     re.DOTALL,
 )
 
@@ -66,7 +53,7 @@ _MD_UNDER_RE = re.compile(r"__(.+?)__")
 
 # Inside-math fixes
 # sqrt(...) without backslash (inside a math segment's content)
-_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*\(([^)]+)\)")
+_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*$begin:math:text$\(\[\^\)\]\+\?\)$end:math:text$")
 # 'frac{' without backslash
 _FRAC_MISSING_BS_RE = re.compile(r"(^|[^\\])frac\s*\{")
 # common functions without backslash (word boundary, not already escaped)
@@ -86,7 +73,7 @@ _ITEM_ENV_RE = re.compile(
 def _rewrite_list_envs(s: str) -> str:
     """
     Convert simple LaTeX list environments into plain text lists, so MathJax
-    never sees unknown environments like 'enumerate'.
+    never sees unknown environments like 'enumerate' / 'itemize'.
     """
 
     def _rewrite_enum(match: re.Match) -> str:
@@ -118,30 +105,25 @@ def _rewrite_list_envs(s: str) -> str:
 
 
 # Normalize Windows newlines, stray NBSP, dashes, middle dots, etc.
-# Also fix a few "over-escaped" bracket delimiters produced by the model.
-_OVERESCAPED_BRACKETS_RE = re.compile(r"\\\\(\[|\]|\(|\))")
-
-
 def _normalize_text_basics(s: str) -> str:
     if not isinstance(s, str):
         return s
 
     # basic unicode / newline cleanup
     s = (
-        s.replace("\r\n", "\n")
-        .replace("\r", "\n")
-        .replace("\u00a0", " ")
-        .replace("−", "-")
-        .replace("–", "-")
-        .replace("—", "-")
-        .replace("·", "*")
-        .replace("×", "*")
+        s.replace("\r\n", "\n").replace("\r", "\n")
+         .replace("\u00a0", " ")
+         .replace("−", "-").replace("–", "-").replace("—", "-")
+         .replace("·", "*").replace("×", "*")
     )
 
-    # Collapse over-escaped display/inline delimiters:
-    # things like "\\[" -> "\[" and "\\]" -> "\]".
-    # This is *only* for the bracket/paren delimiters, so "\rho" etc. are untouched.
-    s = _OVERESCAPED_BRACKETS_RE.sub(r"\\\1", s)
+    # Fix over-escaped bracket delimiters, e.g. "\\[" -> "\[", "\\(" -> "\("
+    s = (
+        s.replace("\\\\[", "\\[")
+         .replace("\\\\]", "\\]")
+         .replace("\\\\(", "\\(")
+         .replace("\\\\)", "\\)")
+    )
 
     return s
 
@@ -151,9 +133,9 @@ def _fix_inside_math(body: str) -> str:
     Fix common TeX issues *inside* a math segment, without touching delimiters.
     """
     # sqrt(...) -> \sqrt{...}
-    body = _SQRT_PAREN_RE.sub(lambda m: r"\\sqrt{" + m.group(1).strip() + "}", body)
+    body = _SQRT_PAREN_RE.sub(lambda m: r"\sqrt{" + m.group(1).strip() + "}", body)
     # bare 'frac{' -> '\frac{'
-    body = _FRAC_MISSING_BS_RE.sub(lambda m: (m.group(1) + r"\\frac{"), body)
+    body = _FRAC_MISSING_BS_RE.sub(lambda m: (m.group(1) + r"\frac{"), body)
     # functions -> \sin, \cos, ...
     body = _FUNCS_RE.sub(lambda m: "\\" + m.group(1), body)
 
@@ -162,35 +144,72 @@ def _fix_inside_math(body: str) -> str:
     body = re.sub(r"\bnablatimes\b", r"\\nabla \\times", body)
     # nablacdot -> \nabla \cdot
     body = re.sub(r"\bnablacdot\b", r"\\nabla \\cdot", body)
-    # mathbfX -> \mathbf{X}  (single-letter bold vectors like r, F)
+    # mathbfX -> \mathbf{X} for single-letter bold vectors like r, F
     body = re.sub(r"\bmathbf([A-Za-z])\b", r"\\mathbf{\1}", body)
+
+    # Remove alignment '&' in common " & \text{...}" pattern to avoid "Misplaced &"
+    body = re.sub(r"&\s*(\\text\b)", r" \1", body)
 
     return body
 
 
 def _process_math_segment(seg: str) -> str:
-    """Apply inside-math fixes but preserve original delimiters."""
+    """Apply inside-math fixes but preserve / normalize delimiters."""
+    # $$ ... $$
     if seg.startswith("$$") and seg.endswith("$$"):
         inner = seg[2:-2]
         return "$$" + _fix_inside_math(inner) + "$$"
+
+    # $begin:math:display$ \.\.\. $end:math:display$  → normalize to $$ ... $$
+    if seg.startswith(r"$begin:math:display$\"\) and seg\.endswith\(r\"$end:math:display$"):
+        inner = seg[2:-2]
+        return "$$" + _fix_inside_math(inner) + "$$"
+
+    # $begin:math:text$ \.\.\. $end:math:text$  → normalize to $ ... $
+    if seg.startswith(r"$begin:math:text$\"\) and seg\.endswith\(r\"$end:math:text$"):
+        inner = seg[2:-2]
+        return "$" + _fix_inside_math(inner) + "$"
+
+    # Legacy custom fences (should mostly be gone after _canon_custom_fences)
     if seg.startswith(r"$begin:math:display$") and seg.endswith(
         r"$end:math:display$"
     ):
-        inner = seg[2:-2]
-        return (
-            r"$begin:math:display$" + _fix_inside_math(inner) + r"$end:math:display$"
-        )
+        inner = seg[len("$begin:math:display$") : -len("$end:math:display$")]
+        return r"$begin:math:display$" + _fix_inside_math(inner) + r"$end:math:display$"
+
     if seg.startswith(r"$begin:math:text$") and seg.endswith(r"$end:math:text$"):
-        inner = seg[2:-2]
+        inner = seg[len("$begin:math:text$") : -len("$end:math:text$")]
         return r"$begin:math:text$" + _fix_inside_math(inner) + r"$end:math:text$"
+
+    # Simple $ ... $
     if seg.startswith("$") and seg.endswith("$"):
         inner = seg[1:-1]
         return "$" + _fix_inside_math(inner) + "$"
+
+    # Legacy: treat backticks as inline math; keep ticks.
     if seg.startswith("`") and seg.endswith("`"):
-        # Legacy: treat backticks as inline math; keep ticks.
         inner = seg[1:-1]
         return "`" + _fix_inside_math(inner) + "`"
+
     return seg  # fallback (shouldn't happen)
+
+
+def _fix_nonmath_spans(text: str) -> str:
+    """
+    Heuristics for *non-math* chunks:
+    - Wrap things like '\{p_1, p_2, p_3\}' in inline math so braces render correctly.
+    """
+    if not text:
+        return text
+
+    # \{ ... \}  →  $\{ ... \}$  (set notation in plain text)
+    def _wrap_braced(m: re.Match) -> str:
+        inner = m.group(1)
+        return "$\\{" + inner + "\\}$"
+
+    text = re.sub(r"\\\{([^{}]+)\\\}", _wrap_braced, text)
+
+    return text
 
 
 def sanitize_text(s: str) -> str:
@@ -201,12 +220,8 @@ def sanitize_text(s: str) -> str:
         return s
 
     s = _normalize_text_basics(s)
-    # Remove backticks that wrap display math (`$$...$$`, `$begin:math:display$\.\.\.$end:math:display$`)
-    s = _strip_backtick_wrapped_math(s)
-    # Rewrite enumerate/itemize environments to plain text
     s = _rewrite_list_envs(s)
-    # Convert legacy Alma fences to standard TeX
-    s = _canon_custom_fences(s)
+    s = _canon_custom_fences(s)  # convert legacy fences to standard TeX
 
     # Tokenize math vs non-math
     parts: List[str] = []
@@ -218,15 +233,19 @@ def sanitize_text(s: str) -> str:
             # strip Markdown emphasis ONLY outside math
             non = _MD_BOLD_RE.sub(r"\1", non)
             non = _MD_UNDER_RE.sub(r"\1", non)
+            non = _fix_nonmath_spans(non)
             parts.append(non)
+
         seg = m.group(0)
         parts.append(_process_math_segment(seg))
         last = m.end()
+
     # trailing non-math
     if last < len(s):
         non = s[last:]
         non = _MD_BOLD_RE.sub(r"\1", non)
         non = _MD_UNDER_RE.sub(r"\1", non)
+        non = _fix_nonmath_spans(non)
         parts.append(non)
 
     return "".join(parts)
