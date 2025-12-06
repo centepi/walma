@@ -22,6 +22,7 @@ from typing import Dict, Any, List
 _INLINE_FENCE_RE = re.compile(r"`?\$begin:math:text\$([\s\S]*?)\$end:math:text\$`?", re.DOTALL)
 _DISPLAY_FENCE_RE = re.compile(r"`?\$begin:math:display\$([\s\S]*?)\$end:math:display\$`?", re.DOTALL)
 
+
 def _canon_custom_fences(s: str) -> str:
     """Convert `$begin:math:*$...$end:math:*$` (with optional backticks) to \( ... \) / \[ ... \]."""
     if not isinstance(s, str) or not s:
@@ -29,6 +30,7 @@ def _canon_custom_fences(s: str) -> str:
     s = _INLINE_FENCE_RE.sub(lambda m: r"\(" + m.group(1) + r"\)", s)
     s = _DISPLAY_FENCE_RE.sub(lambda m: r"\[" + m.group(1) + r"\]", s)
     return s
+
 
 # --- Regex building blocks ---
 # Order matters: longer/multiline blocks first, then single-line
@@ -54,6 +56,7 @@ _FUNCS_RE = re.compile(
 # --- List environments (enumerate/itemize) outside math ---
 _ENUM_ENV_RE = re.compile(r"\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}", re.DOTALL)
 _ITEM_ENV_RE = re.compile(r"\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}", re.DOTALL)
+
 
 def _rewrite_list_envs(s: str) -> str:
     """
@@ -87,16 +90,30 @@ def _rewrite_list_envs(s: str) -> str:
     s = _ITEM_ENV_RE.sub(_rewrite_itemize, s)
     return s
 
+
 # Normalize Windows newlines, stray NBSP, dashes, middle dots, etc.
 def _normalize_text_basics(s: str) -> str:
     if not isinstance(s, str):
         return s
-    return (
+
+    # basic unicode / newline cleanup
+    s = (
         s.replace("\r\n", "\n").replace("\r", "\n")
          .replace("\u00a0", " ")
          .replace("−", "-").replace("–", "-").replace("—", "-")
          .replace("·", "*").replace("×", "*")
     )
+
+    # NEW: fix over-escaped bracket delimiters, e.g. "\\[" → "\["
+    s = (
+        s.replace("\\\\[", "\\[")
+         .replace("\\\\]", "\\]")
+         .replace("\\\\(", "\\(")
+         .replace("\\\\)", "\\)")
+    )
+
+    return s
+
 
 def _fix_inside_math(body: str) -> str:
     """
@@ -119,6 +136,7 @@ def _fix_inside_math(body: str) -> str:
 
     return body
 
+
 def _process_math_segment(seg: str) -> str:
     """Apply inside-math fixes but preserve original delimiters."""
     if seg.startswith("$$") and seg.endswith("$$"):
@@ -139,6 +157,7 @@ def _process_math_segment(seg: str) -> str:
         return "`" + _fix_inside_math(inner) + "`"
     return seg  # fallback (shouldn't happen)
 
+
 def sanitize_text(s: str) -> str:
     """
     Clean a single text field.
@@ -147,7 +166,7 @@ def sanitize_text(s: str) -> str:
         return s
 
     s = _normalize_text_basics(s)
-    # NEW: rewrite enumerate/itemize blocks before we touch math fences
+    # rewrite enumerate/itemize blocks before we touch math fences
     s = _rewrite_list_envs(s)
     s = _canon_custom_fences(s)  # convert legacy fences to standard TeX
 
@@ -173,6 +192,7 @@ def sanitize_text(s: str) -> str:
         parts.append(non)
 
     return "".join(parts)
+
 
 def sanitize_generated_object(obj: Dict[str, Any]) -> Dict[str, Any]:
     """
