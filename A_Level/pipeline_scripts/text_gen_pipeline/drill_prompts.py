@@ -15,7 +15,10 @@ def build_text_drill_prompt(
     Prompt for generating questions from scratch based on user topic/course/difficulty.
     Includes the FULL visual_data specification and STRICT math rules to match existing pipeline standards.
     """
-    correction_block = f"\n**PREVIOUS ERROR & CORRECTION**:\n{correction_prompt_section.strip()}\n" if correction_prompt_section else ""
+    correction_block = (
+        f"\n**PREVIOUS ERROR & CORRECTION**:\n{correction_prompt_section.strip()}\n"
+        if correction_prompt_section else ""
+    )
 
     # --- 1. FULL VISUAL DATA GUIDE (Exact copy from prompts_presets.py) ---
     visual_rules_snippet = """
@@ -354,7 +357,8 @@ def build_text_drill_prompt(
     }
 
     **JSON TECHNICAL RULES**:
-    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{...}`, `\\frac{...}{...}`). **Do not escape the `$` characters** in math fences.
+    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{...}`, `\\frac{...}{...}`).
+    - Do **NOT** escape the `$` characters used for math fences.
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
     - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
     """
@@ -401,7 +405,8 @@ def build_text_drill_prompt(
     
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
-    - Use `$...$` for inline math and either `$$...$$` or `\$begin:math:display$\.\.\.\\$end:math:display$` for display math. Do **not** invent any custom markers like “begin : math : text”.
+    - Use `$...$` for inline math and `$$...$$` for display math.
+    - Do **NOT** use `\$begin:math:display$ \.\.\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.

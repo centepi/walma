@@ -4,52 +4,20 @@ from . import utils
 
 logger = utils.setup_logger(__name__)
 
-# === Math fence normalization (NEW) ==========================================
-_BEGIN_END_KIND = r'(text|display)'
-
-def _normalize_math_in_string(s: str) -> str:
-    """
-    Normalize legacy Alma math fences and common accidental variants:
-    - '$\\begin:math:...$'  -> '$begin:math:...$'
-    - '$ \\begin:math:...$' -> '$begin:math:...$'
-    - backticked fences -> plain fences
-    We keep fences as $begin/$end so the iOS canonicalizer can do the final conversion.
-    """
-    if not isinstance(s, str):
-        return s
-    if '$' not in s and '\\begin:math:' not in s and '$begin:math:' not in s:
-        return s
-
-    # Strip backticks that immediately wrap our markers
-    s = re.sub(r'`(\$begin:math:' + _BEGIN_END_KIND + r'\$)', r'\1', s)
-    s = re.sub(r'(\$end:math:'   + _BEGIN_END_KIND + r'\$)`', r'\1', s)
-
-    # Remove accidental backslashes directly before our markers
-    s = re.sub(r'\$\\begin:math:' + _BEGIN_END_KIND + r'\$', r'$begin:math:\1$', s)
-    s = re.sub(r'\$\\end:math:'   + _BEGIN_END_KIND + r'\$', r'$end:math:\1$',   s)
-
-    # Handle accidental spaces between '$' and '\begin'/'\end'
-    s = re.sub(r'\$\s*\\begin:math:' + _BEGIN_END_KIND + r'\$', r'$begin:math:\1$', s)
-    s = re.sub(r'\$\s*\\end:math:'   + _BEGIN_END_KIND + r'\$', r'$end:math:\1$',   s)
-
-    return s
-
-def _deep_normalize_math(obj):
-    """Walk parsed JSON and normalize math fences in all strings."""
-    if isinstance(obj, dict):
-        return {k: _deep_normalize_math(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_deep_normalize_math(v) for v in obj]
-    if isinstance(obj, str):
-        return _normalize_math_in_string(obj)
-    return obj
-# ============================================================================
-
 
 def _parse_and_repair(raw_text: str):
     """
     Takes a raw string from an AI, attempts to repair common errors,
     and parses it into a JSON object.
+
+    Deliberately minimal:
+    - Find the JSON block (optionally inside ```json ... ```).
+    - Strip control characters and smart quotes.
+    - Remove trailing commas before } or ].
+    - Parse with json.loads.
+
+    NOTE: We no longer touch or normalize any math fences here.
+    Whatever the model outputs inside strings is preserved.
     """
     if not raw_text:
         logger.warning("Validator: empty response.")
@@ -74,10 +42,12 @@ def _parse_and_repair(raw_text: str):
         # Step 2: Clean up common formatting issues.
         control_char_re = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
         json_str = control_char_re.sub('', json_str)
-        json_str = (json_str
-                    .replace('\u00a0', ' ')
-                    .replace('“', '"').replace('”', '"')
-                    .replace("‘", "'").replace("’", "'"))
+        json_str = (
+            json_str
+            .replace('\u00a0', ' ')
+            .replace('“', '"').replace('”', '"')
+            .replace("‘", "'").replace("’", "'")
+        )
 
         # Step 3: Remove trailing commas before closing braces/brackets.
         json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
@@ -86,9 +56,7 @@ def _parse_and_repair(raw_text: str):
         parsed_data = json.loads(json_str)
         logger.debug("Validator: JSON parsed successfully.")
 
-        # Step 5 (NEW): Normalize legacy math fences across all strings.
-        parsed_data = _deep_normalize_math(parsed_data)
-
+        # IMPORTANT: no further mutation here (no math fence rewriting).
         return parsed_data
 
     except Exception as e:
@@ -106,6 +74,11 @@ def validate_and_correct_response(
 ):
     """
     The main 'Quality Inspector' function. Validates and optionally corrects the model response.
+
+    Still does:
+    - First attempt: parse/repair.
+    - If that fails: ask the model once to self-correct into valid JSON.
+    - Second attempt: parse again.
     """
     current_response_text = initial_response_text
 
@@ -127,7 +100,11 @@ def validate_and_correct_response(
             logger.debug("Validator: attempting AI self-correction…")
             # Generic but effective error message for correction prompt
             error_message = "The previous response was not valid JSON."
-            current_response_text = correction_func(chat_session, error_message, current_response_text)
+            current_response_text = correction_func(
+                chat_session,
+                error_message,
+                current_response_text
+            )
 
             if not current_response_text:
                 logger.error("Validator: AI self-correction failed (no response).")
