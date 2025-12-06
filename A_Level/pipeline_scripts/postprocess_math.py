@@ -19,8 +19,12 @@ import re
 from typing import Dict, Any, List
 
 # --- Canonicalize legacy custom fences to standard TeX ---
-_INLINE_FENCE_RE = re.compile(r"`?\$begin:math:text\$([\s\S]*?)\$end:math:text\$`?", re.DOTALL)
-_DISPLAY_FENCE_RE = re.compile(r"`?\$begin:math:display\$([\s\S]*?)\$end:math:display\$`?", re.DOTALL)
+_INLINE_FENCE_RE = re.compile(
+    r"`?\$begin:math:text\$([\s\S]*?)\$end:math:text\$`?", re.DOTALL
+)
+_DISPLAY_FENCE_RE = re.compile(
+    r"`?\$begin:math:display\$([\s\S]*?)\$end:math:display\$`?", re.DOTALL
+)
 
 
 def _canon_custom_fences(s: str) -> str:
@@ -32,10 +36,27 @@ def _canon_custom_fences(s: str) -> str:
     return s
 
 
+# --- Extra wrappers to strip: backticks around display math like `$$ ... $$` ---
+_BACKTICK_DISPLAY_RE = re.compile(
+    r"`\s*(\$\$[\s\S]*?\$\$|\\$begin:math:display$\[\\s\\S\]\*\?\\\\$end:math:display$)\s*`", re.DOTALL
+)
+
+
+def _strip_backtick_wrapped_math(s: str) -> str:
+    """
+    Remove Markdown backticks that wrap display math:
+    `$$ ... $$` -> $$ ... $$
+    `$begin:math:display$ \.\.\. $end:math:display$` -> \[ ... \]
+    """
+    if not isinstance(s, str) or "`" not in s:
+        return s
+    return _BACKTICK_DISPLAY_RE.sub(r"\1", s)
+
+
 # --- Regex building blocks ---
 # Order matters: longer/multiline blocks first, then single-line
 _MATH_SEG_RE = re.compile(
-    r"(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$]*\$|`[^`]*`)",
+    r"(\$\$[\s\S]*?\$\$|\\$begin:math:display$\[\\s\\S\]\*\?\\\\$end:math:display$|\\$begin:math:text$\[\\s\\S\]\*\?\\\\$end:math:text$|\$[^$]*\$|`[^`]*`)",
     re.DOTALL,
 )
 
@@ -45,7 +66,7 @@ _MD_UNDER_RE = re.compile(r"__(.+?)__")
 
 # Inside-math fixes
 # sqrt(...) without backslash (inside a math segment's content)
-_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*$begin:math:text$\\s*([^)]+?)\\s*$end:math:text$")
+_SQRT_PAREN_RE = re.compile(r"(?<!\\)sqrt\s*\(([^)]+)\)")
 # 'frac{' without backslash
 _FRAC_MISSING_BS_RE = re.compile(r"(^|[^\\])frac\s*\{")
 # common functions without backslash (word boundary, not already escaped)
@@ -54,8 +75,12 @@ _FUNCS_RE = re.compile(
 )
 
 # --- List environments (enumerate/itemize) outside math ---
-_ENUM_ENV_RE = re.compile(r"\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}", re.DOTALL)
-_ITEM_ENV_RE = re.compile(r"\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}", re.DOTALL)
+_ENUM_ENV_RE = re.compile(
+    r"\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}", re.DOTALL
+)
+_ITEM_ENV_RE = re.compile(
+    r"\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}", re.DOTALL
+)
 
 
 def _rewrite_list_envs(s: str) -> str:
@@ -66,7 +91,6 @@ def _rewrite_list_envs(s: str) -> str:
 
     def _rewrite_enum(match: re.Match) -> str:
         body = match.group(1)
-        # split on \item, ignore stuff before first item
         parts = re.split(r"\\item\s+", body)
         items = [p.strip() for p in parts[1:] if p.strip()]
         if not items:
@@ -83,7 +107,9 @@ def _rewrite_list_envs(s: str) -> str:
         lines = [f"- {item}" for item in items]
         return "\n".join(lines)
 
-    if not isinstance(s, str) or "\\begin{enumerate}" not in s and "\\begin{itemize}" not in s:
+    if not isinstance(s, str) or (
+        "\\begin{enumerate}" not in s and "\\begin{itemize}" not in s
+    ):
         return s
 
     s = _ENUM_ENV_RE.sub(_rewrite_enum, s)
@@ -92,25 +118,30 @@ def _rewrite_list_envs(s: str) -> str:
 
 
 # Normalize Windows newlines, stray NBSP, dashes, middle dots, etc.
+# Also fix a few "over-escaped" bracket delimiters produced by the model.
+_OVERESCAPED_BRACKETS_RE = re.compile(r"\\\\(\[|\]|\(|\))")
+
+
 def _normalize_text_basics(s: str) -> str:
     if not isinstance(s, str):
         return s
 
     # basic unicode / newline cleanup
     s = (
-        s.replace("\r\n", "\n").replace("\r", "\n")
-         .replace("\u00a0", " ")
-         .replace("−", "-").replace("–", "-").replace("—", "-")
-         .replace("·", "*").replace("×", "*")
+        s.replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\u00a0", " ")
+        .replace("−", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("·", "*")
+        .replace("×", "*")
     )
 
-    # NEW: fix over-escaped bracket delimiters, e.g. "\\[" → "\["
-    s = (
-        s.replace("\\\\[", "\\[")
-         .replace("\\\\]", "\\]")
-         .replace("\\\\(", "\\(")
-         .replace("\\\\)", "\\)")
-    )
+    # Collapse over-escaped display/inline delimiters:
+    # things like "\\[" -> "\[" and "\\]" -> "\]".
+    # This is *only* for the bracket/paren delimiters, so "\rho" etc. are untouched.
+    s = _OVERESCAPED_BRACKETS_RE.sub(r"\\\1", s)
 
     return s
 
@@ -120,9 +151,9 @@ def _fix_inside_math(body: str) -> str:
     Fix common TeX issues *inside* a math segment, without touching delimiters.
     """
     # sqrt(...) -> \sqrt{...}
-    body = _SQRT_PAREN_RE.sub(lambda m: r"\sqrt{" + m.group(1).strip() + "}", body)
+    body = _SQRT_PAREN_RE.sub(lambda m: r"\\sqrt{" + m.group(1).strip() + "}", body)
     # bare 'frac{' -> '\frac{'
-    body = _FRAC_MISSING_BS_RE.sub(lambda m: (m.group(1) + r"\frac{"), body)
+    body = _FRAC_MISSING_BS_RE.sub(lambda m: (m.group(1) + r"\\frac{"), body)
     # functions -> \sin, \cos, ...
     body = _FUNCS_RE.sub(lambda m: "\\" + m.group(1), body)
 
@@ -142,9 +173,13 @@ def _process_math_segment(seg: str) -> str:
     if seg.startswith("$$") and seg.endswith("$$"):
         inner = seg[2:-2]
         return "$$" + _fix_inside_math(inner) + "$$"
-    if seg.startswith(r"$begin:math:display$") and seg.endswith(r"$end:math:display$"):
+    if seg.startswith(r"$begin:math:display$") and seg.endswith(
+        r"$end:math:display$"
+    ):
         inner = seg[2:-2]
-        return r"$begin:math:display$" + _fix_inside_math(inner) + r"$end:math:display$"
+        return (
+            r"$begin:math:display$" + _fix_inside_math(inner) + r"$end:math:display$"
+        )
     if seg.startswith(r"$begin:math:text$") and seg.endswith(r"$end:math:text$"):
         inner = seg[2:-2]
         return r"$begin:math:text$" + _fix_inside_math(inner) + r"$end:math:text$"
@@ -166,9 +201,12 @@ def sanitize_text(s: str) -> str:
         return s
 
     s = _normalize_text_basics(s)
-    # rewrite enumerate/itemize blocks before we touch math fences
+    # Remove backticks that wrap display math (`$$...$$`, `$begin:math:display$\.\.\.$end:math:display$`)
+    s = _strip_backtick_wrapped_math(s)
+    # Rewrite enumerate/itemize environments to plain text
     s = _rewrite_list_envs(s)
-    s = _canon_custom_fences(s)  # convert legacy fences to standard TeX
+    # Convert legacy Alma fences to standard TeX
+    s = _canon_custom_fences(s)
 
     # Tokenize math vs non-math
     parts: List[str] = []
@@ -176,7 +214,7 @@ def sanitize_text(s: str) -> str:
     for m in _MATH_SEG_RE.finditer(s):
         # non-math chunk before this math seg
         if m.start() > last:
-            non = s[last:m.start()]
+            non = s[last : m.start()]
             # strip Markdown emphasis ONLY outside math
             non = _MD_BOLD_RE.sub(r"\1", non)
             non = _MD_UNDER_RE.sub(r"\1", non)
