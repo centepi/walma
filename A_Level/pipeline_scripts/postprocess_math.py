@@ -51,6 +51,42 @@ _FUNCS_RE = re.compile(
     r"(?<!\\)\b(sin|cos|tan|sec|csc|cot|asin|acos|atan|arcsin|arccos|arctan|ln|log)\b"
 )
 
+# --- List environments (enumerate/itemize) outside math ---
+_ENUM_ENV_RE = re.compile(r"\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}", re.DOTALL)
+_ITEM_ENV_RE = re.compile(r"\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}", re.DOTALL)
+
+def _rewrite_list_envs(s: str) -> str:
+    """
+    Convert simple LaTeX list environments into plain text lists, so MathJax
+    never sees unknown environments like 'enumerate'.
+    """
+
+    def _rewrite_enum(match: re.Match) -> str:
+        body = match.group(1)
+        # split on \item, ignore stuff before first item
+        parts = re.split(r"\\item\s+", body)
+        items = [p.strip() for p in parts[1:] if p.strip()]
+        if not items:
+            return body
+        lines = [f"{i}. {item}" for i, item in enumerate(items, start=1)]
+        return "\n".join(lines)
+
+    def _rewrite_itemize(match: re.Match) -> str:
+        body = match.group(1)
+        parts = re.split(r"\\item\s+", body)
+        items = [p.strip() for p in parts[1:] if p.strip()]
+        if not items:
+            return body
+        lines = [f"- {item}" for item in items]
+        return "\n".join(lines)
+
+    if not isinstance(s, str) or "\\begin{enumerate}" not in s and "\\begin{itemize}" not in s:
+        return s
+
+    s = _ENUM_ENV_RE.sub(_rewrite_enum, s)
+    s = _ITEM_ENV_RE.sub(_rewrite_itemize, s)
+    return s
+
 # Normalize Windows newlines, stray NBSP, dashes, middle dots, etc.
 def _normalize_text_basics(s: str) -> str:
     if not isinstance(s, str):
@@ -73,11 +109,7 @@ def _fix_inside_math(body: str) -> str:
     # functions -> \sin, \cos, ...
     body = _FUNCS_RE.sub(lambda m: "\\" + m.group(1), body)
 
-    # --- EXTRA REPAIRS FOR RARE "JOINED WORD" GLITCHES ---
-    # Sometimes the model emits things like "nablatimes" instead of "\nabla \times"
-    # or "nablacdot" instead of "\nabla \cdot", and "mathbfF" instead of "\mathbf{F}".
-    # These only apply inside math and don't affect already-correct TeX.
-
+    # EXTRA REPAIRS FOR RARE "JOINED WORD" GLITCHES
     # nablatimes -> \nabla \times
     body = re.sub(r"\bnablatimes\b", r"\\nabla \\times", body)
     # nablacdot -> \nabla \cdot
@@ -115,6 +147,8 @@ def sanitize_text(s: str) -> str:
         return s
 
     s = _normalize_text_basics(s)
+    # NEW: rewrite enumerate/itemize blocks before we touch math fences
+    s = _rewrite_list_envs(s)
     s = _canon_custom_fences(s)  # convert legacy fences to standard TeX
 
     # Tokenize math vs non-math
