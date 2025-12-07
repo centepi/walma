@@ -38,6 +38,50 @@ _MATH_SEG_RE = re.compile(
 _MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _MD_UNDER_RE = re.compile(r"__(.+?)__")
 
+# LaTeX list environments to rewrite (outside math)
+_ITEM_ENV_RE = re.compile(
+    r"\\begin\{(itemize|enumerate|description)\}([\s\S]*?)\\end\{\1\}",
+    re.DOTALL,
+)
+
+
+def _rewrite_latex_lists(non_math: str) -> str:
+    """
+    Rewrite LaTeX list environments like:
+
+        \\begin{itemize}
+        \\item A
+        \\item B
+        \\end{itemize}
+
+    into simple text bullets:
+
+        - A
+        - B
+
+    This runs ONLY on non-math segments, so any $...$ inside items is preserved.
+    """
+    if not non_math or "\\begin{itemize}" not in non_math and "\\begin{enumerate}" not in non_math and "\\begin{description}" not in non_math:
+        return non_math
+
+    def repl(match: re.Match) -> str:
+        body = match.group(2) or ""
+        # Split on \item, keep content after each
+        parts = re.split(r"\\item", body)
+        items = []
+        for raw in parts:
+            txt = raw.strip()
+            if not txt:
+                continue
+            # Keep the item text as-is (may contain $...$ math)
+            items.append(f"- {txt}")
+        if not items:
+            return ""
+        # End with a newline so following text starts on a new line
+        return "\n".join(items) + "\n"
+
+    return _ITEM_ENV_RE.sub(repl, non_math)
+
 
 # --- Basic text normalization (very conservative) ---
 
@@ -70,6 +114,7 @@ def sanitize_text(s: str) -> str:
       - splits into math vs non-math segments.
       - on NON-math segments only:
           * strip **bold** and __underline__ markdown.
+          * rewrite LaTeX list environments (itemize/enumerate/description) into simple bullets.
       - rejoins everything.
 
     Math segments are passed through unchanged.
@@ -88,6 +133,7 @@ def sanitize_text(s: str) -> str:
             non = s[last:m.start()]
             non = _MD_BOLD_RE.sub(r"\1", non)
             non = _MD_UNDER_RE.sub(r"\1", non)
+            non = _rewrite_latex_lists(non)
             parts.append(non)
 
         # Raw math segment (left untouched)
@@ -99,6 +145,7 @@ def sanitize_text(s: str) -> str:
         non = s[last:]
         non = _MD_BOLD_RE.sub(r"\1", non)
         non = _MD_UNDER_RE.sub(r"\1", non)
+        non = _rewrite_latex_lists(non)
         parts.append(non)
 
     return "".join(parts)

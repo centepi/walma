@@ -384,6 +384,12 @@ def build_text_drill_prompt(
     5. **No Drawing Requests**: Do not ask the student to "sketch/draw/plot." If a 2D graph is appropriate, you (the generator) provide it via `visual_data`.
     6. **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
     7. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
+    8. **Piecewise / cases**: If you use a piecewise definition (e.g. `\\begin{{cases}} ... \\end{{cases}}`), keep each row short and clean:
+       - Exactly ONE `&` per row (left side is the value, right side is the condition).
+       - Do NOT put long explanations, “i.e.” clauses, or extra sentences inside `cases`. Keep the condition simple (for example: `\\text{{if }} x = p/q \\text{{ in lowest terms}}`).
+       - Place any long explanation or extra wording in normal text AFTER the displayed formula, not inside the `cases` environment.
+       - Avoid nested parentheses and long `\\text{{...}}` blocks inside `cases`.
+    9. **No LaTeX list environments**: Do NOT use `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\begin{{description}}`, or any similar LaTeX list environment in any field. Do NOT use `\\item`. If you need to list facts or given values, write them as plain sentences or as simple markdown-style bullets like `- first fact`, `- second fact`, using normal text (not inside math mode).
 
     {dedent(visual_rules_snippet).strip()}
     
@@ -406,10 +412,11 @@ def build_text_drill_prompt(
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
     - Use `$...$` for inline math and `$$...$$` for display math.
-    - Do **NOT** use `\$begin:math:display$ \.\.\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
+    - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
+    - Do **NOT** introduce LaTeX list environments in math or text (for example `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\item`). When you need a list of known facts, write them as plain sentences separated by newlines, or as simple text bullets such as `- fact one`, `- fact two`.
     """
     
     return dedent(prompt).strip()
