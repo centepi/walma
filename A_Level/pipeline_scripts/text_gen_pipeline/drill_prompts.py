@@ -417,6 +417,10 @@ def build_text_drill_prompt(
     - Use `$...$` for inline math and `$$...$$` for display math.
     - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
     - **Backslashes**: always write LaTeX with a **single** backslash per command in the actual string (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** write things like `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}` in the JSON; that leads to broken rendering.
+    - All LaTeX macros MUST start with a backslash and MUST be inside math mode:
+      - Always write things like `\\text{{Re}}(s)`, `\\operatorname{{Re}}(s)`, `\\lfloor x \\rfloor`, `\\{{x\\}}`, `\\gcd(p,q)`, `\\Gamma(s)`.
+      - NEVER write macros without the backslash (for example `ext{{Re}}(s)`, `text{{Re}}(s)`, `operatorname{{Re}}(s)`, `gcd(p,q)`, `floor x`, etc.).
+      - NEVER place these macros in plain text outside `$...$` or `$$...$$`. Wrap them in math fences.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
