@@ -20,7 +20,7 @@ def build_text_drill_prompt(
         if correction_prompt_section else ""
     )
 
-    # --- 1. FULL VISUAL DATA GUIDE (Exact copy from prompts_presets.py) ---
+    # --- 1. FULL VISUAL DATA GUIDE (Exact copy from prompts_presets.py, with JSON rules fixed) ---
     visual_rules_snippet = """
     **'visual_data' STRUCTURE - COMPREHENSIVE GUIDE**:
 
@@ -357,8 +357,11 @@ def build_text_drill_prompt(
     }
 
     **JSON TECHNICAL RULES**:
-    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{...}`, `\\frac{...}{...}`).
-    - Do **NOT** escape the `$` characters used for math fences.
+    - Write LaTeX in the **normal way with a single backslash**, exactly as you would in a .tex file (e.g., `\\sqrt{...}`, `\\frac{...}{...}`, `\\begin{cases} ... \\end{cases}`).
+    - Do **NOT** try to manually “double-escape” or over-escape backslashes. The JSON encoder that consumes your output will handle any escaping. 
+      - ✅ CORRECT in JSON field: `"question_stem": "Let f(x) = \\frac{1}{x} on (0,1]."`  (one backslash before `frac` in the actual LaTeX string)
+      - ❌ INCORRECT: `"question_stem": "Let f(x) = \\\\frac{1}{x} on (0,1]."` (this produces `\\frac` in the final string, which breaks MathJax)
+    - Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
     - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
     """
@@ -413,6 +416,7 @@ def build_text_drill_prompt(
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
     - Use `$...$` for inline math and `$$...$$` for display math.
     - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
+    - **Backslashes**: always write LaTeX with a **single** backslash per command in the actual string (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** write things like `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}` in the JSON; that leads to broken rendering.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
     - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
