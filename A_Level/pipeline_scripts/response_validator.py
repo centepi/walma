@@ -15,20 +15,20 @@ _INVALID_JSON_ESCAPE_RE = re.compile(r'(?<!\\)\\([^"\\/bfnrtu])')
 
 
 def _escape_invalid_json_backslashes(s: str) -> str:
-    """
+    r"""
     Repair invalid JSON backslash escapes such as '\\mathbb', '\\langle', '\\zeta'
-    written with a single backslash in the JSON source (e.g. '\\mathbb{N}' inside
+    written with a single backslash in the JSON source (e.g. '\mathbb{N}' inside
     a JSON string).
 
     Example:
-        input JSON snippet:  "question_stem": "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
-        (which is INVALID JSON because '\\l', '\\m' etc. are not allowed escapes)
+        input JSON snippet:  "question_stem": "D_4 = \langle r, s \mid r^4 = 1 \rangle"
+        (which is INVALID JSON because '\l', '\m' etc. are not allowed escapes)
 
         after this repair, it becomes:
-            "question_stem": "D_4 = \\\\langle r, s \\\\mid r^4 = 1 \\\\rangle"
+            "question_stem": "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
 
         json.loads(...) then sees the string value:
-            "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
+            "D_4 = \langle r, s \mid r^4 = 1 \rangle"
         which MathJax can render correctly.
 
     We deliberately:
@@ -42,7 +42,7 @@ def _escape_invalid_json_backslashes(s: str) -> str:
 
 
 def _parse_and_repair(raw_text: str):
-    """
+    r"""
     Takes a raw string from an AI, attempts to repair common errors,
     and parses it into a JSON object.
 
@@ -113,7 +113,7 @@ def validate_and_correct_response(
     gemini_model,
     initial_response_text: str
 ):
-    """
+    r"""
     The main 'Quality Inspector' function. Validates and optionally corrects the model response.
 
     Still does:
