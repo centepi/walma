@@ -1,5 +1,3 @@
-# pipeline_scripts/text_gen_pipeline/drill_prompts.py
-
 from textwrap import dedent
 
 def build_text_drill_prompt(
@@ -357,13 +355,20 @@ def build_text_drill_prompt(
     }
 
     **JSON TECHNICAL RULES**:
-    - Write LaTeX in the **normal way with a single backslash**, exactly as you would in a .tex file (e.g., `\\sqrt{...}`, `\\frac{...}{...}`, `\\begin{cases} ... \\end{cases}`).
-    - Do **NOT** try to manually “double-escape” or over-escape backslashes. The JSON encoder that consumes your output will handle any escaping. 
-      - ✅ CORRECT in JSON field: `"question_stem": "Let f(x) = \\frac{1}{x} on (0,1]."`  (one backslash before `frac` in the actual LaTeX string)
-      - ❌ INCORRECT: `"question_stem": "Let f(x) = \\\\frac{1}{x} on (0,1]."` (this produces `\\frac` in the final string, which breaks MathJax)
+    - **Backslashes for LaTeX commands (VERY IMPORTANT)**:
+      - In the final math that the student sees, every LaTeX command must start with a **single** backslash: `\\mathbb{N}`, `\\operatorname{Ran}(T)`, `\\frac{1}{2}`, `\\dots`, etc.
+      - When you write JSON strings, do NOT over-escape those backslashes. If you over-escape, they turn into `\\\\mathbb`, `\\\\operatorname`, `\\\\frac` in the final text and the student will see broken output like `mathbbN` or `operatornameRan(T)` instead of proper symbols.
+      - ✅ CORRECT JSON snippet (after JSON parsing the student sees correct LaTeX):
+        - `"question_stem": "H = \\ell^2(\\mathbb{N}),\\; y \\in \\operatorname{Ran}(T)"`
+      - ❌ INCORRECT JSON snippet (produces `\\mathbb`, `\\operatorname` in the final string and breaks MathJax):
+        - `"question_stem": "H = \\\\ell^2(\\\\mathbb{N}), y \\\\in \\\\operatorname{Ran}(T)"`
+      - Never write patterns like `\\\\mathbb`, `\\\\operatorname`, `\\\\frac` in your JSON. If you notice them, fix them so that the final math has only a single `\\` before each command.
     - Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
-    - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
+    - If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n`):
+      - ✅ CORRECT: `"question_stem": "Sentence one.\\nSentence two."`  (this becomes two lines after JSON parsing)
+      - ❌ INCORRECT: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string)
+    - Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
     """
 
     prompt = f"""
@@ -411,12 +416,24 @@ def build_text_drill_prompt(
         "calculator_required": boolean,
         "visual_data": {{...}} // Optional
     }}
-    
+
+    --- PURPOSE OF SOLUTION AND FINAL ANSWER ---
+    - `solution_text` is **not** a model answer for a student to read. It is an internal explanation for an **AI tutor** that will mark and discuss student work.
+    - The goal of `solution_text` is to make clear:
+      - what the main mathematical steps are,
+      - which definitions, constructions, or theorems are used,
+      - and what conclusions are expected at each stage of the solution.
+    - It does **not** need to be written as a fully polished, pedagogical, line-by-line textbook proof. Assume the reader is a mathematically competent AI, not a struggling student.
+    - Avoid re-stating the problem or copying the question text. Focus on the mathematical reasoning needed to solve the question, not on motivational exposition or extra teaching commentary.
+    - `final_answer` is a **compact summary of the final mathematical conclusions**, for quick reference by the tutor and checker.
+    - `final_answer` should only contain the essential end results (values, classifications, properties), **not** another full solution or long explanation. Do not duplicate the entire solution in `final_answer`.
+
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
     - Use `$...$` for inline math and `$$...$$` for display math.
     - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
-    - **Backslashes**: always write LaTeX with a **single** backslash per command in the actual string (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** write things like `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}` in the JSON; that leads to broken rendering.
+    - **Backslashes**: in the final math, every LaTeX command must start with a single backslash (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** produce commands that effectively start with two backslashes in the final string (such as `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}`); these render as plain text and break MathJax.
+    - Do **not** use the LaTeX linebreak command `\\\\` inside math (no `\\\\` at the TeX level). If you need a new sentence, end the sentence in plain text instead of using a LaTeX linebreak.
     - All LaTeX macros MUST start with a backslash and MUST be inside math mode:
       - Always write things like `\\text{{Re}}(s)`, `\\operatorname{{Re}}(s)`, `\\lfloor x \\rfloor`, `\\{{x\\}}`, `\\gcd(p,q)`, `\\Gamma(s)`.
       - NEVER write macros without the backslash (for example `ext{{Re}}(s)`, `text{{Re}}(s)`, `operatorname{{Re}}(s)`, `gcd(p,q)`, `floor x`, etc.).

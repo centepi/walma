@@ -61,8 +61,9 @@ def create_drill_question(
         logger.error(f"Drill Generation Error for topic '{topic}': {e}")
         return None
 
-    # 3. Validate JSON & Normalize Math Fences
-    # This ensures iOS compatibility ($begin:math:text$...)
+    # 3. Validate JSON (no math-fence rewriting)
+    # Whatever LaTeX and $...$/$$...$$ math fences the model outputs here will be
+    # passed through to iOS MathView and rendered directly by MathJax.
     content_object = response_validator.validate_and_correct_response(
         chat, gemini_model, raw_text_response
     )
