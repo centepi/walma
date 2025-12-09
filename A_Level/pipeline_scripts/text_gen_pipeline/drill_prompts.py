@@ -355,19 +355,20 @@ def build_text_drill_prompt(
     }
 
     **JSON TECHNICAL RULES**:
-    - **Backslashes for LaTeX commands (VERY IMPORTANT)**:
-      - In the final math that the student sees, every LaTeX command must start with a **single** backslash: `\\mathbb{N}`, `\\operatorname{Ran}(T)`, `\\frac{1}{2}`, `\\dots`, etc.
-      - When you write JSON strings, do NOT over-escape those backslashes. If you over-escape, they turn into `\\\\mathbb`, `\\\\operatorname`, `\\\\frac` in the final text and the student will see broken output like `mathbbN` or `operatornameRan(T)` instead of proper symbols.
-      - ✅ CORRECT JSON snippet (after JSON parsing the student sees correct LaTeX):
-        - `"question_stem": "H = \\ell^2(\\mathbb{N}),\\; y \\in \\operatorname{Ran}(T)"`
-      - ❌ INCORRECT JSON snippet (produces `\\mathbb`, `\\operatorname` in the final string and breaks MathJax):
-        - `"question_stem": "H = \\\\ell^2(\\\\mathbb{N}), y \\\\in \\\\operatorname{Ran}(T)"`
-      - Never write patterns like `\\\\mathbb`, `\\\\operatorname`, `\\\\frac` in your JSON. If you notice them, fix them so that the final math has only a single `\\` before each command.
+    - **Backslashes & math fences for LaTeX (VERY IMPORTANT)**:
+      - You are writing a JSON object directly. Inside any JSON string, every backslash in a LaTeX command **must be escaped as `\\\\`** in the JSON source so that, after JSON parsing, the final string seen by the student has a **single** backslash.
+      - All LaTeX commands MUST still live **inside** `$...$` or `$$...$$` in the final string. The dollar signs are written literally in JSON; only the backslashes are doubled.
+      - For example, to produce the final text:
+        - `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`
+        your JSON must contain:
+        - `"question_stem": "Let $H = \\\\ell^2(\\\\mathbb{N})$ and $y \\\\in \\\\operatorname{Ran}(T)$."`
+        After JSON parsing, this becomes `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`, which MathJax renders correctly.
+      - Never output bare `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`, `\\|Ax_n\\|` with only a **single** backslash **in the JSON source** (for example `"x_n \\rightharpoonup 0"`). That is invalid JSON and will cause the entire response to be rejected with an `Invalid \\escape` error. In JSON, the source must be `\\\\mathbb{N}`, `\\\\infty`, `\\\\rightharpoonup`, etc., so that the parsed string has `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`.
     - Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
-    - If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n`):
-      - ✅ CORRECT: `"question_stem": "Sentence one.\\nSentence two."`  (this becomes two lines after JSON parsing)
-      - ❌ INCORRECT: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string)
+    - If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n` in the JSON source):
+      - ✅ CORRECT JSON: `"question_stem": "Sentence one.\\nSentence two."`  (after parsing, this becomes two lines.)
+      - ❌ INCORRECT JSON: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string.)
     - Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
     """
 
