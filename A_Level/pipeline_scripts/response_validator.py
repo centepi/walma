@@ -4,6 +4,42 @@ from . import utils
 
 logger = utils.setup_logger(__name__)
 
+# Regex + helper to repair invalid JSON backslash escapes coming from LaTeX.
+# JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
+# We:
+#   - find a single backslash not preceded by another backslash,
+#   - whose next character is NOT one of the valid escape codes above,
+#   - and turn "\x" into "\\x" so json.loads accepts it and the parsed
+#     string contains the intended single backslash LaTeX command.
+_INVALID_JSON_ESCAPE_RE = re.compile(r'(?<!\\)\\([^"\\/bfnrtu])')
+
+
+def _escape_invalid_json_backslashes(s: str) -> str:
+    """
+    Repair invalid JSON backslash escapes such as '\\mathbb', '\\langle', '\\zeta'
+    written with a single backslash in the JSON source (e.g. '\\mathbb{N}' inside
+    a JSON string).
+
+    Example:
+        input JSON snippet:  "question_stem": "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
+        (which is INVALID JSON because '\\l', '\\m' etc. are not allowed escapes)
+
+        after this repair, it becomes:
+            "question_stem": "D_4 = \\\\langle r, s \\\\mid r^4 = 1 \\\\rangle"
+
+        json.loads(...) then sees the string value:
+            "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
+        which MathJax can render correctly.
+
+    We deliberately:
+      - leave valid JSON escapes (\\, \", \/, \b, \f, \n, \r, \t, \uXXXX) untouched;
+      - avoid modifying already-escaped sequences like '\\\\mathbb' by requiring
+        that the backslash is *not* preceded by another backslash.
+    """
+    if not s:
+        return s
+    return _INVALID_JSON_ESCAPE_RE.sub(r'\\\\\1', s)
+
 
 def _parse_and_repair(raw_text: str):
     """
@@ -13,11 +49,13 @@ def _parse_and_repair(raw_text: str):
     Deliberately minimal:
     - Find the JSON block (optionally inside ```json ... ```).
     - Strip control characters and smart quotes.
+    - Repair invalid backslash escapes (e.g. \mathbb, \langle) for JSON.
     - Remove trailing commas before } or ].
     - Parse with json.loads.
 
     NOTE: We no longer touch or normalize any math fences here.
-    Whatever the model outputs inside strings is preserved.
+    Whatever the model outputs inside strings is preserved (up to the
+    minimal escaping needed for valid JSON).
     """
     if not raw_text:
         logger.warning("Validator: empty response.")
@@ -48,6 +86,9 @@ def _parse_and_repair(raw_text: str):
             .replace('“', '"').replace('”', '"')
             .replace("‘", "'").replace("’", "'")
         )
+
+        # Step 2b: Repair invalid JSON backslash escapes coming from LaTeX commands.
+        json_str = _escape_invalid_json_backslashes(json_str)
 
         # Step 3: Remove trailing commas before closing braces/brackets.
         json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
