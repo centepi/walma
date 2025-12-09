@@ -398,7 +398,7 @@ def build_text_drill_prompt(
        - Do NOT put long explanations, “i.e.” clauses, or extra sentences inside `cases`. Keep the condition simple (for example: `\\text{{if }} x = p/q \\text{{ in lowest terms}}`).
        - Place any long explanation or extra wording in normal text AFTER the displayed formula, not inside the `cases` environment.
        - Avoid nested parentheses and long `\\text{{...}}` blocks inside `cases`.
-    9. **No LaTeX list environments**: Do NOT use `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\begin{{description}}`, or any similar LaTeX list environment in any field. Do NOT use `\\item`. If you need to list facts or given values, write them as plain sentences or as simple markdown-style bullets like `- first fact`, `- second fact`, using normal text (not inside math mode).
+    9. **No LaTeX list environments**: Do NOT use `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\begin{{description}}`, or any similar LaTeX list environment in any field. Do NOT use `\\item`. If you need to list facts or given values, write them as plain sentences or as simple text bullets like `- first fact`, `- second fact`, using normal text (not inside math mode).
 
     {dedent(visual_rules_snippet).strip()}
     
@@ -441,7 +441,7 @@ def build_text_drill_prompt(
       - NEVER place these macros in plain text outside `$...$` or `$$...$$`. Wrap them in math fences.
     - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
     - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
-    - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
+    - Do not use Markdown styling like `**bold**` inside any field, and do **not** use LaTeX text-formatting commands such as `\\textbf{{...}}` or `\\emph{{...}}` in prose. If emphasis is needed in the question text, simply use plain wording without any special styling.
     - Do **NOT** introduce LaTeX list environments in math or text (for example `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\item`). When you need a list of known facts, write them as plain sentences separated by newlines, or as simple text bullets such as `- fact one`, `- fact two`.
     """
     
