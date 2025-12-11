@@ -1,4 +1,3 @@
-# prompts_presets.py
 from textwrap import dedent
 
 try:
@@ -36,7 +35,7 @@ def build_creator_prompt(
 
     correction_block = f"\n{correction_prompt_section.strip()}\n" if correction_prompt_section else ""
 
-    # --- NEW SECTION: DOMAIN & SKILL LOCK ---
+    # --- DOMAIN & SKILL LOCK (same semantics as before) ---
     domain_skill_block = """
     **DOMAIN & SKILL LOCK**
     Before generating the new question, carefully infer the following from the original context:
@@ -56,90 +55,16 @@ def build_creator_prompt(
         • If the source was a proof question, do NOT replace it with a numerical computation.
     """
 
-    # --- NEW SECTION: DIAGRAM DISCIPLINE ---
+    # --- DIAGRAM DISCIPLINE (still for visual_data, but now sits alongside the full visual guide) ---
     diagram_block = """
-    **DIAGRAM DISCIPLINE (2D Graphs Only; No Phantom Figures)**
+    **DIAGRAM DISCIPLINE (No Phantom Figures)**
     - Do **not** mention a “diagram/figure/picture” **unless** you actually include a `visual_data` object in the JSON.
-    - Visuals are limited to simple **2D analytic graphs on Cartesian axes** (e.g., lines, quadratics, cubics, exponentials, trig, piecewise), plus optional labeled points and shaded regions bounded by graphs/axes.
-    - If a visual is not a simple 2D graph, **omit** `visual_data` and encode all necessary givens in text so the problem is fully solvable without any image.
+    - Visuals must be encoded using the `visual_data` system described below (functions on axes, histograms, bar charts, scatter plots, box plots, cumulative curves, parametric curves, and tables).
+    - If a visual is not one of these supported types, **omit** `visual_data` and encode all necessary givens in text so the problem is fully solvable without any image.
     """
 
-    prompt = f"""
-    {context_header.strip()}
-
-    You are an expert A-level Mathematics content creator. Your task is to create a NEW, ORIGINAL, and SELF-CONTAINED A-level question.
-
-    {correction_block}
-
-    --- CONTEXT: THE FULL ORIGINAL QUESTION (for skill + style only; do NOT copy) ---
-    {full_reference_text}
-
-    --- INSPIRATION: THE TARGET PART ---
-    - Reference Part Content: "{target_part_content}"
-    - Reference Part Solution (if available): "{(target_part_answer or '').strip()}"
-
-    {dedent(domain_skill_block).strip()}
-
-    {dedent(diagram_block).strip()}
-
-    --- YOUR TASK ---
-    Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
-
-    **CRITICAL INSTRUCTIONS**:
-    1.  **Single Question Shape**: Provide a clear "question_stem" and exactly ONE part in "parts".
-        - If the task naturally fits in one sentence, you may leave "question_stem" empty and put the whole prompt in "parts[0].question_text".
-        - Never duplicate the same sentence across stem and part.
-    2.  **Multiple-Choice Handling (IMPORTANT)**:
-        - If the source looks like a multiple-choice item (a single prompt with several short labelled options such as A/B/C/D or (a)/(b)/(c) that are *answers*, not sub-parts),
-          then produce **ONE** question with options inside the single part — **do not** create separate questions per option.
-        - In this MCQ case, include inside the single part:
-            * "choices": a list of 4–5 options, each as {{ "label": "A", "text": "<option text with LaTeX where needed>" }}.
-            * "correct_choice": the label of the correct option, e.g., "B".
-            * Keep "solution_text" explaining why the correct option is right (and briefly why others are wrong).
-            * Set "final_answer" to the **mathematical value or exact text** of the correct option (not just the letter),
-              so computer algebra checks can still apply when appropriate (e.g., use "1/2" rather than "B").
-        - **Never** split MCQ options into separate parts or separate questions.
-    3.  **Invent Values**: Use fresh numbers/functions/scenarios to avoid copying.
-    4.  **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
-    5.  **Contextual Visuals Only**: Any `visual_data` must aid understanding and must NOT encode the answer.
-    6.  **Include 2D Graphs When Applicable**: If a function/relation naturally benefits from a simple 2D analytic plot on Cartesian axes, include it in `visual_data` with reasonable axis ranges.
-    7.  **Calculator Use**: Set 'calculator_required' appropriately.
-    8.  **NO DRAWING REQUESTS TO THE STUDENT**: Do not ask the student to "sketch/draw/plot." If a 2D graph is appropriate, you (the generator) provide it via `visual_data`.
-    9.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string.
-    10. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
-
-    {dedent(keep_block).strip()}
-
-    **MATH FORMATTING RULES (STRICT)**:
-    - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
-    - Use `$begin:math:text$...$end:math:text$` for inline math and `$begin:math:display$...$end:math:display$` for display math. `$...$` and `$$...$$` are also accepted. **Do not put a backslash before `$begin:` or `$end:` and do not wrap these fences in extra `$` or backticks.**
-    - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
-    - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
-    - Do not use Markdown styling like `**bold**` inside any field. If emphasis is needed, prefer plain text or `\\textbf{{...}}` inside math.
-
-    **Examples — follow EXACTLY**:
-    - Non-MCQ OK:  Find the gradient of the curve $y = (x-1)^3\\sqrt{{4x}}$ at $x=4$.
-    - Non-MCQ OK:  Given $f(x) = \\frac{{e^{{4x}}}}{{(2x+1)^3}}$, find $f'(x)$.
-    - MCQ OK (shape only): one stem + one part whose `question_text` states the task; include  
-      `"choices": [{{"label":"A","text":"..."}}, {{"label":"B","text":"..."}}, ...]`,  
-      `"correct_choice": "B"`, and set `"final_answer"` to the correct option’s value/text.
-    - BAD: Treating each option (A/B/C/…) as separate questions.
-
-     **OUTPUT FORMAT**:
-    Your output MUST be a single, valid JSON object with the following structure:
-    {{
-    "question_stem": "A concise introduction/setup for your new question.",
-    "parts": [
-        {{
-        "part_label": "a",
-        "question_text": "The single task for the user to perform.",
-        "solution_text": "The detailed, step-by-step solution to your new question."
-        }}
-    ],
-    "calculator_required": true,
-    "visual_data": {{...}} // Omit this key entirely if no visual is needed
-    }}
-
+    # --- FULL VISUAL DATA GUIDE (kept in this file; mirrors drill prompt spec) ---
+    visual_rules_snippet = """
     **'visual_data' STRUCTURE - COMPREHENSIVE GUIDE**:
 
     The 'visual_data' object adapts its structure based on the chart type being visualized. Always include a 'charts' array (not 'graphs' for non-explicit-function charts). Your `visual_data` MAY contain one **or more** chart objects. If your question text refers to multiple diagrams/graphs, you MUST include multiple chart objects in the `charts` array. Choose the appropriate structure for each chart object you include.
@@ -176,7 +101,7 @@ def build_creator_prompt(
         ],
         "labeled_points": [
             {{"label": "A", "x": 1.0, "y": 4.0}}
-        ] // Optional
+        ], // Optional
         "shaded_regions": [
             {{
                 "upper_bound_id": "g1",
@@ -282,7 +207,7 @@ def build_creator_prompt(
                     "trend_line": {{
                         "enabled": true,
                         "equation": "y = 1200*x + 5000"
-                    }} // Optional
+                    }}, // Optional
                     "axes_range": {{
                         "x_min": 20,
                         "x_max": 60,
@@ -322,7 +247,7 @@ def build_creator_prompt(
                     "outliers": [
                         {{"group": "Group A", "value": 110}},
                         {{"group": "Group B", "value": 105}}
-                    ] // Optional
+                    ], // Optional
                     "axes_range": {{
                         "x_min": -0.5,
                         "x_max": 1.5,
@@ -404,14 +329,12 @@ def build_creator_prompt(
         ]
     }}
 
-    
     ---
 
     ### **TYPE 8: TABLES**
     Use this for displaying raw data, frequency distributions, two-way tables, function values, or summary statistics.
 
     Structure:
-    
     {{
         "charts": [
             {{
@@ -429,20 +352,18 @@ def build_creator_prompt(
                     ],
                     "table_style": "standard|striped|minimal",
                     "position": "standalone|above_chart|below_chart|beside_chart",
-                    "associated_chart_id": "h1"  
+                    "associated_chart_id": "h1"
                 }}
             }}
         ]
     }}
 
-    
     ---
 
     ### **TYPE 9: COMPOSITE (CHART + TABLE)**
     Use this when you need to display both a chart and its underlying data table together.
 
     Structure:
-    
     {{
         "charts": [
             {{
@@ -478,17 +399,129 @@ def build_creator_prompt(
         "layout": "composite"  // Triggers multi-panel layout
     }}
 
-
     **JSON TECHNICAL RULES**:
-    - **Double-escape backslashes for LaTeX commands** inside JSON strings (e.g., `\\sqrt{{...}}`, `\\frac{{...}}{{...}}`). **Do not escape the `$` characters** in math fences (`$begin:...$`, `$end:...$`).
+    - **Backslashes & math fences for LaTeX (VERY IMPORTANT)**:
+      - You are writing a JSON object directly. Inside any JSON string, every backslash in a LaTeX command **must be escaped as `\\\\`** in the JSON source so that, after JSON parsing, the final string seen by the student has a **single** backslash.
+      - All LaTeX commands MUST still live **inside** `$...$` or `$$...$$` in the final string. The dollar signs are written literally in JSON; only the backslashes are doubled.
+      - For example, to produce the final text:
+        - `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`
+        your JSON must contain:
+        - `"question_stem": "Let $H = \\\\ell^2(\\\\mathbb{N})$ and $y \\\\in \\\\operatorname{Ran}(T)$."`
+        After JSON parsing, this becomes `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`, which MathJax renders correctly.
+      - Never output bare `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`, `\\|Ax_n\\|` with only a **single** backslash **in the JSON source** (for example `"x_n \\rightharpoonup 0"`). That is invalid JSON and will cause the entire response to be rejected with an `Invalid \\escape` error. In JSON, the source must be `\\\\mathbb{N}`, `\\\\infty`, `\\\\rightharpoonup`, etc., so that the parsed string has `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`.
+    - Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
     - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
-    - Keep strings single-line where possible; if you include newlines, use `\\n` in JSON.
+    - If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n` in the JSON source):
+      - ✅ CORRECT JSON: `"question_stem": "Sentence one.\\nSentence two."`  (after parsing, this becomes two lines.)
+      - ❌ INCORRECT JSON: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string.)
+    - Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
+    """
 
-    **FINAL CHECK**:
-    - If MCQ: exactly one part, include choices + correct_choice; final_answer equals the correct option’s value/text.
-    - If non-MCQ: no choices; provide a clean final_answer.
-    - **If you mention any diagram/figure, the JSON must include `visual_data`; otherwise do not mention a diagram/figure at all.**
-    - Ensure the JSON is valid.
+    prompt = f"""
+    {context_header.strip()}
+
+    You are an expert A-level Mathematics content creator. Your task is to create a NEW, ORIGINAL, and SELF-CONTAINED A-level question.
+
+    --- SYSTEM CONTEXT (READ CAREFULLY) ---
+    - You are generating a **single JSON object** that will be consumed by an automated mobile learning app (iPad) called ALMA.
+    - Your JSON is parsed programmatically and the text fields (`question_stem`, `question_text`, `solution_text`, `final_answer`, and any text in `visual_data`) are rendered using **MathJax** inside a WebView.
+    - The app does **not** see LaTeX documents, TeX preambles, or Markdown. It only sees the JSON fields described below.
+    - MathJax supports **inline and display math inside `$...$` or `$$...$$`** with standard LaTeX math commands, but it does **not** support full TeX layout or diagram environments.
+    - Therefore, you **must not** use any LaTeX environments that require a full TeX engine, such as `\\begin{{equation}}`, `\\begin{{align}}`, `\\begin{{displaymath}}`, `\\begin{{tikzcd}}`, `\\begin{{tikzpicture}}`, `\\begin{{CD}}`, `\\xymatrix`, `\\begin{{array}}`, `\\begin{{matrix}}`, or any other diagram-producing or layout-heavy environment. All diagrams must be represented **only** through the `visual_data` JSON system.
+
+    {correction_block}
+
+    --- CONTEXT: THE FULL ORIGINAL QUESTION (for skill + style only; do NOT copy) ---
+    {full_reference_text}
+
+    --- INSPIRATION: THE TARGET PART ---
+    - Reference Part Content: "{target_part_content}"
+    - Reference Part Solution (if available): "{(target_part_answer or '').strip()}"
+
+    {dedent(domain_skill_block).strip()}
+
+    {dedent(diagram_block).strip()}
+
+    --- YOUR TASK ---
+    Create ONE self-contained question that tests the same mathematical skill as the target part above, following the specified OUTPUT FORMAT.
+
+    **CRITICAL INSTRUCTIONS**:
+    1.  **Single Question Shape**: Provide a clear "question_stem" and exactly ONE part in "parts".
+        - If the task naturally fits in one sentence, you may leave "question_stem" empty and put the whole prompt in "parts[0].question_text".
+        - Never duplicate the same sentence across stem and part.
+    2.  **Multiple-Choice Handling (IMPORTANT)**:
+        - If the source looks like a multiple-choice item (a single prompt with several short labelled options such as A/B/C/D or (a)/(b)/(c) that are *answers*, not sub-parts),
+          then produce **ONE** question with options inside the single part — **do not** create separate questions per option.
+        - In this MCQ case, include inside the single part:
+            * "choices": a list of 4–5 options, each as {{ "label": "A", "text": "<option text with LaTeX where needed>" }}.
+            * "correct_choice": the label of the correct option, e.g., "B".
+            * Keep "solution_text" explaining why the correct option is right (and briefly why others are wrong).
+            * Set "final_answer" to the **mathematical value or exact text** of the correct option (not just the letter),
+              so computer algebra checks can still apply when appropriate (e.g., use "1/2" rather than "B").
+        - **Never** split MCQ options into separate parts or separate questions.
+    3.  **Invent Values**: Use fresh numbers/functions/scenarios to avoid copying.
+    4.  **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
+    5.  **Contextual Visuals Only**: Any `visual_data` must aid understanding and must NOT encode the answer.
+    6.  **Include Supported Visuals When Applicable**: If the skill naturally benefits from a simple visual representation (function graph, histogram, bar chart, scatter, etc.), include it in `visual_data` with reasonable axis ranges.
+    7.  **Calculator Use**: Set 'calculator_required' appropriately.
+    8.  **NO DRAWING REQUESTS TO THE STUDENT**: Do not ask the student to "sketch/draw/plot." If a visual is appropriate, you (the generator) provide it via `visual_data`.
+    9.  **FINAL ANSWER FIELD**: Inside the single part object, include a concise 'final_answer' string.
+    10. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
+    11. **No LaTeX list environments**: Do NOT use `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\begin{{description}}`, or any similar LaTeX list environment in any field. Do NOT use `\\item`. If you need to list facts or given values, write them as plain sentences separated by newlines, or as simple text bullets like `- first fact`, `- second fact`, using normal text (not inside math mode).
+    12. **No LaTeX text-formatting commands in prose**: do **not** use `\\textbf{{...}}`, `\\emph{{...}}`, `\\textit{{...}}`, or similar styling commands in the question text or explanations. If you want emphasis, rewrite the sentence in plain words without any special formatting.
+
+    {dedent(keep_block).strip()}
+
+    {dedent(visual_rules_snippet).strip()}
+
+    --- OUTPUT FORMAT ---
+    Your output MUST be a single, valid JSON object with the following structure:
+    {{
+        "question_stem": "A concise introduction/setup for your new question.",
+        "parts": [
+            {{
+                "part_label": "a",
+                "question_text": "The single task for the user to perform.",
+                "solution_text": "The detailed solution for your new question.",
+                "final_answer": "A compact statement of the final mathematical result(s)."
+            }}
+        ],
+        "calculator_required": true,
+        "visual_data": {{...}} // Omit this key entirely if no visual is needed
+    }}
+
+    --- PURPOSE OF SOLUTION AND FINAL ANSWER ---
+    - `solution_text` is **not** a model answer for a student to read. It is an internal explanation for an **AI tutor** that will mark and discuss student work.
+    - The goal of `solution_text` is to concisely make clear: main mathematical steps, definitions/constructions/theorems used, and the expected conclusions at each stage of the reasoning.
+    - It does **not** need to be written as a fully polished, pedagogical, line-by-line textbook proof. Assume the reader is a mathematically competent AI, not a struggling student.
+    - Avoid re-stating the problem or copying the question text. Focus on the mathematical reasoning needed to solve the question, not on motivational exposition or extra teaching commentary.
+    - `final_answer` is a compact summary of the final mathematical conclusions, for quick reference by the tutor and checker.
+    - `final_answer` should only contain the essential end results (values, classifications, properties), **not** another full solution or long explanation. Do not duplicate the entire solution in `final_answer`.
+
+    **MATH FORMATTING RULES (STRICT)**:
+    - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
+    - Use `$...$` for inline math and `$$...$$` for display math.
+    - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
+    - Do **NOT** use LaTeX math environments such as `\\begin{{equation}} ... \\end{{equation}}`, `\\begin{{align}} ... \\end{{align}}`, or `\\begin{{displaymath}} ... \\end{{displaymath}}`. If you want a standalone displayed formula, wrap it in `$$...$$` instead.
+    - Never use diagram-producing LaTeX environments such as `\\begin{{tikzcd}} ... \\end{{tikzcd}}`, `\\begin{{tikzpicture}} ... \\end{{tikzpicture}}`, `\\begin{{CD}} ... \\end{{CD}}`, `\\xymatrix{{...}}`, `\\begin{{array}} ... \\end{{array}}`, `\\begin{{matrix}} ... \\end{{matrix}}`, or any custom diagram environment. Any diagram, commutative square, or geometric picture must be expressed **only** through the `visual_data` JSON system, not through LaTeX.
+    - **Backslashes**: in the final math, every LaTeX command must start with a single backslash (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** produce commands that effectively start with two backslashes in the final string (such as `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}`); these render as plain text and break MathJax.
+    - Do **not** use the LaTeX linebreak command `\\\\` inside math (no `\\\\` at the TeX level). If you need a new sentence, end the sentence in plain text instead of using a LaTeX linebreak.
+    - All LaTeX macros MUST start with a backslash and MUST be inside math mode:
+      - Always write things like `\\text{{Re}}(s)`, `\\operatorname{{Re}}(s)`, `\\lfloor x \\rfloor`, `\\{{x\\}}`, `\\gcd(p,q)`, `\\Gamma(s)`.
+      - NEVER write macros without the backslash (for example `ext{{Re}}(s)`, `text{{Re}}(s)`, `operatorname{{Re}}(s)`, `gcd(p,q)`, `floor x`, etc.).
+      - NEVER place these macros in plain text outside `$...$` or `$$...$$`. Wrap them in math fences.
+    - **NEVER** output plain-text math like `sqrt(3x+1)`, `sqrt3x+1`, `frac{{e^{{4x}}}}{{(2x+1)^3}}`, or exponents without braces.
+    - Every macro that takes arguments **must** use braces: `\\sqrt{{3x+1}}`, `\\frac{{e^{{4x}}}}{{(2x+1)^3}}`, `(x-1)^3\\sqrt{{4x}}`.
+    - Do not use Markdown styling like `**bold**` inside any field, and do **not** use LaTeX text-formatting commands such as `\\textbf{{...}}` or `\\emph{{...}}` in prose. If emphasis is needed in the question text, simply use plain wording without any special styling.
+    - Do **NOT** introduce LaTeX list environments in math or text (for example `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\item`). When you need a list of known facts, write them as plain sentences separated by newlines, or as simple text bullets such as `- fact one`, `- fact two`.
+
+    **Examples — follow EXACTLY**:
+    - Non-MCQ OK:  Find the gradient of the curve $y = (x-1)^3\\sqrt{{4x}}$ at $x=4$.
+    - Non-MCQ OK:  Given $f(x) = \\frac{{e^{{4x}}}}{{(2x+1)^3}}$, find $f'(x)$.
+    - MCQ OK (shape only): one stem + one part whose `question_text` states the task; include
+      `"choices": [{{"label":"A","text":"..."}}, {{"label":"B","text":"..."}}, ...]`,
+      `"correct_choice": "B"`, and set `"final_answer"` to the correct option’s value/text.
+    - BAD: Treating each option (A/B/C/…) as separate questions.
     """
     return dedent(prompt).strip()
 
