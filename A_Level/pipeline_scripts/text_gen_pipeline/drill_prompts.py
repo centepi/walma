@@ -397,7 +397,7 @@ def build_text_drill_prompt(
     2. **Single Question Shape**: Provide a clear "question_stem" and exactly ONE part in "parts".
     3. **Visuals**: If the topic (e.g., Geometry, Graph Theory) usually requires a diagram, generate the JSON `visual_data` object. If it's a pure algebra problem, omit it.
     4. **MCQ Handling**: If the user asks for Multiple Choice, include "choices": [{{"label":"A", "text":"..."}}...] and "correct_choice": "A" inside the part.
-    5. **No Drawing Requests**: Do not ask the student to "sketch/draw/plot." If a 2D graph is appropriate, you (the generator) provide it via `visual_data`.
+    5. **No Drawing Requests**: Do not ask the student to "sketch/draw/plot."
     6. **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
     7. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
     8. **Piecewise / cases**: If you use a piecewise definition (e.g. `\\begin{{cases}} ... \\end{{cases}}`), keep each row short and clean:
@@ -428,10 +428,10 @@ def build_text_drill_prompt(
 
     --- PURPOSE OF SOLUTION AND FINAL ANSWER ---
     - `solution_text` is **not** a model answer for a student to read. It is an internal explanation for an **AI tutor** that will mark and discuss student work.
-    - The goal of `solution_text` is to make clear:
-      - what the main mathematical steps are,
-      - which definitions, constructions, or theorems are used,
-      - and what conclusions are expected at each stage of the solution.
+    - The goal of `solution_text` is to concisely make clear:
+      - main mathematical steps,
+      - definitions, constructions, or theorems used,
+      - expected conclusions throughout stages of the solution.
     - It does **not** need to be written as a fully polished, pedagogical, line-by-line textbook proof. Assume the reader is a mathematically competent AI, not a struggling student.
     - Avoid re-stating the problem or copying the question text. Focus on the mathematical reasoning needed to solve the question, not on motivational exposition or extra teaching commentary.
     - `final_answer` is a compact summary of the final mathematical conclusions, for quick reference by the tutor and checker.
