@@ -54,8 +54,8 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     - Never escape quotes in normal text. For example: "try this", not \\"try this\\".
     - Always address the student directly — never say "the student".
     - Never give the full final solution. Only confirm what is correct and suggest a possible next step.
-    - Output must be plain UTF-8 text. Do not emit control characters or escape sequences like \\x....
-    - **No bullet lists**: Do NOT start lines with '-', '*', '•', or similar bullet characters. Do not use Markdown lists.
+    - Output must be plain UTF-8 text. Do not emit control characters or explicit escape sequences.
+    - **No bullet lists**: Do NOT start lines with "-", "*", "•", or similar bullet characters. Do not use Markdown lists.
       Instead, write short sentences or numbered steps like "Step 1:", "Step 2:" in normal prose.
     - Keep simple explanations on a single line when possible, with math inline, e.g.:
       "Your expansion $ (x+1)^2 = x^2 + 2x + 1 $ is correct."
@@ -119,8 +119,8 @@ def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text
     - Never output escaped quotes in text. For example: write "try this", not \\"try this\\".
     - Do not refer to the student in the third person ("the student"). Always address them directly.
     - Do not provide the full correct solution — only hints or feedback.
-    - Output must be plain UTF-8 text. Do not emit control characters or escape sequences like \\x....
-    - **No bullet lists**: Do NOT start lines with '-', '*', '•', or similar bullet characters. Do not use Markdown lists.
+    - Output must be plain UTF-8 text. Do not emit control characters or explicit escape sequences.
+    - **No bullet lists**: Do NOT start lines with "-", "*", "•", or similar bullet characters. Do not use Markdown lists.
       Instead, write short sentences or numbered steps like "Step 1:", "Step 2:" in normal prose.
     - Keep simple explanations on a single line when possible, with math inline, e.g.:
       "Your expansion $ (x+1)^2 = x^2 + 2x + 1 $ is correct."
@@ -162,13 +162,13 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     - If you previously misread their work and now, after clarification or a rewrite, you can verify that it is correct and satisfies the problem requirements, you MUST mark the work complete in this same turn.
 
     Formatting Rules:
-    1.  **Structure (no bullet lists)**: Do NOT use bullet-list markers or characters such as '-', '*', '•', or numbered Markdown lists.
+    1.  **Structure (no bullet lists)**: Do NOT use bullet-list markers or characters such as "-", "*", "•", or numbered Markdown lists.
         Do not start lines with these characters. Instead, write short paragraphs or numbered sentences like
-        "1. Metric tensor $g_{{ij}}$ describes distances in the manifold." in plain text.
+        "1. The metric tensor g_ij describes distances in the manifold." in plain text.
     2.  **Emphasis**: Use standard Markdown for emphasis only. Use double asterisks for **bold** text (e.g., **important**) and single asterisks for *italic* text (e.g., *this one*). Do not use bullets, checkboxes, or other Markdown list syntax.
     3.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable x must be written as $x$. A simple equation like -3x + 2 = -5x MUST be written as $-3x + 2 = -5x$. Use single dollar signs for inline math and $$ ... $$ for blocks. Do **not** escape dollar signs (write $x$, not \\$x\\$). Use _ for subscripts **inside math** only (e.g., $x_1$). Never use any custom markers like begin:math:text or begin:math:display.
         - For simple definitions or facts, prefer keeping math inline with the sentence instead of on its own line, e.g.:
-          "The metric tensor $g_{{ij}}$ defines distances in the manifold."
+          "The metric tensor $g_ij$ defines distances in the manifold."
     4.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
     5.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
     6.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
