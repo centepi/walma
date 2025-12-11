@@ -156,9 +156,18 @@ def get_chat_prompt(question_part: str, student_work: str, solution_text: str, f
     Formatting Rules:
     1.  **Emphasis**: Use standard Markdown for emphasis. Use double asterisks for **bold** text (e.g., **important**) and single asterisks for *italic* text (e.g., *this one*). Do not use any other characters for emphasis.
     2.  **Math Rendering**: THIS IS YOUR MOST IMPORTANT RULE. You MUST enclose ALL mathematical notation, variables, equations, and expressions in LaTeX delimiters, no matter how simple. For example, a single variable x must be written as $x$. A simple equation like -3x + 2 = -5x MUST be written as $-3x + 2 = -5x$. Use single dollar signs for inline math and $$ ... $$ for blocks. Do **not** escape dollar signs (write $x$, not \\$x\\$). Use _ for subscripts **inside math** only (e.g., $x_1$). Never use any custom markers like begin:math:text or begin:math:display.
-    3.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
-    4.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
-    5.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
+    3.  **Headings**: You MAY use simple text headings like "1. Metric Tensor" or "2. Key Ideas" on their own line. Do **NOT** use Markdown header markers like `#`, `##`, or `###`. Just write the heading text directly.
+    4.  **Bullet Lists (IMPORTANT FOR LAYOUT)**:
+        - Bullets are allowed, but each bullet must be on **one single line**, for example:
+          - "• Line element: $ds^2 = g_{{ij}} dx^i dx^j$"
+          - "• Symmetric: $g_{{ij}} = g_{{ji}}$"
+        - Do **NOT** create bullets that are empty or consist only of a symbol. Avoid patterns like:
+          - "•" on one line and "$g_{{ij}}$" on the next line.
+        - Do **NOT** put blank lines between bullet points. Write bullets as consecutive lines with no empty lines in between.
+        - Do **NOT** output stray `*` lines or bullets without any explanatory text. Every bullet must contain meaningful text (and may include inline LaTeX).
+    5.  **No Prefixes**: Your response is being sent directly to the user. Do not start your message with prefixes like "Tutor:" or "AI:".
+    6.  **Direct Address**: Always speak directly to the student using "you" and "your". Never refer to them in the third person (e.g., "the student's work").
+    7.  **Quotes & Backslashes**: Do NOT escape quotes in normal text — write "like this". Do not wrap quotes in slashes or code formatting. Only use backslashes for LaTeX commands (e.g., \\frac, \\sqrt). Output must be plain UTF-8 with no control characters.
 
     COMPLETION SIGNAL (VERY IMPORTANT):
     At the END of every reply, on a new line, output EXACTLY ONE of the following tokens so the app can update UI state:
