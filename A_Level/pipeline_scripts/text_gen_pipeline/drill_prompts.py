@@ -374,7 +374,14 @@ def build_text_drill_prompt(
 
     prompt = f"""
     You are an expert Mathematics Content Creator for the **{course}** curriculum.
-    
+
+    --- SYSTEM CONTEXT (READ CAREFULLY) ---
+    - You are generating a **single JSON object** that will be consumed by an automated mobile learning app (iPad) called ALMA.
+    - Your JSON is parsed programmatically and the text fields (`question_stem`, `question_text`, `solution_text`, `final_answer`, and any text in `visual_data`) are rendered using **MathJax** inside a WebView.
+    - The app does **not** see LaTeX documents, TeX preambles, or Markdown. It only sees the JSON fields described below.
+    - MathJax supports **inline and display math inside `$...$` or `$$...$$`** with standard LaTeX math commands, but it does **not** support full TeX layout or diagram environments.
+    - Therefore, you **must not** use any LaTeX environments that require a full TeX engine, such as `\\begin{{equation}}`, `\\begin{{align}}`, `\\begin{{displaymath}}`, `\\begin{{tikzcd}}`, `\\begin{{tikzpicture}}`, `\\begin{{CD}}`, `\\xymatrix`, `\\begin{{array}}`, `\\begin{{matrix}}`, or any diagram-producing environment. All diagrams must be represented **only** through the `visual_data` JSON system.
+
     YOUR TASK:
     Create a **{difficulty}** level question on the topic: **"{topic}"**.
     
@@ -427,14 +434,15 @@ def build_text_drill_prompt(
       - and what conclusions are expected at each stage of the solution.
     - It does **not** need to be written as a fully polished, pedagogical, line-by-line textbook proof. Assume the reader is a mathematically competent AI, not a struggling student.
     - Avoid re-stating the problem or copying the question text. Focus on the mathematical reasoning needed to solve the question, not on motivational exposition or extra teaching commentary.
-    - `final_answer` is a **compact summary of the final mathematical conclusions**, for quick reference by the tutor and checker.
+    - `final_answer` is a compact summary of the final mathematical conclusions, for quick reference by the tutor and checker.
     - `final_answer` should only contain the essential end results (values, classifications, properties), **not** another full solution or long explanation. Do not duplicate the entire solution in `final_answer`.
 
     **MATH FORMATTING RULES (STRICT)**:
     - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
     - Use `$...$` for inline math and `$$...$$` for display math.
     - Do **NOT** use `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, backticks, or any custom math markers like `$begin:math:text$`.
-    - Do **NOT** use LaTeX math environments such as `\$begin:math:display$ \.\.\. \\$end:math:display$`, `\$begin:math:text$ \.\.\. \\$end:math:text$`, `\\begin{{equation}} ... \\end{{equation}}`, `\\begin{{align}} ... \\end{{align}}`, or `\\begin{{displaymath}} ... \\end{{displaymath}}`. If you want a standalone displayed formula, wrap it in `$$...$$` instead.
+    - Do **NOT** use LaTeX math environments such as `\$begin:math:display$ \\.\\.\\. \\$end:math:display$`, `\$begin:math:text$ \\.\\.\\. \\$end:math:text$`, `\\begin{{equation}} ... \\end{{equation}}`, `\\begin{{align}} ... \\end{{align}}`, or `\\begin{{displaymath}} ... \\end{{displaymath}}`. If you want a standalone displayed formula, wrap it in `$$...$$` instead.
+    - Never use diagram-producing LaTeX environments such as `\\begin{{tikzcd}} ... \\end{{tikzcd}}`, `\\begin{{tikzpicture}} ... \\end{{tikzpicture}}`, `\\begin{{CD}} ... \\end{{CD}}`, `\\xymatrix{{...}}`, `\\begin{{array}} ... \\end{{array}}`, `\\begin{{matrix}} ... \\end{{matrix}}`, or any custom diagram environment. Any diagram, commutative square, or geometric picture must be expressed **only** through the `visual_data` JSON system, not through LaTeX.
     - **Backslashes**: in the final math, every LaTeX command must start with a single backslash (for example `\\frac`, `\\sqrt`, `\\begin{{cases}}`). Do **NOT** produce commands that effectively start with two backslashes in the final string (such as `\\\\frac`, `\\\\sqrt`, or `\\\\begin{{cases}}`); these render as plain text and break MathJax.
     - Do **not** use the LaTeX linebreak command `\\\\` inside math (no `\\\\` at the TeX level). If you need a new sentence, end the sentence in plain text instead of using a LaTeX linebreak.
     - All LaTeX macros MUST start with a backslash and MUST be inside math mode:
