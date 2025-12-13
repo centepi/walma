@@ -190,7 +190,11 @@ def _normalize_mcq_fields(obj: dict) -> dict:
         # Ensure cc exists in choices; else fallback to first
         valid_labels = {c["label"] for c in choices}
         if cc_label not in valid_labels:
-            logger.debug("MCQ normalize: correct_choice '%s' not in labels %s; defaulting to first.", cc_label, sorted(valid_labels))
+            logger.debug(
+                "MCQ normalize: correct_choice '%s' not in labels %s; defaulting to first.",
+                cc_label,
+                sorted(valid_labels),
+            )
             cc_label = choices[0]["label"]
 
         part["correct_choice"] = cc_label
@@ -279,6 +283,7 @@ _FUNC_EQ_PAT = re.compile(
     re.IGNORECASE,
 )
 
+
 def _pyexpr(s: str) -> str:
     """Normalize common math text to Python/SymPy-ish."""
     if not isinstance(s, str):
@@ -290,7 +295,8 @@ def _pyexpr(s: str) -> str:
     t = t.replace("ln", "log")
     return t
 
-def _maybe_build_derivative_spec(stem: str, qtext: str, final_answer: str) -> dict | None:
+
+def _maybe_build_derivative_spec(stem: str, qtext: str, final_answer: str) -> Optional[dict]:
     """
     If the question clearly asks for a general derivative (not 'at x=a'),
     and we can spot y=f(x) / f(x)=..., build:
@@ -353,6 +359,7 @@ def _synthesize_answer_spec_if_missing(content_object: dict) -> dict:
         logger.debug("CAS: synthesize skipped due to error: %s", e)
         return content_object
 
+
 # -------------------------
 # Auto domain/skill anchoring (prompt-only; zero new deps)
 # -------------------------
@@ -374,7 +381,8 @@ _ANCHOR_TOKENS = [
     "proof", "show that", "hence", "therefore",
 ]
 
-def _extract_anchor_terms(*texts: str, limit: int = 8) -> list[str]:
+
+def _extract_anchor_terms(*texts: str, limit: int = 8) -> List[str]:
     """
     Heuristic: keep distinctive, domain-signalling tokens from source text
     to gently bias the generator. No NLP deps, minimal & safe.
@@ -535,9 +543,12 @@ def create_question(
             print("✅ Configuration is valid!")
 
             # --- FIX: Split path for upload vs plot ---
-            # 1. Sanitize for Firestore (strings)
+            # 1. Sanitize for Firestore (strings) BUT DO NOT overwrite visual_data
             sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
-            content_object["visual_data"] = sanitized_data
+
+            # Store sanitized copy under a separate key (safe for Firestore)
+            # while keeping the original numeric visual_data for plotting and app use.
+            content_object["visual_data_firestore"] = sanitized_data
 
             # 2. Use ORIGINAL visual_data (numbers) for logic and plotting
             # -------------------------------------------------------------
@@ -571,6 +582,32 @@ def create_question(
                 buffer.close()
 
                 svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+
+                # -----------------------------------------------------------------
+                # UPDATED SCHEMA (Option A): store an array of SVGs, one per figure
+                #
+                # svg_images: [{id, label, svg_base64, kind}]
+                #
+                # For now we emit a single entry, but the field is future-proof:
+                # later you can append multiple entries (multi-figure questions)
+                # without changing iOS parsing logic again.
+                # -----------------------------------------------------------------
+                fig_id = None
+                if isinstance(visual_data, dict):
+                    charts_for_id = visual_data.get("charts", visual_data.get("graphs", [])) or []
+                    if isinstance(charts_for_id, list) and charts_for_id:
+                        first = charts_for_id[0] if isinstance(charts_for_id[0], dict) else {}
+                        fig_id = first.get("id")
+
+                content_object["svg_images"] = [{
+                    "id": fig_id or "figure_1",
+                    "label": "Figure 1",
+                    "svg_base64": svg_base64,
+                    "kind": "chart",
+                }]
+
+                # Backwards-compat (optional): keep old key for older clients.
+                # Remove this once iOS fully reads svg_images.
                 content_object["svg_image"] = svg_base64
     else:
         logger.debug("No visual data generated for seed '%s'.", target_part_id)

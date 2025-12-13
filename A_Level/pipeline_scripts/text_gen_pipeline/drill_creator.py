@@ -11,17 +11,15 @@ from pipeline_scripts import postprocess_math
 from pipeline_scripts import firestore_sanitizer
 from pipeline_scripts.dynamic_chart_plotter import dynamic_chart_plotter, validate_config
 
-# Import specific prompt builder for this mode
 from .drill_prompts import build_text_drill_prompt
 
-# Import normalization helpers from the main content_creator to ensure
-# "Text-to-Drill" questions look identical to "Image-based" questions.
 from pipeline_scripts.content_creator import (
     _normalize_generated_object,
     _synthesize_answer_spec_if_missing
 )
 
 logger = utils.setup_logger(__name__)
+
 
 def create_drill_question(
     gemini_model,
@@ -39,7 +37,6 @@ def create_drill_question(
     topic = task_input.get("topic")
     course = task_input.get("course")
     difficulty = task_input.get("difficulty")
-    # question_type is available in input but NOT used in the prompt anymore
     details = task_input.get("additional_details", "")
 
     # 1. Build Prompt
@@ -47,7 +44,6 @@ def create_drill_question(
         topic=topic,
         course=course,
         difficulty=difficulty,
-        # question_type removed to match the updated drill_prompts.py signature
         additional_details=details,
         correction_prompt_section=correction_feedback
     )
@@ -61,9 +57,7 @@ def create_drill_question(
         logger.error(f"Drill Generation Error for topic '{topic}': {e}")
         return None
 
-    # 3. Validate JSON (no math-fence rewriting)
-    # Whatever LaTeX and $...$/$$...$$ math fences the model outputs here will be
-    # passed through to iOS MathView and rendered directly by MathJax.
+    # 3. Validate JSON
     content_object = response_validator.validate_and_correct_response(
         chat, gemini_model, raw_text_response
     )
@@ -73,13 +67,11 @@ def create_drill_question(
         return None
 
     # 4. Normalize & Sanitize
-    # (Reusing your existing pipeline logic for consistency)
     content_object = _normalize_generated_object(content_object)
     content_object = postprocess_math.sanitize_generated_object(content_object)
     content_object = _synthesize_answer_spec_if_missing(content_object)
 
     # 5. Process Visual Data (Generate SVGs)
-    # LOGIC COPIED EXACTLY FROM content_creator.py TO ENSURE CONSISTENCY
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for drill question. Processing…")
@@ -91,19 +83,22 @@ def create_drill_question(
         else:
             print("✅ Configuration is valid!")
 
-            # --- SPLIT PATH: Upload (Strings) vs Plot (Numbers) ---
+            # --- SPLIT PATH: Firestore-safe copy vs Plot/Client numeric copy ---
 
-            # A. Sanitize for Firestore (Convert nested lists to strings)
-            sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
-            content_object["visual_data"] = sanitized_data
+            # A. Create a Firestore-safe copy (do NOT overwrite the numeric visual_data)
+            try:
+                sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
+                content_object["visual_data_firestore"] = sanitized_data
+            except Exception as ex:
+                logger.error(f"Failed to sanitize visual_data for Firestore: {ex}")
 
-            # B. Use ORIGINAL visual_data (numbers) for logic and plotting
+            # B. Use ORIGINAL visual_data for plotting and for the client
             charts = []
             if isinstance(visual_data, dict):
                 charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
 
             has_non_table = any(
-                str(c.get("type", "")).strip().lower() != "table"
+                isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
                 for c in charts
             )
             has_only_table = bool(charts) and not has_non_table
@@ -111,12 +106,10 @@ def create_drill_question(
             if has_only_table:
                 logger.debug("Visual data is table-only; skipping SVG generation.")
             else:
-                # Generate SVG diagram using ORIGINAL numeric data
                 try:
                     fig = dynamic_chart_plotter(visual_data)
 
                     buffer = io.BytesIO()
-                    # IMPORTANT: save the specific figure returned (not the global plt state)
                     fig.savefig(buffer, format="svg")
                     plt.close(fig)
 
@@ -124,7 +117,22 @@ def create_drill_question(
                     buffer.close()
 
                     svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+
+                    # UPDATED SCHEMA: svg_images array (and legacy svg_image)
+                    fig_id = None
+                    if charts and isinstance(charts[0], dict):
+                        fig_id = charts[0].get("id")
+
+                    content_object["svg_images"] = [{
+                        "id": fig_id or "figure_1",
+                        "label": "Figure 1",
+                        "svg_base64": svg_base64,
+                        "kind": "chart",
+                    }]
+
+                    # Backwards compatibility (remove later)
                     content_object["svg_image"] = svg_base64
+
                 except Exception as ex:
                     logger.error(f"Failed to plot drill chart: {ex}")
     else:

@@ -26,7 +26,7 @@ License: MIT
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple, Union
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -55,8 +55,76 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     layout_mode = config.get('layout', 'single')
 
     # Check for tables and their positioning
-    tables = [c for c in charts if isinstance(c, dict) and c.get('type') == 'table']
-    non_tables = [c for c in charts if isinstance(c, dict) and c.get('type') != 'table']
+    tables = [c for c in charts if isinstance(c, dict) and str(c.get('type', '')).strip().lower() == 'table']
+    non_tables = [c for c in charts if isinstance(c, dict) and str(c.get('type', '')).strip().lower() != 'table']
+
+    # ------------------------------------------------------------------------
+    # USABILITY DEFAULTS (so visuals actually help)
+    #
+    # 1) For data-reading charts (hist/bar/scatter/cumulative/box), axis numbers
+    #    MUST be shown, otherwise the chart is useless.
+    #
+    #    IMPORTANT: do NOT use setdefault here, because configs coming from the
+    #    model/pipeline often include show_axis_numbers=False implicitly, which
+    #    would permanently suppress ticks. We override to True when needed.
+    #
+    # 2) If multiple curves are drawn on one axes (e.g., two functions),
+    #    curve labels must be enabled so the diagram can be referenced meaningfully.
+    #
+    # 3) If the caller didn't provide a global axes_range, but the first chart has
+    #    visual_features.axes_range, promote it so setup_plot_appearance() can apply it.
+    # ------------------------------------------------------------------------
+    try:
+        chart_types = [
+            str(c.get("type", "")).strip().lower()
+            for c in non_tables
+            if isinstance(c, dict)
+        ]
+
+        data_reading_types = {"histogram", "bar", "scatter", "cumulative", "box_plot"}
+        if any(t in data_reading_types for t in chart_types):
+            # FORCE axis numbers on for data-reading charts (user needs values to answer).
+            if config.get("show_axis_numbers") is not True:
+                config["show_axis_numbers"] = True
+
+        # Promote a chart-level axes_range to global if none was provided
+        if not config.get("global_axes_range") and not config.get("axes_range"):
+            for c in non_tables:
+                if not isinstance(c, dict):
+                    continue
+                vf = c.get("visual_features")
+                if isinstance(vf, dict) and isinstance(vf.get("axes_range"), dict):
+                    config["axes_range"] = vf.get("axes_range")
+                    break
+
+        curve_types = {"function", "parametric"}
+        curve_charts = [
+            c for c in non_tables
+            if isinstance(c, dict) and str(c.get("type", "")).strip().lower() in curve_types
+        ]
+        if len(curve_charts) >= 2:
+            used_labels = set()
+            for i, c in enumerate(curve_charts, start=1):
+                vf = c.get("visual_features")
+                if not isinstance(vf, dict):
+                    vf = {}
+                    c["visual_features"] = vf
+
+                vf.setdefault("show_label", True)
+
+                # Ensure each curve has a usable, non-empty, unique label.
+                existing_label = str(c.get("label", "") or "").strip()
+                if not existing_label:
+                    existing_label = str(c.get("id", "") or "").strip() or f"g{i}"
+
+                candidate = existing_label
+                if candidate in used_labels:
+                    candidate = f"{candidate}{i}"
+                used_labels.add(candidate)
+                c["label"] = candidate
+    except Exception:
+        # Never crash plotting due to defaulting logic.
+        pass
 
     # Determine subplot configuration
     if layout_mode == 'composite' or tables:
@@ -446,6 +514,44 @@ def plot_bar_chart(ax: plt.Axes, graph: Dict[str, Any],
     function_registry[graph_id] = None
 
 
+def _coerce_bin_pair(b: Any) -> Optional[Tuple[float, float]]:
+    """
+    Accept bins in any of these shapes:
+      - [0, 5]
+      - (0, 5)
+      - "[0, 5]"  (Firestore-safe form)
+      - "0,5" / "0 5" / "0-5"  (fallback)
+    Returns (lo, hi) floats or None if unparseable.
+    """
+    if isinstance(b, (list, tuple)) and len(b) == 2:
+        try:
+            return float(b[0]), float(b[1])
+        except Exception:
+            return None
+
+    if isinstance(b, str):
+        s = b.strip()
+
+        # Try JSON array first: "[0, 5]"
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, (list, tuple)) and len(parsed) == 2:
+                return float(parsed[0]), float(parsed[1])
+        except Exception:
+            pass
+
+        # Fallback: pull two numbers from the string
+        try:
+            import re
+            nums = re.findall(r"[-+]?\d*\.?\d+", s)
+            if len(nums) >= 2:
+                return float(nums[0]), float(nums[1])
+        except Exception:
+            pass
+
+    return None
+
+
 def plot_histogram(ax: plt.Axes, graph: Dict[str, Any],
                    function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
@@ -453,25 +559,46 @@ def plot_histogram(ax: plt.Axes, graph: Dict[str, Any],
     color = get_color_cycle(graph_id)
 
     visual_features = graph.get('visual_features', {}) or {}
-    bins = visual_features.get('bins', [])
+    raw_bins = visual_features.get('bins', [])
     frequencies = visual_features.get('frequencies', [])
 
-    if len(bins) != len(frequencies):
+    if len(raw_bins) != len(frequencies):
         print(f"⚠️ Bin and frequency count mismatch in histogram '{graph_id}'")
         return
-    if not bins:
+    if not raw_bins:
         print(f"⚠️ No bins found in histogram '{graph_id}'")
         return
+
+    # Accept bins even if Firestore-sanitized into strings like "[0, 5]"
+    bins: List[Tuple[float, float]] = []
+    for b in raw_bins:
+        pair = _coerce_bin_pair(b)
+        if pair is None:
+            print(f"⚠️ Unparseable bin in histogram '{graph_id}': {b!r}")
+            return
+        lo, hi = pair
+        bins.append((lo, hi))
 
     show_label = bool(visual_features.get('show_label', False))
     safe_label = label if show_label else ""
 
-    bin_centers = np.array([(b[0] + b[1]) / 2 for b in bins])
-    bin_widths = np.array([b[1] - b[0] for b in bins])
+    bin_centers = np.array([(lo + hi) / 2 for (lo, hi) in bins], dtype=float)
+    bin_widths = np.array([(hi - lo) for (lo, hi) in bins], dtype=float)
 
     ax.bar(bin_centers, frequencies, width=bin_widths, align='center',
            label=safe_label, alpha=0.7, color=color,
            edgecolor='black', linewidth=1.5)
+
+    # Make x-axis readable: place ticks at bin boundaries.
+    try:
+        edges = []
+        for (lo, hi) in bins:
+            edges.extend([lo, hi])
+        edges = sorted(set(edges))
+        if edges:
+            ax.set_xticks(edges)
+    except Exception:
+        pass
 
     function_registry[graph_id] = None
 
@@ -569,28 +696,15 @@ def plot_cumulative_frequency(ax: plt.Axes, graph: Dict[str, Any],
 def evaluate_function(func_str: str, x_vals: np.ndarray) -> np.ndarray:
     """
     Safely evaluate a mathematical function string.
-    
+
     Converts common mathematical notation to NumPy equivalents and evaluates
     the expression. Handles both scalar and array inputs.
-    
+
     Supported functions:
     - Trigonometric: sin, cos, tan, arcsin, arccos, arctan
     - Exponential/Logarithmic: exp, log, log10
     - Other: sqrt, abs, sinh, cosh, tanh
-    
-    Parameters:
-    -----------
-    func_str : str
-        Mathematical expression as string (e.g., "x**2 + 3*x + 2")
-    x_vals : np.ndarray or float
-        Input values for x
-    
-    Returns:
-    --------
-    np.ndarray
-        Evaluated function values
     """
-    
     try:
         import re
 
@@ -645,29 +759,18 @@ def evaluate_function(func_str: str, x_vals: np.ndarray) -> np.ndarray:
         y_vals = np.asarray(y_vals, dtype=float)
 
         return y_vals
-    
+
     except Exception as e:
         print(f"⚠️ Error evaluating function '{func_str}': {e}")
         return np.zeros_like(x_vals)
 
 
-def add_visual_features(ax: plt.Axes, features: Dict[str, Any], 
+def add_visual_features(ax: plt.Axes, features: Dict[str, Any],
                        x_vals: np.ndarray, y_vals: np.ndarray) -> None:
     """
     Add visual features like intercepts, turning points, asymptotes, etc.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    features : dict
-        Dictionary containing visual feature specifications
-    x_vals : np.ndarray
-        X values of the plotted function
-    y_vals : np.ndarray
-        Y values of the plotted function
     """
-    
+
     # ---- Pedagogy guardrails (avoid giving away answers) ----
     # Nothing in here should render unless the caller opted-in via features['render_features'].
     # Still, keep these local switches so we can be strict per-feature.
@@ -683,30 +786,32 @@ def add_visual_features(ax: plt.Axes, features: Dict[str, Any],
             for x_int in x_intercepts:
                 ax.plot(x_int, 0, 'ro', markersize=8, zorder=5)
                 ax.axvline(x=x_int, color='red', linestyle='--', alpha=0.5, linewidth=1)
-    
+
     # Mark y-intercept
     if reveal_intercepts and features.get('y_intercept') is not None:
         y_int = features['y_intercept']
         ax.plot(0, y_int, 'go', markersize=8, zorder=5)
         ax.axhline(y=y_int, color='green', linestyle='--', alpha=0.5, linewidth=1)
-    
+
     # Mark turning points (critical points, extrema)
     if reveal_turning_points and features.get('turning_points'):
         for tp in features['turning_points']:
             x_tp, y_tp = tp['x'], tp['y']
             ax.plot(x_tp, y_tp, 'bs', markersize=10, zorder=5)
             if reveal_coordinates:
-                ax.annotate(f'({x_tp:.1f}, {y_tp:.1f})', 
-                           xy=(x_tp, y_tp), xytext=(10, 10),
-                           textcoords='offset points', fontsize=9,
-                           bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3),
-                           arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
-    
+                ax.annotate(
+                    f'({x_tp:.1f}, {y_tp:.1f})',
+                    xy=(x_tp, y_tp), xytext=(10, 10),
+                    textcoords='offset points', fontsize=9,
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3),
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0')
+                )
+
     # Mark asymptotes
     if reveal_asymptotes and features.get('vertical_asymptotes'):
         for va in features['vertical_asymptotes']:
             ax.axvline(x=va, color='purple', linestyle=':', alpha=0.7, linewidth=1.5)
-    
+
     if reveal_asymptotes and features.get('horizontal_asymptote') is not None:
         ha = features['horizontal_asymptote']
         ax.axhline(y=ha, color='purple', linestyle=':', alpha=0.7, linewidth=1.5)
@@ -715,56 +820,45 @@ def add_visual_features(ax: plt.Axes, features: Dict[str, Any],
 def plot_labeled_point(ax: plt.Axes, point: Dict[str, Any]) -> None:
     """
     Plot a labeled point with annotation.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    point : dict
-        Point configuration with 'label', 'x', 'y'
+
+    Pedagogy:
+    - By default, labeled points are hidden.
+    - If you want the point visible, set point["reveal"] = True.
+    - If the point is visible, the label is shown (because otherwise there is no purpose).
     """
-    
+
     # ---- Pedagogy guardrails (avoid giving away answers) ----
-    # Default: do NOT render labeled points unless explicitly allowed.
     if not bool(point.get('reveal', False)):
         return
-    
+
     x, y = point['x'], point['y']
     label = point.get('label', '')
     color = point.get('color', 'black')
     marker_size = point.get('marker_size', 8)
-    
-    # Plot the point
+
     ax.plot(x, y, 'o', color=color, markersize=marker_size, zorder=5)
-    
-    # Add label annotation
+
+    # Always show label if the point is revealed (otherwise it’s pointless)
     offset = point.get('offset', (12, 12))
-    ax.annotate(label, 
-               xy=(x, y), 
-               xytext=offset,
-               textcoords='offset points',
-               fontsize=11, 
-               fontweight='bold',
-               bbox=dict(boxstyle='round,pad=0.4', facecolor='white', 
-                        edgecolor='black', alpha=0.8),
-               arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.3'))
+    if label:
+        ax.annotate(
+            label,
+            xy=(x, y),
+            xytext=offset,
+            textcoords='offset points',
+            fontsize=11,
+            fontweight='bold',
+            bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                      edgecolor='black', alpha=0.8),
+            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.3')
+        )
 
 
-def plot_shaded_region(ax: plt.Axes, region: Dict[str, Any], 
+def plot_shaded_region(ax: plt.Axes, region: Dict[str, Any],
                       function_registry: Dict[str, Callable]) -> None:
     """
     Plot a shaded region between two curves or between a curve and a constant.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    region : dict
-        Region configuration with upper_bound_id, lower_bound_id, x_start, x_end
-    function_registry : dict
-        Registry of stored functions
     """
-    
     upper_bound_id = region['upper_bound_id']
     lower_bound_id = region['lower_bound_id']
     x_start = region['x_start']
@@ -772,58 +866,37 @@ def plot_shaded_region(ax: plt.Axes, region: Dict[str, Any],
     color = region.get('color', 'lightblue')
     alpha = region.get('alpha', 0.3)
     label = region.get('label', None)
-    
-    # Create x values for the region
+
     x_region = np.linspace(x_start, x_end, 300)
-    
-    # Get upper bound values
+
     y_upper = get_bound_values(upper_bound_id, x_region, function_registry)
-    
-    # Get lower bound values
     y_lower = get_bound_values(lower_bound_id, x_region, function_registry)
-    
-    # Fill the region
+
     ax.fill_between(x_region, y_lower, y_upper, alpha=alpha, color=color, label=label)
 
 
-def get_bound_values(bound_id: str, x_vals: np.ndarray, 
+def get_bound_values(bound_id: str, x_vals: np.ndarray,
                     function_registry: Dict[str, Callable]) -> np.ndarray:
     """
     Get y values for a bound (either from function registry or constant).
-    
+
     Handles both function references and constant values like "y=0" or "y=5".
-    
-    Parameters:
-    -----------
-    bound_id : str
-        Either a graph ID or constant specification (e.g., "y=0")
-    x_vals : np.ndarray
-        X values at which to evaluate the bound
-    function_registry : dict
-        Registry of available functions
-    
-    Returns:
-    --------
-    np.ndarray
-        Y values for the bound
     """
-    
     if bound_id in function_registry:
         func = function_registry[bound_id]
         if func is not None:
             return func(x_vals)
         else:
             return np.zeros_like(x_vals)
-    
+
     elif bound_id.startswith('y='):
-        # Handle constant functions like y=0, y=5
         try:
             const_val = float(bound_id.split('=')[1])
             return np.full_like(x_vals, const_val)
         except (ValueError, IndexError):
             print(f"⚠️ Could not parse constant bound: {bound_id}")
             return np.zeros_like(x_vals)
-    
+
     else:
         print(f"⚠️ Bound '{bound_id}' not found in function registry")
         return np.zeros_like(x_vals)
@@ -832,34 +905,30 @@ def get_bound_values(bound_id: str, x_vals: np.ndarray,
 def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
     """
     Set up the overall appearance and styling of the plot.
-    
-    Handles titles, labels, grid, axis ranges, legend, and other visual settings.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to format
-    config : dict
-        Configuration dictionary with optional styling parameters
+
+    NOTE:
+    - Axis labels (x/y) are always shown.
+    - Axis *numbers* are hidden by default unless config["show_axis_numbers"] is True.
+      dynamic_chart_plotter() will FORCE show_axis_numbers=True for data-reading charts.
     """
-    
+
     # Set labels
     x_label = config.get('x_label', 'x')
     y_label = config.get('y_label', 'y')
     ax.set_xlabel(x_label, fontsize=13, fontweight='bold')
     ax.set_ylabel(y_label, fontsize=13, fontweight='bold')
-    
+
     # Set title
     if 'title' in config:
         ax.set_title(config['title'], fontsize=15, fontweight='bold', pad=20)
-    
+
     # Set grid
     grid_enabled = config.get('grid', True)
     grid_style = config.get('grid_style', 'major')
     if grid_enabled:
         ax.grid(True, alpha=0.3, which=grid_style)
-    
-    # Set axis ranges - support both 'global_axes_range' and direct chart 'axes_range'
+
+    # Set axis ranges - support both 'global_axes_range' and 'axes_range'
     axes_range_config = config.get('global_axes_range', config.get('axes_range'))
     if axes_range_config:
         x_min = axes_range_config.get('x_min', -10)
@@ -868,30 +937,34 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
         y_max = axes_range_config.get('y_max', 10)
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
-    
-    # ---- Pedagogy guardrails (avoid giving away answers) ----
-    # Default: hide axis tick labels (numbers) unless explicitly allowed.
+
+    # Axis numbers
     show_axis_numbers = bool(config.get('show_axis_numbers', False))
     if not show_axis_numbers:
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax.tick_params(axis='both', which='both', length=0)
-    
+    else:
+        ax.tick_params(axis='both', which='both', length=4)
+
     # Add legend if there are labeled items
     handles, labels = ax.get_legend_handles_labels()
     if handles:
-        legend_loc = config.get('legend_location', 'best')
-        ax.legend(loc=legend_loc, fontsize=11, framealpha=0.9)
-    
+        filtered = [(h, l) for (h, l) in zip(handles, labels) if str(l).strip()]
+        if filtered:
+            handles2, labels2 = zip(*filtered)
+            legend_loc = config.get('legend_location', 'best')
+            ax.legend(handles2, labels2, loc=legend_loc, fontsize=11, framealpha=0.9)
+
     # Set equal aspect ratio if specified
     if config.get('equal_aspect', False):
         ax.set_aspect('equal', adjustable='box')
-    
+
     # Add axis through origin if requested
     if config.get('axes_through_origin', False):
         ax.axhline(y=0, color='k', linewidth=0.8, alpha=0.3)
         ax.axvline(x=0, color='k', linewidth=0.8, alpha=0.3)
-    
+
     # Tight layout
     plt.tight_layout()
 
@@ -899,22 +972,10 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
 def get_color_cycle(graph_id: str) -> str:
     """
     Get a color from matplotlib's color cycle based on graph ID.
-    
-    Parameters:
-    -----------
-    graph_id : str
-        Unique identifier for the graph
-    
-    Returns:
-    --------
-    str
-        Color specification
     """
-    
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red',
               'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray']
-    
-    # Use hash of graph_id to select color
+
     hash_val = hash(graph_id) % len(colors)
     return colors[hash_val]
 
@@ -925,29 +986,15 @@ def get_color_cycle(graph_id: str) -> str:
 def validate_config(config: Dict[str, Any]) -> List[str]:
     """
     Validate the configuration and return any issues found.
-    
-    Parameters:
-    -----------
-    config : dict
-        Configuration to validate
-    
-    Returns:
-    --------
-    List[str]
-        List of validation warnings/errors
     """
-    
     issues = []
-    
-    # Check for required structure
+
     if not isinstance(config, dict):
         issues.append("Configuration must be a dictionary")
         return issues
-    
-    # Support both 'charts' (new) and 'graphs' (legacy) keys
+
     charts = config.get('charts', config.get('graphs', []))
-    
-    # Validate charts
+
     if not charts:
         issues.append("No charts found in configuration")
     elif isinstance(charts, list):
@@ -955,92 +1002,94 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
             if not isinstance(chart, dict):
                 issues.append(f"Chart {i} must be a dictionary")
                 continue
-            
+
             if 'id' not in chart:
                 issues.append(f"Chart {i} missing required 'id' field")
-            
-            chart_type = chart.get('type', 'function')
-            
-            # Validate based on chart type
+
+            chart_type = str(chart.get('type', 'function')).strip().lower()
+
             if chart_type == 'function':
                 if 'explicit_function' not in chart:
                     issues.append(f"Chart '{chart.get('id', i)}' missing 'explicit_function'")
-            
+
             elif chart_type == 'parametric':
                 if 'parametric_function' not in chart:
                     issues.append(f"Chart '{chart.get('id', i)}' missing 'parametric_function'")
-            
+
             elif chart_type == 'histogram':
-                vf = chart.get('visual_features', {})
+                vf = chart.get('visual_features', {}) or {}
                 if 'bins' not in vf or 'frequencies' not in vf:
                     issues.append(f"Histogram '{chart.get('id', i)}' missing 'bins' or 'frequencies'")
                 elif len(vf['bins']) != len(vf['frequencies']):
                     issues.append(f"Histogram '{chart.get('id', i)}': bins and frequencies length mismatch")
-            
+                else:
+                    # Allow bins to be Firestore-sanitized strings like "[0, 5]"
+                    for b in vf.get("bins", []):
+                        if _coerce_bin_pair(b) is None:
+                            issues.append(f"Histogram '{chart.get('id', i)}' has unparseable bin: {b!r}")
+                            break
+
             elif chart_type == 'bar':
-                vf = chart.get('visual_features', {})
+                vf = chart.get('visual_features', {}) or {}
                 if 'categories' not in vf or 'values' not in vf:
                     issues.append(f"Bar chart '{chart.get('id', i)}' missing 'categories' or 'values'")
                 elif len(vf['categories']) != len(vf['values']):
                     issues.append(f"Bar chart '{chart.get('id', i)}': categories and values length mismatch")
-            
+
             elif chart_type == 'scatter':
-                vf = chart.get('visual_features', {})
+                vf = chart.get('visual_features', {}) or {}
                 if 'data_points' not in vf:
                     issues.append(f"Scatter plot '{chart.get('id', i)}' missing 'data_points'")
-            
+
             elif chart_type == 'box_plot':
-                vf = chart.get('visual_features', {})
+                vf = chart.get('visual_features', {}) or {}
                 required_fields = ['min_values', 'q1_values', 'median_values', 'q3_values', 'max_values']
                 for field in required_fields:
                     if field not in vf:
                         issues.append(f"Box plot '{chart.get('id', i)}' missing '{field}'")
-            
+
             elif chart_type == 'cumulative':
-                vf = chart.get('visual_features', {})
+                vf = chart.get('visual_features', {}) or {}
                 if 'upper_class_boundaries' not in vf or 'cumulative_frequencies' not in vf:
                     issues.append(f"Cumulative frequency '{chart.get('id', i)}' missing boundaries or frequencies")
                 elif len(vf['upper_class_boundaries']) != len(vf['cumulative_frequencies']):
                     issues.append(f"Cumulative frequency '{chart.get('id', i)}': length mismatch")
-            elif chart.get('type') == 'table':
-                vf = chart.get('visual_features', {})
-                
-                # Check for rows
+
+            elif chart_type == 'table':
+                vf = chart.get('visual_features', {}) or {}
                 if 'rows' not in vf:
                     issues.append(f"Table '{chart.get('id', i)}' missing 'rows' field")
                     continue
-                
+
                 rows = vf['rows']
                 headers = vf.get('headers', [])
-                
-                # Validate row consistency
+
                 if rows:
                     expected_cols = len(headers) if headers else len(rows[0])
-                    
                     for row_idx, row in enumerate(rows):
                         if len(row) != expected_cols:
                             issues.append(
                                 f"Table '{chart.get('id', i)}' row {row_idx}: "
                                 f"expected {expected_cols} columns, got {len(row)}"
                             )
-                
-                # Validate position and association
+
                 position = vf.get('position', 'standalone')
                 if position in ['above_chart', 'below_chart', 'beside_chart']:
                     associated_id = vf.get('associated_chart_id')
                     if associated_id:
-                        # Check if associated chart exists
                         chart_ids = [c.get('id') for c in charts]
                         if associated_id not in chart_ids:
                             issues.append(
                                 f"Table '{chart.get('id', i)}' references "
                                 f"non-existent chart '{associated_id}'"
                             )
-    
+
+            else:
+                issues.append(f"Unsupported chart type: {chart_type}")
+
     else:
         issues.append("'charts' or 'graphs' must be a list")
-    
-    # Validate labeled points
+
     if 'labeled_points' in config:
         if not isinstance(config['labeled_points'], list):
             issues.append("'labeled_points' must be a list")
@@ -1050,8 +1099,7 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                 for field in required_fields:
                     if field not in point:
                         issues.append(f"Labeled point {i} missing required field: '{field}'")
-    
-    # Validate shaded regions
+
     if 'shaded_regions' in config:
         if not isinstance(config['shaded_regions'], list):
             issues.append("'shaded_regions' must be a list")
@@ -1061,5 +1109,5 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                 for field in required_fields:
                     if field not in region:
                         issues.append(f"Shaded region {i} missing required field: '{field}'")
-    
+
     return issues

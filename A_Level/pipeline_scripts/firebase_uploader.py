@@ -1,13 +1,14 @@
 import os
 import re
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from config import settings
 from . import utils
+from . import firestore_sanitizer  # NEW: ensure nested arrays are Firestore-safe
 
 logger = utils.setup_logger(__name__)
 
@@ -93,6 +94,47 @@ def _sanitize_visual_data_for_firestore(vd: Dict[str, Any]) -> Dict[str, Any]:
                 vf["rows"] = new_rows
                 ch["visual_features"] = vf
     return vd
+
+
+def _sanitize_svg_images_for_firestore(svg_images: Any) -> List[Dict[str, Any]]:
+    """
+    Ensure svg_images is a Firestore-safe list[dict] with string keys.
+    This matches Option A schema:
+        svg_images: [{id, label, svg_base64, kind}]
+    """
+    if not isinstance(svg_images, list):
+        return []
+
+    cleaned: List[Dict[str, Any]] = []
+    for item in svg_images:
+        if not isinstance(item, dict):
+            continue
+
+        # Stringify keys + keep values simple (Firestore-safe)
+        out: Dict[str, Any] = {}
+        for k, v in item.items():
+            key = str(k)
+
+            # svg_base64 should always be a string (large, but Firestore accepts it)
+            if key == "svg_base64":
+                out[key] = "" if v is None else str(v)
+            # Common scalar fields
+            elif key in {"id", "label", "kind"}:
+                out[key] = "" if v is None else str(v)
+            else:
+                # Allow extras, but keep them JSON-safe
+                if v is None:
+                    out[key] = None
+                elif isinstance(v, (str, int, float, bool)):
+                    out[key] = v
+                else:
+                    out[key] = str(v)
+
+        # Only keep if it actually has content
+        if out.get("svg_base64"):
+            cleaned.append(out)
+
+    return cleaned
 
 
 # -----------------------------
@@ -354,14 +396,11 @@ def upload_content(db_client, collection_path, document_id, data):
                     probe_ref = col_ref.document(candidate_id)
                     snap = probe_ref.get()
                     if not snap.exists:
-                        # free id
                         doc_ref = probe_ref
                         break
-                    # otherwise bump suffix and try again
                     suffix += 1
                     candidate_id = f"{base_id}-{suffix}"
                 except Exception as e:
-                    # On any probe error, fall back to current candidate_id
                     logger.warning(
                         "Firebase: existence probe failed for '%s/%s' (%s); using candidate id.",
                         collection_path,
@@ -379,7 +418,6 @@ def upload_content(db_client, collection_path, document_id, data):
             )
 
         elif is_users_collection:
-            # Any other Users/... doc (e.g. upload parent) → fixed doc id
             doc_ref = db_client.collection(collection_path).document(document_id)
             exists_snapshot = None
             logger.debug(
@@ -388,7 +426,6 @@ def upload_content(db_client, collection_path, document_id, data):
                 document_id,
             )
         else:
-            # Non-user collections keep WRITE_MODE semantics (e.g. Topics)
             doc_ref = db_client.collection(collection_path).document(document_id)
             mode = getattr(settings, "WRITE_MODE", "preserve").strip().lower()
             exists_snapshot = None
@@ -441,20 +478,42 @@ def upload_content(db_client, collection_path, document_id, data):
         if "xp_curve_version" not in payload:
             payload["xp_curve_version"] = 1
 
-        # Only apply created_at/startedAt when we explicitly probed existence
         if exists_snapshot is not None and not exists_snapshot.exists:
             payload.setdefault("created_at", firestore.SERVER_TIMESTAMP)
             payload.setdefault("startedAt", firestore.SERVER_TIMESTAMP)
 
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
-        # For user-upload questions, optionally record the logical id
         if is_user_upload_question:
             payload.setdefault("logical_question_id", logical_id)
 
-        # Sanitize visual_data (tables) for Firestore if present
+        # --------------------------------------------------------------------
+        # Visual data: ALWAYS make it Firestore-safe (nested arrays etc.)
+        #
+        # Preferred pattern:
+        # - If upstream produced an explicit Firestore-safe copy, prefer it.
+        #   (We accept either `visual_data_firestore` or `visual_data_sanitized`.)
+        # - Otherwise sanitize `visual_data` here.
+        #
+        # This prevents silent breaks where one pipeline path sanitizes and
+        # another doesn't (e.g. histogram bins [[0,5],[5,10]] are nested arrays).
+        # --------------------------------------------------------------------
+        if isinstance(payload.get("visual_data_firestore"), dict):
+            payload["visual_data"] = payload.pop("visual_data_firestore")
+        elif isinstance(payload.get("visual_data_sanitized"), dict):
+            payload["visual_data"] = payload.pop("visual_data_sanitized")
+        elif "visual_data" in payload and isinstance(payload["visual_data"], dict):
+            payload["visual_data"] = firestore_sanitizer.sanitize_for_firestore(payload["visual_data"])
+
+        # Keep the existing table-row normalization on top (safe idempotent cleanup)
         if "visual_data" in payload and isinstance(payload["visual_data"], dict):
             payload["visual_data"] = _sanitize_visual_data_for_firestore(payload["visual_data"])
+
+        # -------------------------
+        # NEW: Sanitize svg_images (Option A schema) if present
+        # -------------------------
+        if "svg_images" in payload:
+            payload["svg_images"] = _sanitize_svg_images_for_firestore(payload.get("svg_images"))
 
         doc_ref.set(payload, merge=True)
         logger.info(
