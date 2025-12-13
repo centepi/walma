@@ -2,6 +2,7 @@ import os
 import re
 import json
 import google.generativeai as genai
+from typing import Optional, List  # ✅ FIX: Optional (and List used in annotations below)
 
 from config import settings
 from . import utils
