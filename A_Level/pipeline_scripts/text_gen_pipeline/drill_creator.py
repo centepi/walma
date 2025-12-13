@@ -14,7 +14,7 @@ from pipeline_scripts.dynamic_chart_plotter import dynamic_chart_plotter, valida
 # Import specific prompt builder for this mode
 from .drill_prompts import build_text_drill_prompt
 
-# Import normalization helpers from the main content_creator to ensure 
+# Import normalization helpers from the main content_creator to ensure
 # "Text-to-Drill" questions look identical to "Image-based" questions.
 from pipeline_scripts.content_creator import (
     _normalize_generated_object,
@@ -30,7 +30,7 @@ def create_drill_question(
 ):
     """
     Generates a question from scratch using user specifications.
-    
+
     This function mimics the logic of content_creator.create_question but:
     1. Uses 'build_text_drill_prompt' instead of 'build_creator_prompt'.
     2. Takes text inputs (topic, course) instead of image references.
@@ -90,13 +90,13 @@ def create_drill_question(
                 print(f"  ⚠️  {issue}")
         else:
             print("✅ Configuration is valid!")
-            
+
             # --- SPLIT PATH: Upload (Strings) vs Plot (Numbers) ---
-            
+
             # A. Sanitize for Firestore (Convert nested lists to strings)
             sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
             content_object["visual_data"] = sanitized_data
-            
+
             # B. Use ORIGINAL visual_data (numbers) for logic and plotting
             charts = []
             if isinstance(visual_data, dict):
@@ -116,8 +116,9 @@ def create_drill_question(
                     fig = dynamic_chart_plotter(visual_data)
 
                     buffer = io.BytesIO()
-                    plt.savefig(buffer, format="svg")
-                    plt.close()
+                    # IMPORTANT: save the specific figure returned (not the global plt state)
+                    fig.savefig(buffer, format="svg")
+                    plt.close(fig)
 
                     svg_data = buffer.getvalue().decode("utf-8")
                     buffer.close()

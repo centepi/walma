@@ -39,81 +39,25 @@ warnings.filterwarnings('ignore')
 def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     """
     Dynamic function to plot various charts and graphs based on JSON configuration.
-    
-    Supports explicit mathematical functions, parametric curves, histograms,
-    bar charts, scatter plots, box plots, cumulative frequency curves, labeled
-    annotations, shaded regions, and customizable visual features.
-    
-    Parameters:
-    -----------
-    config : dict
-        Configuration dictionary containing:
-        - charts: List of chart objects to plot (replaces 'graphs')
-        - labeled_points: Optional list of labeled points to annotate
-        - shaded_regions: Optional list of regions to shade between curves
-        - title: Optional plot title
-        - global_axes_range: Optional global axis limits
-        - equal_aspect: Optional boolean for equal aspect ratio
-        - x_label, y_label: Optional axis labels
-    
-    Returns:
-    --------
-    matplotlib.figure.Figure
-        The generated matplotlib figure object
-    
-    Raises:
-    -------
-    TypeError
-        If config is not a dictionary
-    ValueError
-        If chart type is not supported or required fields are missing
-    
-    Example:
-    --------
-    # Example 1: Explicit function
-    config = {
-        "charts": [{
-            "id": "g1",
-            "type": "function",
-            "label": "y = x^2",
-            "explicit_function": "x**2",
-            "visual_features": {"type": "parabola"}
-        }],
-        "title": "Quadratic Function"
-    }
-    
-    # Example 2: Histogram
-    config = {
-        "charts": [{
-            "id": "h1",
-            "type": "histogram",
-            "label": "Distribution",
-            "visual_features": {
-                "type": "histogram",
-                "bins": [[0, 10], [10, 20], [20, 30]],
-                "frequencies": [5, 8, 3]
-            }
-        }]
-    }
-    
-    fig = dynamic_chart_plotter(config)
-    plt.show()
     """
-    
     # Validate input
     if not isinstance(config, dict):
         raise TypeError("Config must be a dictionary")
-    
+
     # Support both 'charts' (new) and 'graphs' (legacy) keys
     charts = config.get('charts', config.get('graphs', []))
-    
+    if charts is None:
+        charts = []
+    if not isinstance(charts, list):
+        raise TypeError("'charts'/'graphs' must be a list of chart objects")
+
     # Determine layout type
     layout_mode = config.get('layout', 'single')
-    
+
     # Check for tables and their positioning
-    tables = [c for c in charts if c.get('type') == 'table']
-    non_tables = [c for c in charts if c.get('type') != 'table']
-    
+    tables = [c for c in charts if isinstance(c, dict) and c.get('type') == 'table']
+    non_tables = [c for c in charts if isinstance(c, dict) and c.get('type') != 'table']
+
     # Determine subplot configuration
     if layout_mode == 'composite' or tables:
         fig, axes = create_composite_layout(config, tables, non_tables)
@@ -121,138 +65,117 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         # Standard single-chart layout
         fig, ax = plt.subplots(figsize=(12, 8))
         axes = {'main': ax}
-    
+
     # Store function objects for later reference
-    function_registry: Dict[str, Callable] = {}
-    
+    # NOTE: some chart types store None (e.g., parametric/scatter), so Optional is required.
+    function_registry: Dict[str, Optional[Callable]] = {}
+
     # Process charts (non-tables)
     if 'main' in axes:
         for chart in non_tables:
             plot_chart(axes['main'], chart, function_registry)
-        
+
         # Process labeled points
-        if 'labeled_points' in config:
-            for point in config['labeled_points']:
-                plot_labeled_point(axes['main'], point)
-        
+        labeled_points = config.get('labeled_points')
+        if isinstance(labeled_points, list):
+            for point in labeled_points:
+                if isinstance(point, dict):
+                    plot_labeled_point(axes['main'], point)
+
         # Process shaded regions
-        if 'shaded_regions' in config:
-            for region in config['shaded_regions']:
-                plot_shaded_region(axes['main'], region, function_registry)
-        
+        shaded_regions = config.get('shaded_regions')
+        if isinstance(shaded_regions, list):
+            for region in shaded_regions:
+                if isinstance(region, dict):
+                    plot_shaded_region(axes['main'], region, function_registry)
+
         # Set up the plot appearance for main chart
         setup_plot_appearance(axes['main'], config)
-    
+
     # Process tables
     if 'table' in axes:
         for table in tables:
             plot_table(axes['table'], table)
-    
-    # Global title if specified
+
+    # Global title if specified (composite only)
     if 'title' in config and layout_mode == 'composite':
         fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.98)
-    
-    plt.tight_layout()
-    
+
+    # NOTE: avoid calling plt.tight_layout() here because setup_plot_appearance()
+    # already tightens (and composite figures often need the suptitle spacing).
     return fig
 
-def create_composite_layout(config: Dict[str, Any], 
-                            tables: List[Dict[str, Any]], 
+
+def create_composite_layout(config: Dict[str, Any],
+                            tables: List[Dict[str, Any]],
                             charts: List[Dict[str, Any]]) -> tuple:
     """
     Create figure with composite layout for charts and tables.
-    
-    Parameters:
-    -----------
-    config : dict
-        Full configuration
-    tables : list
-        List of table configurations
-    charts : list
-        List of chart configurations
-    
-    Returns:
-    --------
-    tuple
-        (figure, dict of axes)
     """
-    
-    axes = {}
-    
+    axes: Dict[str, plt.Axes] = {}
+
     # Determine positioning
     if not tables:
         # No tables, standard layout
         fig, ax = plt.subplots(figsize=(12, 8))
         axes['main'] = ax
         return fig, axes
-    
+
     if not charts:
         # Only tables, no charts
         fig, ax = plt.subplots(figsize=(12, 6))
         axes['table'] = ax
         return fig, axes
-    
+
     # Determine table position from first table
     position = tables[0].get('visual_features', {}).get('position', 'below_chart')
-    
+
     if position == 'above_chart':
         # Table on top, chart below
-        fig, (ax_table, ax_chart) = plt.subplots(2, 1, figsize=(12, 10), 
-                                                  gridspec_kw={'height_ratios': [1, 3]})
+        fig, (ax_table, ax_chart) = plt.subplots(
+            2, 1, figsize=(12, 10),
+            gridspec_kw={'height_ratios': [1, 3]}
+        )
         axes['table'] = ax_table
         axes['main'] = ax_chart
-    
+
     elif position == 'below_chart':
         # Chart on top, table below
-        fig, (ax_chart, ax_table) = plt.subplots(2, 1, figsize=(12, 10), 
-                                                  gridspec_kw={'height_ratios': [3, 1]})
+        fig, (ax_chart, ax_table) = plt.subplots(
+            2, 1, figsize=(12, 10),
+            gridspec_kw={'height_ratios': [3, 1]}
+        )
         axes['main'] = ax_chart
         axes['table'] = ax_table
-    
+
     elif position == 'beside_chart':
         # Side-by-side layout
-        fig, (ax_chart, ax_table) = plt.subplots(1, 2, figsize=(16, 8), 
-                                                  gridspec_kw={'width_ratios': [2, 1]})
+        fig, (ax_chart, ax_table) = plt.subplots(
+            1, 2, figsize=(16, 8),
+            gridspec_kw={'width_ratios': [2, 1]}
+        )
         axes['main'] = ax_chart
         axes['table'] = ax_table
-    
+
     else:  # 'standalone'
         # Table only
         fig, ax = plt.subplots(figsize=(12, 6))
         axes['table'] = ax
-    
-    return fig, axes
 
+    return fig, axes
 
 
 # ============================================================================
 # MAIN CHART PLOTTING DISPATCHER
 # ============================================================================
 
-def plot_chart(ax: plt.Axes, chart: Dict[str, Any], 
-               function_registry: Dict[str, Callable]) -> None:
+def plot_chart(ax: plt.Axes, chart: Dict[str, Any],
+               function_registry: Dict[str, Optional[Callable]]) -> None:
     """
     Dispatcher function to route chart plotting to appropriate handler.
-    
-    Routes to specialized plotting functions based on chart type.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    chart : dict
-        Chart configuration containing id, type, and function definition
-    function_registry : dict
-        Registry to store function objects for later reference
-    
-    Raises:
-    -------
-    ValueError
-        If chart type is not recognized
     """
-    
     chart_type = str(chart.get('type', 'function')).strip().lower()
-    
+
     if chart_type == 'function':
         plot_explicit_function(ax, chart, function_registry)
     elif chart_type == 'parametric':
@@ -269,7 +192,6 @@ def plot_chart(ax: plt.Axes, chart: Dict[str, Any],
         plot_cumulative_frequency(ax, chart, function_registry)
     elif chart_type == 'table':
         # Tables are handled separately in layout logic
-        # This is a no-op in single-axis plotting
         pass
     else:
         raise ValueError(f"Unsupported chart type: {chart_type}")
@@ -278,33 +200,13 @@ def plot_chart(ax: plt.Axes, chart: Dict[str, Any],
 def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
     """
     Plot a table using matplotlib's table functionality.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot the table on
-    table_config : dict
-        Table configuration containing headers, rows, and styling
-    
-    Example:
-    --------
-    table_config = {
-        "id": "t1",
-        "type": "table",
-        "visual_features": {
-            "headers": ["Class", "Frequency"],
-            "rows": [["0-10", "5"], ["10-20", "12"]],
-            "table_style": "striped"
-        }
-    }
     """
-    
-    visual_features = table_config.get('visual_features', {})
-    headers = visual_features.get('headers', [])
-    rows = visual_features.get('rows', [])
+    visual_features = table_config.get('visual_features', {}) or {}
+    headers = visual_features.get('headers', []) or []
+    rows = visual_features.get('rows', []) or []
     table_style = visual_features.get('table_style', 'standard')
     label = table_config.get('label', '')
-    
+
     # Validate table data
     if not rows:
         print(f"⚠️ No rows found in table '{table_config.get('id', 'unknown')}'")
@@ -315,7 +217,7 @@ def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
     for row in rows:
         cleaned_row = [clean_table_text(cell) for cell in row]
         cleaned_rows.append(cleaned_row)
-    
+
     # Prepare table data with cleaned text
     if cleaned_headers:
         table_data = [cleaned_headers] + cleaned_rows
@@ -326,33 +228,35 @@ def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
         num_table_rows = len(cleaned_rows)
         has_header = False
 
-    # Determine expected column count (fix: use row width when no headers)
-    expected_cols = len(cleaned_headers) if cleaned_headers else (len(cleaned_rows[0]) if cleaned_rows and len(cleaned_rows[0]) > 0 else 0)
+    # Determine expected column count (use row width when no headers)
+    expected_cols = len(cleaned_headers) if cleaned_headers else (
+        len(cleaned_rows[0]) if cleaned_rows and len(cleaned_rows[0]) > 0 else 0
+    )
     if expected_cols <= 0:
         print(f"⚠️ Could not determine column count for table '{table_config.get('id', 'unknown')}'")
         return
-    
+
     # Generate colors with correct column count
     cell_colors = get_table_colors(num_table_rows, expected_cols, table_style, has_header=has_header)
-    
+
     # Turn off axis
     ax.axis('off')
     ax.axis('tight')
-    
+
     # Create the table
     mpl_table = ax.table(
         cellText=table_data,
         cellLoc='center',
         loc='center',
         cellColours=cell_colors,
-        colWidths=[1.0/expected_cols] * expected_cols
+        colWidths=[1.0 / expected_cols] * expected_cols
     )
-    
+
     # Style the table
     mpl_table.auto_set_font_size(False)
     mpl_table.set_fontsize(10)
     mpl_table.scale(1, 2)  # Scale row height for readability
-    
+
     # Apply header styling if present
     if cleaned_headers:
         for i in range(expected_cols):
@@ -361,43 +265,27 @@ def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
             cell.set_facecolor('#4472C4')
             cell.set_edgecolor('black')
             cell.set_linewidth(1.5)
-    
+
     # Apply border styling to all cells
-    for key, cell in mpl_table.get_celld().items():
+    for _, cell in mpl_table.get_celld().items():
         cell.set_edgecolor('black')
         cell.set_linewidth(0.5 if table_style == 'minimal' else 1)
-    
+
     # Add label/title if present
     if label:
         ax.set_title(label, fontsize=12, fontweight='bold', pad=10)
 
 
-def get_table_colors(num_rows: int, num_cols: int, style: str, 
+def get_table_colors(num_rows: int, num_cols: int, style: str,
                      has_header: bool = False) -> List[List[str]]:
     """
     Generate cell colors based on table style.
-    
-    Parameters:
-    -----------
-    num_rows : int
-        Number of rows in the table (including header if present)
-    style : str
-        Table style: 'standard', 'striped', or 'minimal'
-    has_header : bool
-        Whether the first row is a header
-    
-    Returns:
-    --------
-    List[List[str]]
-        2D list of color codes for each cell
     """
-    
-    colors = []
+    colors: List[List[str]] = []
     for i in range(num_rows):
         if i == 0 and has_header:
             row_color = ['#4472C4'] * num_cols
         elif style == 'striped':
-            # Alternate shading for body rows (header not counted)
             base_idx = i - (1 if has_header else 0)
             row_color = (['#E7E6E6'] * num_cols) if base_idx % 2 == 0 else (['white'] * num_cols)
         elif style == 'minimal':
@@ -405,12 +293,11 @@ def get_table_colors(num_rows: int, num_cols: int, style: str,
         else:  # 'standard'
             row_color = ['#F2F2F2'] * num_cols
         colors.append(row_color)
-    
     return colors
+
 
 def latex_to_unicode(text: str) -> str:
     """Convert LaTeX mathematical notation to Unicode equivalents."""
-    
     latex_to_unicode_map = {
         r'\le': '≤',
         r'\leq': '≤',
@@ -420,13 +307,11 @@ def latex_to_unicode(text: str) -> str:
         r'\times': '×',
         r'\div': '÷',
         r'\pm': '±',
-        # ... add others as needed
     }
-    
-    text = str(text).replace('$', '')  # Remove math mode delimiters
+
+    text = str(text).replace('$', '')
     for latex_cmd, unicode_char in latex_to_unicode_map.items():
         text = text.replace(latex_cmd, unicode_char)
-    
     return text
 
 
@@ -442,25 +327,11 @@ def clean_table_text(text: str) -> str:
 # SPECIALIZED PLOTTING FUNCTIONS FOR EACH CHART TYPE
 # ============================================================================
 
-def plot_explicit_function(ax: plt.Axes, graph: Dict[str, Any], 
-                          function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot explicit mathematical function y = f(x).
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with explicit_function
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+def plot_explicit_function(ax: plt.Axes, graph: Dict[str, Any],
+                           function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
-    
-    # Determine the range for plotting
+
     axes_range = None
     if 'visual_features' in graph and 'axes_range' in graph['visual_features']:
         axes_range = graph['visual_features']['axes_range']
@@ -468,209 +339,150 @@ def plot_explicit_function(ax: plt.Axes, graph: Dict[str, Any],
         x_max = axes_range.get('x_max', 10)
     else:
         x_min, x_max = -10, 10
-    
-    # Create x values
-    x_vals = np.linspace(x_min, x_max, 1000)
-    
-    # Parse and evaluate explicit function
-    func_str = graph['explicit_function']
-    
-    # Create lambda function for registry
-    create_safe_function = lambda s: lambda x: evaluate_function(s, x)
-    function_registry[graph_id] = create_safe_function(func_str)
-    
-    # Evaluate function over x range
-    y_vals = evaluate_function(func_str, x_vals)
-    
-    # Plot the function
-    ax.plot(x_vals, y_vals, label=label, linewidth=2.5, color=get_color_cycle(graph_id))
-    
-    # Add special features if specified
-    if 'visual_features' in graph:
-        add_visual_features(ax, graph['visual_features'], x_vals, y_vals)
 
-def plot_parametric_curve(ax: plt.Axes, graph: Dict[str, Any], 
-                         function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot parametric curve defined by x(t) and y(t).
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with parametric_function
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+    x_vals = np.linspace(x_min, x_max, 1000)
+    func_str = graph['explicit_function']
+
+    create_safe_function = lambda s: (lambda x: evaluate_function(s, x))
+    function_registry[graph_id] = create_safe_function(func_str)
+
+    y_vals = evaluate_function(func_str, x_vals)
+
+    visual_features = graph.get('visual_features', {}) or {}
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
+    ax.plot(x_vals, y_vals, label=safe_label, linewidth=2.5, color=get_color_cycle(graph_id))
+
+    if bool(visual_features.get('render_features', False)):
+        add_visual_features(ax, visual_features, x_vals, y_vals)
+
+
+def plot_parametric_curve(ax: plt.Axes, graph: Dict[str, Any],
+                          function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
-    
-    # Handle parametric functions x(t), y(t)
+
     param_funcs = graph['parametric_function']
-    t_range = graph.get('parameter_range', {'t_min': 0, 't_max': 2*np.pi})
+    t_range = graph.get('parameter_range', {'t_min': 0, 't_max': 2 * np.pi})
     t_vals = np.linspace(t_range['t_min'], t_range['t_max'], 1000)
-    
+
     x_param = evaluate_function(param_funcs['x'], t_vals)
     y_param = evaluate_function(param_funcs['y'], t_vals)
-    
-    # Store function as None since parametric doesn't fit standard y=f(x)
+
     function_registry[graph_id] = None
-    
-    ax.plot(x_param, y_param, label=label, linewidth=2.5, 
-            color=get_color_cycle(graph_id))
+
+    visual_features = graph.get('visual_features', {}) or {}
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
+    ax.plot(x_param, y_param, label=safe_label, linewidth=2.5, color=get_color_cycle(graph_id))
 
 
-def plot_scatter(ax: plt.Axes, graph: Dict[str, Any], 
-                function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot scatter plot with optional trend line.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with data_points in visual_features
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+def plot_scatter(ax: plt.Axes, graph: Dict[str, Any],
+                 function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
-    
-    visual_features = graph.get('visual_features', {})
+
+    visual_features = graph.get('visual_features', {}) or {}
     data_points = visual_features.get('data_points', [])
-    
+
     if not data_points:
         print(f"⚠️ No data points found in scatter plot '{graph_id}'")
         return
-    
+
     x_data = np.array([point['x'] for point in data_points])
     y_data = np.array([point['y'] for point in data_points])
-    
-    # Plot scatter points
-    ax.scatter(x_data, y_data, label=label, s=100, alpha=0.7, color=color, zorder=5)
-    
-    # Plot trend line if specified
-    trend_line = visual_features.get('trend_line', {})
-    if trend_line.get('enabled', False):
-        trend_eq = trend_line.get('equation', '')
+
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
+    ax.scatter(x_data, y_data, label=safe_label, s=100, alpha=0.7, color=color, zorder=5)
+
+    trend_line = visual_features.get('trend_line', {}) or {}
+    if trend_line.get('enabled', False) and bool(trend_line.get('reveal', False)):
+        trend_eq = str(trend_line.get('equation', '')).strip()
         if trend_eq:
-            # Use a small x range for trend line
+            rhs = trend_eq.split('=', 1)[1].strip() if '=' in trend_eq else trend_eq
             x_trend = np.linspace(x_data.min(), x_data.max(), 100)
-            y_trend = evaluate_function(trend_eq.split('=')[1].strip(), x_trend)
-            ax.plot(x_trend, y_trend, '--', color=color, alpha=0.6, linewidth=2, label='Trend line')
-    
-    # Store as None for data points
+            y_trend = evaluate_function(rhs, x_trend)
+
+            show_trend_label = bool(trend_line.get('show_label', False))
+            trend_label = (trend_line.get('label') or 'Trend line') if show_trend_label else ""
+
+            ax.plot(x_trend, y_trend, '--', color=color, alpha=0.6, linewidth=2, label=trend_label)
+
     function_registry[graph_id] = None
 
 
-def plot_bar_chart(ax: plt.Axes, graph: Dict[str, Any], 
-                  function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot bar chart with categories.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with categories and values
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+def plot_bar_chart(ax: plt.Axes, graph: Dict[str, Any],
+                   function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
-    
-    visual_features = graph.get('visual_features', {})
+
+    visual_features = graph.get('visual_features', {}) or {}
     categories = visual_features.get('categories', [])
     values = visual_features.get('values', [])
-    
+
     if len(categories) != len(values):
         print(f"⚠️ Category and value count mismatch in bar chart '{graph_id}'")
         return
-    
     if not categories:
         print(f"⚠️ No categories found in bar chart '{graph_id}'")
         return
-    
-    # Plot bar chart
+
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
     x_pos = np.arange(len(categories))
-    ax.bar(x_pos, values, label=label, alpha=0.7, color=color, edgecolor='black', linewidth=1.5)
-    
-    # Set category labels
+    ax.bar(x_pos, values, label=safe_label, alpha=0.7, color=color,
+           edgecolor='black', linewidth=1.5)
+
     ax.set_xticks(x_pos)
     ax.set_xticklabels(categories, rotation=0)
-    
-    # Store as None for categorical data
+
     function_registry[graph_id] = None
 
 
-def plot_histogram(ax: plt.Axes, graph: Dict[str, Any], 
-                  function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot histogram with bins and frequencies.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with bins and frequencies
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+def plot_histogram(ax: plt.Axes, graph: Dict[str, Any],
+                   function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
-    
-    visual_features = graph.get('visual_features', {})
+
+    visual_features = graph.get('visual_features', {}) or {}
     bins = visual_features.get('bins', [])
     frequencies = visual_features.get('frequencies', [])
-    
+
     if len(bins) != len(frequencies):
         print(f"⚠️ Bin and frequency count mismatch in histogram '{graph_id}'")
         return
-    
     if not bins:
         print(f"⚠️ No bins found in histogram '{graph_id}'")
         return
-    
-    # Calculate bin centers and widths
+
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
     bin_centers = np.array([(b[0] + b[1]) / 2 for b in bins])
     bin_widths = np.array([b[1] - b[0] for b in bins])
-    
-    # Plot histogram using bar chart
-    ax.bar(bin_centers, frequencies, width=bin_widths, align='center', 
-           label=label, alpha=0.7, color=color, edgecolor='black', linewidth=1.5)
-    
-    # Store as None for histogram data
+
+    ax.bar(bin_centers, frequencies, width=bin_widths, align='center',
+           label=safe_label, alpha=0.7, color=color,
+           edgecolor='black', linewidth=1.5)
+
     function_registry[graph_id] = None
 
-def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any], 
-                 function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot box plot (box-and-whisker plot) with quartiles.
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with five-number summary
-    function_registry : dict
-        Registry to store function objects
-    """
+
+def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any],
+                  function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
 
-    visual_features = graph.get('visual_features', {})
+    visual_features = graph.get('visual_features', {}) or {}
     groups = visual_features.get('groups', ['Data'])
     min_vals = visual_features.get('min_values', [])
     q1_vals = visual_features.get('q1_values', [])
@@ -679,20 +491,19 @@ def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any],
     max_vals = visual_features.get('max_values', [])
     outliers = visual_features.get('outliers', [])
 
-    # Verify data lengths match
     n_groups = len(groups)
     if not all(len(v) == n_groups for v in [min_vals, q1_vals, median_vals, q3_vals, max_vals]):
         print(f"⚠️ Data length mismatch in box plot '{graph_id}'")
         return
 
-    # Create box plot data structure
     stats = []
     for i in range(n_groups):
         q1, med, q3 = q1_vals[i], median_vals[i], q3_vals[i]
-        # Handle missing min/max: extend whiskers based on IQR
         iqr = q3 - q1
-        whisker_low = min_vals[i] if min_vals[i] is not None else max(0, q1 - 1.5 * iqr)
-        whisker_high = max_vals[i] if max_vals[i] is not None else q3 + 1.5 * iqr
+
+        # FIX: do NOT clamp whiskers to 0; boxplots can be negative.
+        whisker_low = min_vals[i] if min_vals[i] is not None else (q1 - 1.5 * iqr)
+        whisker_high = max_vals[i] if max_vals[i] is not None else (q3 + 1.5 * iqr)
 
         stats.append({
             'label': groups[i],
@@ -705,64 +516,51 @@ def plot_box_plot(ax: plt.Axes, graph: Dict[str, Any],
         })
 
     bp = ax.bxp(stats, patch_artist=True, widths=0.6)
-
     for patch in bp['boxes']:
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
 
-    ax.set_title(label)
-    # Plot outliers if present
-    if outliers:
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+    ax.set_title(safe_label)
+
+    if outliers and bool(visual_features.get('render_outliers', False)):
         for outlier in outliers:
             group_idx = groups.index(outlier.get('group', groups[0]))
-            ax.scatter(group_idx + 1, outlier['value'], color='red', s=100, 
-                      marker='o', zorder=5, label='Outliers' if outlier == outliers[0] else '')
-    # Store as None for box plot data
+            ax.scatter(group_idx + 1, outlier['value'], color='red', s=100,
+                       marker='o', zorder=5,
+                       label='Outliers' if outlier == outliers[0] else '')
+
     function_registry[graph_id] = None
 
 
-def plot_cumulative_frequency(ax: plt.Axes, graph: Dict[str, Any], 
-                              function_registry: Dict[str, Callable]) -> None:
-    """
-    Plot cumulative frequency curve.
-    
-    Parameters:
-    -----------
-    ax : matplotlib.axes.Axes
-        The axes object to plot on
-    graph : dict
-        Graph configuration with class boundaries and cumulative frequencies
-    function_registry : dict
-        Registry to store function objects
-    """
-    
+def plot_cumulative_frequency(ax: plt.Axes, graph: Dict[str, Any],
+                              function_registry: Dict[str, Optional[Callable]]) -> None:
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
-    
-    visual_features = graph.get('visual_features', {})
+
+    visual_features = graph.get('visual_features', {}) or {}
     boundaries = visual_features.get('upper_class_boundaries', [])
     cum_frequencies = visual_features.get('cumulative_frequencies', [])
-    
+
     if len(boundaries) != len(cum_frequencies):
         print(f"⚠️ Boundary and cumulative frequency count mismatch in CF curve '{graph_id}'")
         return
-    
     if not boundaries:
         print(f"⚠️ No class boundaries found in cumulative frequency plot '{graph_id}'")
         return
-    
-    # Prepend origin point for proper curve
+
+    show_label = bool(visual_features.get('show_label', False))
+    safe_label = label if show_label else ""
+
     x_vals = np.array([0] + list(boundaries))
     y_vals = np.array([0] + list(cum_frequencies))
-    
-    # Plot cumulative frequency curve
-    ax.plot(x_vals, y_vals, marker='o', linewidth=2.5, markersize=6, 
-            label=label, color=color, alpha=0.7)
-    
-    # Store as None for cumulative frequency data
-    function_registry[graph_id] = None
 
+    ax.plot(x_vals, y_vals, marker='o', linewidth=2.5, markersize=6,
+            label=safe_label, color=color, alpha=0.7)
+
+    function_registry[graph_id] = None
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -794,45 +592,58 @@ def evaluate_function(func_str: str, x_vals: np.ndarray) -> np.ndarray:
     """
     
     try:
-        # Replace common mathematical notation
-        replacements = {
-            '^': '**',
-            'sin': 'np.sin',
-            'cos': 'np.cos',
-            'tan': 'np.tan',
-            'arcsin': 'np.arcsin',
-            'arccos': 'np.arccos',
-            'arctan': 'np.arctan',
-            'sinh': 'np.sinh',
-            'cosh': 'np.cosh',
-            'tanh': 'np.tanh',
-            'exp': 'np.exp',
-            'log': 'np.log',
-            'log10': 'np.log10',
-            'sqrt': 'np.sqrt',
-            'abs': 'np.abs',
-            'pi': 'np.pi',
-            'e': 'np.e'
-        }
-        
-        processed_str = func_str
-        for old, new in replacements.items():
-            processed_str = processed_str.replace(old, new)
-        
+        import re
+
+        s = str(func_str)
+
+        # 1) Power operator
+        s = s.replace('^', '**')
+
+        # 2) Replace known function names using word boundaries (prevents e.g. arcsin -> arcnp.sin)
+        #    Order matters: longer names first.
+        fn_map = [
+            ('arcsin', 'np.arcsin'),
+            ('arccos', 'np.arccos'),
+            ('arctan', 'np.arctan'),
+            ('sinh', 'np.sinh'),
+            ('cosh', 'np.cosh'),
+            ('tanh', 'np.tanh'),
+            ('sin', 'np.sin'),
+            ('cos', 'np.cos'),
+            ('tan', 'np.tan'),
+            ('exp', 'np.exp'),
+            ('log10', 'np.log10'),
+            ('log', 'np.log'),
+            ('sqrt', 'np.sqrt'),
+            ('abs', 'np.abs'),
+        ]
+        for name, repl in fn_map:
+            s = re.sub(rf'\b{name}\b', repl, s)
+
+        # 3) Constants (word-boundary so we don’t corrupt identifiers)
+        s = re.sub(r'\bpi\b', 'np.pi', s)
+        # NOTE: we intentionally do NOT replace bare "e" globally because it corrupts strings like "exp".
+        # If you need Euler's constant, prefer "np.e" in generated configs.
+
         # Handle the case where x_vals might be a single value
         x = x_vals
-        
+
         # Evaluate the function with error suppression for invalid values
+        # SECURITY: lock down eval() so the expression cannot access builtins/imports/etc.
         with np.errstate(all='ignore'):
-            y_vals = eval(processed_str)
-        
+            y_vals = eval(
+                s,
+                {"__builtins__": {}},
+                {"np": np, "x": x}
+            )
+
         # Handle scalar results
         if np.isscalar(y_vals):
             y_vals = np.full_like(x_vals, y_vals, dtype=float)
-        
-        # Replace NaN and Inf with appropriate values for plotting
+
+        # Ensure ndarray float
         y_vals = np.asarray(y_vals, dtype=float)
-        
+
         return y_vals
     
     except Exception as e:
@@ -857,8 +668,16 @@ def add_visual_features(ax: plt.Axes, features: Dict[str, Any],
         Y values of the plotted function
     """
     
+    # ---- Pedagogy guardrails (avoid giving away answers) ----
+    # Nothing in here should render unless the caller opted-in via features['render_features'].
+    # Still, keep these local switches so we can be strict per-feature.
+    reveal_intercepts = bool(features.get('reveal_intercepts', False))
+    reveal_turning_points = bool(features.get('reveal_turning_points', False))
+    reveal_asymptotes = bool(features.get('reveal_asymptotes', False))
+    reveal_coordinates = bool(features.get('reveal_coordinates', False))
+
     # Mark x-intercepts
-    if features.get('x_intercepts') is not None:
+    if reveal_intercepts and features.get('x_intercepts') is not None:
         x_intercepts = features['x_intercepts']
         if isinstance(x_intercepts, (list, tuple)):
             for x_int in x_intercepts:
@@ -866,28 +685,29 @@ def add_visual_features(ax: plt.Axes, features: Dict[str, Any],
                 ax.axvline(x=x_int, color='red', linestyle='--', alpha=0.5, linewidth=1)
     
     # Mark y-intercept
-    if features.get('y_intercept') is not None:
+    if reveal_intercepts and features.get('y_intercept') is not None:
         y_int = features['y_intercept']
         ax.plot(0, y_int, 'go', markersize=8, zorder=5)
         ax.axhline(y=y_int, color='green', linestyle='--', alpha=0.5, linewidth=1)
     
     # Mark turning points (critical points, extrema)
-    if features.get('turning_points'):
+    if reveal_turning_points and features.get('turning_points'):
         for tp in features['turning_points']:
             x_tp, y_tp = tp['x'], tp['y']
             ax.plot(x_tp, y_tp, 'bs', markersize=10, zorder=5)
-            ax.annotate(f'({x_tp:.1f}, {y_tp:.1f})', 
-                       xy=(x_tp, y_tp), xytext=(10, 10),
-                       textcoords='offset points', fontsize=9,
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3),
-                       arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+            if reveal_coordinates:
+                ax.annotate(f'({x_tp:.1f}, {y_tp:.1f})', 
+                           xy=(x_tp, y_tp), xytext=(10, 10),
+                           textcoords='offset points', fontsize=9,
+                           bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3),
+                           arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
     
     # Mark asymptotes
-    if features.get('vertical_asymptotes'):
+    if reveal_asymptotes and features.get('vertical_asymptotes'):
         for va in features['vertical_asymptotes']:
             ax.axvline(x=va, color='purple', linestyle=':', alpha=0.7, linewidth=1.5)
     
-    if features.get('horizontal_asymptote') is not None:
+    if reveal_asymptotes and features.get('horizontal_asymptote') is not None:
         ha = features['horizontal_asymptote']
         ax.axhline(y=ha, color='purple', linestyle=':', alpha=0.7, linewidth=1.5)
 
@@ -903,6 +723,11 @@ def plot_labeled_point(ax: plt.Axes, point: Dict[str, Any]) -> None:
     point : dict
         Point configuration with 'label', 'x', 'y'
     """
+    
+    # ---- Pedagogy guardrails (avoid giving away answers) ----
+    # Default: do NOT render labeled points unless explicitly allowed.
+    if not bool(point.get('reveal', False)):
+        return
     
     x, y = point['x'], point['y']
     label = point.get('label', '')
@@ -1044,6 +869,14 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
     
+    # ---- Pedagogy guardrails (avoid giving away answers) ----
+    # Default: hide axis tick labels (numbers) unless explicitly allowed.
+    show_axis_numbers = bool(config.get('show_axis_numbers', False))
+    if not show_axis_numbers:
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.tick_params(axis='both', which='both', length=0)
+    
     # Add legend if there are labeled items
     handles, labels = ax.get_legend_handles_labels()
     if handles:
@@ -1084,7 +917,6 @@ def get_color_cycle(graph_id: str) -> str:
     # Use hash of graph_id to select color
     hash_val = hash(graph_id) % len(colors)
     return colors[hash_val]
-
 
 # ============================================================================
 # VALIDATION FUNCTION

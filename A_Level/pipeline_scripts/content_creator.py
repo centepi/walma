@@ -10,8 +10,8 @@ from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
-from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config 
-from . import firestore_sanitizer 
+from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config
+from . import firestore_sanitizer
 
 import datetime
 import io
@@ -427,16 +427,16 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
         lines.append(f"- Source topic/skill cues: {', '.join(tags)}.")
     if visual_hint:
         lines.append(
-        "- The source appears VISUAL-HEAVY. "
-        "If the diagram used in the question is one listed that you can make, "
-        "then include 'visual_data'. "
-        "If you ever write a question and reference any visual element, "
-        "it must be the case that you also produce that 'visual_data'. "
-        "If the diagram they use is not one listed that you can make, "
-        "then you must remake the question as close to the topic as possible "
-        "without needing the visual element."
-        "Most importantly, if you reference any visual element you MUST include its respective 'visual_data' object."
-    )
+            "- The source appears VISUAL-HEAVY. "
+            "If the diagram used in the question is one listed that you can make, "
+            "then include 'visual_data'. "
+            "If you ever write a question and reference any visual element, "
+            "it must be the case that you also produce that 'visual_data'. "
+            "If the diagram they use is not one listed that you can make, "
+            "then you must remake the question as close to the topic as possible "
+            "without needing the visual element. "
+            "Most importantly, if you reference any visual element you MUST include its respective 'visual_data' object."
+        )
         lines.append("- The source appears VISUAL. For simple Cartesian cases, INCLUDE a 2D analytic graph via 'visual_data' (do not ask the student to draw). Avoid any non-graph shapes.")
     return "\n".join(lines)
 
@@ -533,12 +533,12 @@ def create_question(
                 print(f"  ⚠️  {issue}")
         else:
             print("✅ Configuration is valid!")
-            
+
             # --- FIX: Split path for upload vs plot ---
             # 1. Sanitize for Firestore (strings)
             sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
             content_object["visual_data"] = sanitized_data
-            
+
             # 2. Use ORIGINAL visual_data (numbers) for logic and plotting
             # -------------------------------------------------------------
 
@@ -548,7 +548,7 @@ def create_question(
                 charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
 
             has_non_table = any(
-                str(c.get("type", "")).strip().lower() != "table"
+                isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
                 for c in charts
             )
             has_only_table = bool(charts) and not has_non_table
@@ -563,8 +563,9 @@ def create_question(
                 fig = dynamic_chart_plotter(visual_data)
 
                 buffer = io.BytesIO()
-                plt.savefig(buffer, format="svg")
-                plt.close()
+                # IMPORTANT: save the specific figure, not the global pyplot state
+                fig.savefig(buffer, format="svg")
+                plt.close(fig)
 
                 svg_data = buffer.getvalue().decode("utf-8")
                 buffer.close()
