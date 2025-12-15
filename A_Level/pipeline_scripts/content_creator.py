@@ -13,8 +13,8 @@ from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
 
 # ✅ NEW chart plotter (NOT legacy)
-from .dynamic_chart_plotter.plotter import dynamic_chart_plotter
-from .dynamic_chart_plotter.utils import validate_config
+from pipeline_scripts.dynamic_chart_plotter.plotter import dynamic_chart_plotter
+from pipeline_scripts.dynamic_chart_plotter.utils import validate_config
 
 from . import firestore_sanitizer
 
@@ -507,6 +507,7 @@ def create_question(
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
 
+        # Always validate, but do not gate plotting on validation.
         try:
             issues = validate_config(visual_data)
         except Exception as ex:
@@ -543,15 +544,18 @@ def create_question(
         except Exception as ex:
             logger.error("Failed to sanitize visual_data for Firestore: %s", ex)
 
-        # --- IMPORTANT CHANGE ---
-        # Tables are now rendered as normal SVG charts (TableChartView removed),
-        # so we ALWAYS generate SVG if visual_data exists (including table-only).
+        # Tables are rendered as normal SVG charts now, so ALWAYS generate SVG.
         fig = None
         try:
             fig = dynamic_chart_plotter(visual_data)
 
             buffer = io.BytesIO()
-            fig.savefig(buffer, format="svg")
+            fig.savefig(
+                buffer,
+                format="svg",
+                bbox_inches="tight",
+                pad_inches=0.02,
+            )
             svg_data = buffer.getvalue().decode("utf-8")
             buffer.close()
 

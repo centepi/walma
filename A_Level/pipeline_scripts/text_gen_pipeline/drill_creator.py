@@ -127,7 +127,12 @@ def create_drill_question(
             fig = dynamic_chart_plotter(visual_data)
 
             buffer = io.BytesIO()
-            fig.savefig(buffer, format="svg")
+            fig.savefig(
+                buffer,
+                format="svg",
+                bbox_inches="tight",
+                pad_inches=0.02,
+            )
             svg_data = buffer.getvalue().decode("utf-8")
             buffer.close()
 
