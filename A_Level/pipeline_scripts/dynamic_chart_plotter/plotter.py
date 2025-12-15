@@ -213,7 +213,7 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
                 if isinstance(region, dict):
                     plot_shaded_region(axes['main'], region, function_registry)
 
-        # Set up the plot appearance for main chart
+        # Set up the plot appearance for main chart (axis-level only; no tight_layout here)
         setup_plot_appearance(axes['main'], config)
 
     # Process tables
@@ -224,6 +224,14 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     # Global title if specified (composite only)
     if 'title' in config and layout_mode == 'composite':
         fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.98)
+
+    # IMPORTANT: apply figure-level layout once, at the very end.
+    # This prevents clipped table titles / overlapping when multiple panels exist.
+    try:
+        fig.tight_layout()
+    except Exception:
+        # Never crash plotting due to layout.
+        pass
 
     return fig
 

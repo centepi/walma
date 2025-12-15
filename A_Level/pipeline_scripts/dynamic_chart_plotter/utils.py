@@ -221,6 +221,15 @@ def clean_table_text(text: str) -> str:
 # ============================================================================
 
 def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
+    """
+    Apply axis-level styling only.
+
+    IMPORTANT:
+    - Do NOT call plt.tight_layout() here.
+    - tight_layout/constrained_layout are figure-level policies and can
+      clip titles/labels in composite (chart+table) figures.
+    - Layout should be applied once in plotter.py after all subplots are drawn.
+    """
     ax.set_xlabel(config.get("x_label", "x"), fontsize=13, fontweight="bold")
     ax.set_ylabel(config.get("y_label", "y"), fontsize=13, fontweight="bold")
 
@@ -255,8 +264,6 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
     if config.get("axes_through_origin"):
         ax.axhline(0, color="k", alpha=0.3, linewidth=0.8)
         ax.axvline(0, color="k", alpha=0.3, linewidth=0.8)
-
-    plt.tight_layout()
 
 
 # ============================================================================
