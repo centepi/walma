@@ -123,12 +123,25 @@ def plot_explicit_function(
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
 
-    if 'visual_features' in graph and 'axes_range' in (graph.get('visual_features') or {}):
-        axes_range = graph['visual_features']['axes_range']
-        x_min = axes_range.get('x_min', -10)
-        x_max = axes_range.get('x_max', 10)
-    else:
-        x_min, x_max = -10, 10
+    # --------------------------------------------------------------------
+    # FIX: sample over the visible x-range (axes limits), not the per-curve
+    # axes_range. Otherwise a curve can "stop early" if it was generated
+    # with a narrower chart-level range than the global plot viewport.
+    #
+    # This has zero API cost; it only changes local sampling for plotting.
+    # --------------------------------------------------------------------
+    x_min, x_max = ax.get_xlim()
+
+    # If limits are still Matplotlib defaults (0..1), fall back to any
+    # per-graph axes_range, then to (-10, 10).
+    if x_min == 0.0 and x_max == 1.0:
+        vf = graph.get('visual_features', {}) or {}
+        axes_range = vf.get('axes_range') if isinstance(vf.get('axes_range'), dict) else None
+        if axes_range:
+            x_min = axes_range.get('x_min', -10)
+            x_max = axes_range.get('x_max', 10)
+        else:
+            x_min, x_max = -10, 10
 
     x_vals = np.linspace(x_min, x_max, 1000)
     func_str = graph['explicit_function']
@@ -275,19 +288,48 @@ def plot_histogram(
     graph: Dict[str, Any],
     function_registry: Dict[str, Optional[Callable]]
 ) -> None:
+    """
+    Histogram rendering (pedagogy-safe):
+
+    We plot bar HEIGHTS in "Frequency Density (units)" (i.e. the y-axis units
+    shown to the student), NOT raw frequencies (student counts).
+
+    Required visual_features keys:
+      - bins: list of [lo, hi] pairs (or Firestore-sanitized strings)
+      - heights: list of bar heights in "units" (same length as bins)
+
+    Accepted alias for heights:
+      - frequency_density_units
+
+    We intentionally DO NOT plot visual_features["frequencies"] because that
+    can both (a) break the chart scale and (b) give away answers.
+    """
     graph_id = graph.get('id', 'unknown')
     label = graph.get('label', '')
     color = get_color_cycle(graph_id)
 
     visual_features = graph.get('visual_features', {}) or {}
     raw_bins = visual_features.get('bins', [])
-    frequencies = visual_features.get('frequencies', [])
 
-    if len(raw_bins) != len(frequencies):
-        print(f"⚠️ Bin and frequency count mismatch in histogram '{graph_id}'")
-        return
+    # Heights in "units" (what the histogram axis shows)
+    heights = visual_features.get('heights', None)
+    if heights is None:
+        heights = visual_features.get('frequency_density_units', None)
+    heights = heights or []
+
     if not raw_bins:
         print(f"⚠️ No bins found in histogram '{graph_id}'")
+        return
+
+    if not heights:
+        print(
+            f"⚠️ Histogram '{graph_id}' missing 'heights' (frequency density units). "
+            f"Refusing to plot to avoid incorrect/answer-leaking render."
+        )
+        return
+
+    if len(raw_bins) != len(heights):
+        print(f"⚠️ Bin and height count mismatch in histogram '{graph_id}'")
         return
 
     # Accept bins even if Firestore-sanitized into strings like "[0, 5]"
@@ -308,7 +350,7 @@ def plot_histogram(
 
     ax.bar(
         bin_centers,
-        frequencies,
+        heights,
         width=bin_widths,
         align='center',
         label=safe_label,
