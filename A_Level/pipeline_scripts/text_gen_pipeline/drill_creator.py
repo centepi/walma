@@ -9,7 +9,11 @@ from pipeline_scripts import utils
 from pipeline_scripts import response_validator
 from pipeline_scripts import postprocess_math
 from pipeline_scripts import firestore_sanitizer
-from pipeline_scripts.dynamic_chart_plotter import dynamic_chart_plotter, validate_config
+
+# ✅ NEW chart plotter (no legacy imports)
+# NOTE: adjust this import path ONLY if your new package lives elsewhere.
+from pipeline_scripts.dynamic_chart_plotter.plotter import dynamic_chart_plotter
+from pipeline_scripts.dynamic_chart_plotter.utils import validate_config
 
 from .drill_prompts import build_text_drill_prompt
 
@@ -75,66 +79,78 @@ def create_drill_question(
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for drill question. Processing…")
-        issues = validate_config(visual_data)
+
+        # Always run validation, but treat issues as warnings (do NOT gate plotting).
+        try:
+            issues = validate_config(visual_data)
+        except Exception as ex:
+            issues = [f"validate_config raised exception: {ex}"]
+
         if issues:
-            print("Validation Issues:")
+            print("Validation Issues (warnings):")
             for issue in issues:
                 print(f"  ⚠️  {issue}")
         else:
             print("✅ Configuration is valid!")
 
-            # --- SPLIT PATH: Firestore-safe copy vs Plot/Client numeric copy ---
+        # --- SPLIT PATH: Firestore-safe copy vs Plot/Client numeric copy ---
 
-            # A. Create a Firestore-safe copy (do NOT overwrite the numeric visual_data)
+        # A. Create a Firestore-safe copy (do NOT overwrite the numeric visual_data)
+        try:
+            sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
+            content_object["visual_data_firestore"] = sanitized_data
+        except Exception as ex:
+            logger.error(f"Failed to sanitize visual_data for Firestore: {ex}")
+
+        # B. Use ORIGINAL visual_data for plotting and for the client
+        charts = []
+        if isinstance(visual_data, dict):
+            charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
+
+        has_non_table = any(
+            isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
+            for c in charts
+        )
+        has_only_table = bool(charts) and not has_non_table
+
+        if has_only_table:
+            # Keep behaviour: tables-only doesn't need an SVG chart (and avoids confusing empty plots).
+            logger.debug("Visual data is table-only; skipping SVG generation.")
+        else:
+            fig = None
             try:
-                sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
-                content_object["visual_data_firestore"] = sanitized_data
+                fig = dynamic_chart_plotter(visual_data)
+
+                buffer = io.BytesIO()
+                fig.savefig(buffer, format="svg")
+                svg_data = buffer.getvalue().decode("utf-8")
+                buffer.close()
+
+                svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+
+                # UPDATED SCHEMA: svg_images array (and legacy svg_image)
+                fig_id = None
+                if charts and isinstance(charts[0], dict):
+                    fig_id = charts[0].get("id")
+
+                content_object["svg_images"] = [{
+                    "id": fig_id or "figure_1",
+                    "label": "Figure 1",
+                    "svg_base64": svg_base64,
+                    "kind": "chart",
+                }]
+
+                # Backwards compatibility (remove later)
+                content_object["svg_image"] = svg_base64
+
             except Exception as ex:
-                logger.error(f"Failed to sanitize visual_data for Firestore: {ex}")
-
-            # B. Use ORIGINAL visual_data for plotting and for the client
-            charts = []
-            if isinstance(visual_data, dict):
-                charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
-
-            has_non_table = any(
-                isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
-                for c in charts
-            )
-            has_only_table = bool(charts) and not has_non_table
-
-            if has_only_table:
-                logger.debug("Visual data is table-only; skipping SVG generation.")
-            else:
+                logger.error(f"Failed to plot drill chart: {ex}")
+            finally:
                 try:
-                    fig = dynamic_chart_plotter(visual_data)
-
-                    buffer = io.BytesIO()
-                    fig.savefig(buffer, format="svg")
-                    plt.close(fig)
-
-                    svg_data = buffer.getvalue().decode("utf-8")
-                    buffer.close()
-
-                    svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
-
-                    # UPDATED SCHEMA: svg_images array (and legacy svg_image)
-                    fig_id = None
-                    if charts and isinstance(charts[0], dict):
-                        fig_id = charts[0].get("id")
-
-                    content_object["svg_images"] = [{
-                        "id": fig_id or "figure_1",
-                        "label": "Figure 1",
-                        "svg_base64": svg_base64,
-                        "kind": "chart",
-                    }]
-
-                    # Backwards compatibility (remove later)
-                    content_object["svg_image"] = svg_base64
-
-                except Exception as ex:
-                    logger.error(f"Failed to plot drill chart: {ex}")
+                    if fig is not None:
+                        plt.close(fig)
+                except Exception:
+                    pass
     else:
         logger.debug("No visual data generated.")
 
