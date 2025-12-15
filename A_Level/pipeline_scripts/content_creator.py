@@ -2,7 +2,7 @@ import os
 import re
 import json
 import google.generativeai as genai
-from typing import Optional, List  # ✅ FIX: Optional (and List used in annotations below)
+from typing import Optional, Dict, Any, List  # ✅ include Dict/Any too (used in type hints)
 
 from config import settings
 from . import utils
@@ -11,7 +11,11 @@ from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
-from .dynamic_chart_plotter_Legacy import dynamic_chart_plotter, validate_config
+
+# ✅ NEW chart plotter (NOT legacy)
+from .dynamic_chart_plotter.plotter import dynamic_chart_plotter
+from .dynamic_chart_plotter.utils import validate_config
+
 from . import firestore_sanitizer
 
 import datetime
@@ -370,46 +374,34 @@ _VISUAL_CUES = re.compile(
     re.IGNORECASE
 )
 
-# A small whitelist of math-y topic tokens that help anchor domain without being too prescriptive.
 _ANCHOR_TOKENS = [
-    # Topology / analysis-ish
     "topology", "metric", "open set", "closed set", "connected", "compact",
     "continuity", "homeomorphism", "quotient", "basis", "subspace",
     "neighbourhood", "neighborhood", "accumulation point", "limit point",
-    # Graphs / visual maths
     "graph", "axes", "locus", "contour", "surface", "curve",
-    # General (kept minimal)
     "proof", "show that", "hence", "therefore",
 ]
 
 
 def _extract_anchor_terms(*texts: str, limit: int = 8) -> List[str]:
-    """
-    Heuristic: keep distinctive, domain-signalling tokens from source text
-    to gently bias the generator. No NLP deps, minimal & safe.
-    """
     joined = " ".join([t for t in texts if isinstance(t, str)])
     low = joined.lower()
 
-    # Pull from whitelist if present
     hits = []
     for tk in _ANCHOR_TOKENS:
         if tk in low:
             hits.append(tk)
 
-    # Add a few long-ish alphabetic words that look mathy (fallback)
     extra = []
     for w in re.findall(r"[a-zA-Z][a-zA-Z\-]{4,}", low):
         if w in hits:
             continue
         if any(c.isdigit() for c in w):
             continue
-        # Avoid super-generic fillers
         if w in {"which", "their", "therefore", "where", "given", "using", "hence", "since", "prove"}:
             continue
         extra.append(w)
 
-    # Dedup, preserve order, cap
     out = []
     for w in hits + extra:
         if w not in out:
@@ -420,10 +412,6 @@ def _extract_anchor_terms(*texts: str, limit: int = 8) -> List[str]:
 
 
 def _build_auto_context_header(full_reference_text: str, target_part_content: str) -> str:
-    """
-    Builds a tiny preface that locks domain/skill and visual intent for the model.
-    This is purely prompt-time guidance; no new validators or files.
-    """
     visual_hint = bool(_VISUAL_CUES.search(f"{full_reference_text}\n{target_part_content}"))
     tags = _extract_anchor_terms(full_reference_text, target_part_content, limit=8)
 
@@ -460,15 +448,6 @@ def create_question(
     correction_feedback=None,
     keep_structure: bool = False,
 ):
-    """
-    Creates a new, self-contained question inspired by a specific part of a reference question.
-    If correction_feedback is provided, it attempts to fix a previously failed generation.
-
-    NOTE: We ask the model to include a concise 'final_answer' inside the first part
-    so downstream CAS validation can run quickly and reliably. If CAS is enabled and
-    the model omits 'answer_spec', we try a tiny heuristic to synthesize one for
-    common derivative-style items.
-    """
     target_part_id = target_part_ref.get("original_question", {}).get("id", "N/A")
     target_part_content = target_part_ref.get("original_question", {}).get("content", "")
     target_part_answer = target_part_ref.get("original_answer", {}).get("content", "")
@@ -485,7 +464,6 @@ def create_question(
         logger.info(f"Generating new question inspired by part '{target_part_id}'.")
         correction_prompt_section = ""
 
-    # ---- NEW: auto domain/skill anchoring header (merged with any global context header) ----
     try:
         auto_header = _build_auto_context_header(full_reference_text or "", target_part_content or "")
     except Exception as e:
@@ -495,7 +473,6 @@ def create_question(
     base_header = (getattr(settings, "GENERATION_CONTEXT_PROMPT", "") or "").strip()
     effective_context_header = "\n\n".join([h for h in (base_header, auto_header) if h]).strip()
 
-    # Build the prompt via shared presets (keeps behavior consistent across modules)
     prompt = build_creator_prompt(
         context_header=effective_context_header,
         full_reference_text=full_reference_text,
@@ -521,21 +498,20 @@ def create_question(
         logger.error(f"Failed to generate or validate content for seed '{target_part_id}'.")
         return None
 
-    # 1) Normalize (includes MCQ handling if choices present)
     content_object = _normalize_generated_object(content_object)
-
-    # 2) Sanitize math text fields (outside/inside delimiters) — removes stray **, fixes sqrt/frac, \sin, etc.
-    #    Note: choices text is not sanitized here (to keep this change minimal).
     content_object = postprocess_math.sanitize_generated_object(content_object)
-
-    # 3) If CAS is enabled but spec missing, attempt minimal synthesis for common cases
     content_object = _synthesize_answer_spec_if_missing(content_object)
 
     # 4) Process any visual data
     visual_data = content_object.get("visual_data")
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
-        issues = validate_config(visual_data)
+
+        try:
+            issues = validate_config(visual_data)
+        except Exception as ex:
+            issues = [f"validate_config raised exception: {ex}"]
+
         if issues:
             print("Validation Issues:")
             for issue in issues:
@@ -543,73 +519,70 @@ def create_question(
         else:
             print("✅ Configuration is valid!")
 
-            # --- FIX: Split path for upload vs plot ---
-            # 1. Sanitize for Firestore (strings) BUT DO NOT overwrite visual_data
+        # --- Firestore-safe copy (do NOT overwrite numeric visual_data) ---
+        try:
             sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
 
-            # Store sanitized copy under a separate key (safe for Firestore)
-            # while keeping the original numeric visual_data for plotting and app use.
+            # Restore any table charts from original visual_data so tables are never Firestore-mangled.
+            if isinstance(visual_data, dict) and isinstance(sanitized_data, dict):
+                charts_key = "charts" if "charts" in visual_data else "graphs"
+                orig_charts = visual_data.get(charts_key, []) or []
+                sani_charts = sanitized_data.get(charts_key, []) or []
+
+                if (
+                    isinstance(orig_charts, list)
+                    and isinstance(sani_charts, list)
+                    and len(orig_charts) == len(sani_charts)
+                ):
+                    for i, orig_c in enumerate(orig_charts):
+                        if isinstance(orig_c, dict) and str(orig_c.get("type", "")).strip().lower() == "table":
+                            sani_charts[i] = orig_c
+                    sanitized_data[charts_key] = sani_charts
+
             content_object["visual_data_firestore"] = sanitized_data
+        except Exception as ex:
+            logger.error("Failed to sanitize visual_data for Firestore: %s", ex)
 
-            # 2. Use ORIGINAL visual_data (numbers) for logic and plotting
-            # -------------------------------------------------------------
+        # --- IMPORTANT CHANGE ---
+        # Tables are now rendered as normal SVG charts (TableChartView removed),
+        # so we ALWAYS generate SVG if visual_data exists (including table-only).
+        fig = None
+        try:
+            fig = dynamic_chart_plotter(visual_data)
 
-            # Decide if this visual is table-only; if so, skip SVG generation
-            charts = []
+            buffer = io.BytesIO()
+            fig.savefig(buffer, format="svg")
+            svg_data = buffer.getvalue().decode("utf-8")
+            buffer.close()
+
+            svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+
+            fig_id = None
             if isinstance(visual_data, dict):
-                charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
+                charts_for_id = visual_data.get("charts", visual_data.get("graphs", [])) or []
+                if isinstance(charts_for_id, list) and charts_for_id:
+                    first = charts_for_id[0] if isinstance(charts_for_id[0], dict) else {}
+                    fig_id = first.get("id")
 
-            has_non_table = any(
-                isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
-                for c in charts
-            )
-            has_only_table = bool(charts) and not has_non_table
+            content_object["svg_images"] = [{
+                "id": fig_id or "figure_1",
+                "label": "Figure 1",
+                "svg_base64": svg_base64,
+                "kind": "chart",
+            }]
 
-            if has_only_table:
-                logger.debug(
-                    "Visual data for seed '%s' is table-only; skipping SVG generation.",
-                    target_part_id,
-                )
-            else:
-                # Generate SVG diagram using ORIGINAL numeric data
-                fig = dynamic_chart_plotter(visual_data)
+            # Backwards-compat (optional): keep old key for older clients.
+            content_object["svg_image"] = svg_base64
 
-                buffer = io.BytesIO()
-                # IMPORTANT: save the specific figure, not the global pyplot state
-                fig.savefig(buffer, format="svg")
-                plt.close(fig)
+        except Exception as ex:
+            logger.error("Failed to plot chart for seed '%s': %s", target_part_id, ex)
+        finally:
+            try:
+                if fig is not None:
+                    plt.close(fig)
+            except Exception:
+                pass
 
-                svg_data = buffer.getvalue().decode("utf-8")
-                buffer.close()
-
-                svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
-
-                # -----------------------------------------------------------------
-                # UPDATED SCHEMA (Option A): store an array of SVGs, one per figure
-                #
-                # svg_images: [{id, label, svg_base64, kind}]
-                #
-                # For now we emit a single entry, but the field is future-proof:
-                # later you can append multiple entries (multi-figure questions)
-                # without changing iOS parsing logic again.
-                # -----------------------------------------------------------------
-                fig_id = None
-                if isinstance(visual_data, dict):
-                    charts_for_id = visual_data.get("charts", visual_data.get("graphs", [])) or []
-                    if isinstance(charts_for_id, list) and charts_for_id:
-                        first = charts_for_id[0] if isinstance(charts_for_id[0], dict) else {}
-                        fig_id = first.get("id")
-
-                content_object["svg_images"] = [{
-                    "id": fig_id or "figure_1",
-                    "label": "Figure 1",
-                    "svg_base64": svg_base64,
-                    "kind": "chart",
-                }]
-
-                # Backwards-compat (optional): keep old key for older clients.
-                # Remove this once iOS fully reads svg_images.
-                content_object["svg_image"] = svg_base64
     else:
         logger.debug("No visual data generated for seed '%s'.", target_part_id)
 
