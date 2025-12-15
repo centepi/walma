@@ -296,8 +296,19 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
             vf = chart.get("visual_features", {}) or {}
             bins = vf.get("bins", [])
             freqs = vf.get("frequencies", [])
+
             if len(bins) != len(freqs):
                 issues.append(f"Histogram '{chart_id}' bins/frequencies mismatch")
+
+            # NEW: warn if heights are missing / mismatched (so we know we’ll infer)
+            heights = vf.get("heights")
+            if heights is None:
+                issues.append(
+                    f"Histogram '{chart_id}' missing heights; will be inferred from frequencies/bin widths."
+                )
+            elif isinstance(heights, list) and len(heights) != len(bins):
+                issues.append(f"Histogram '{chart_id}' bins/heights mismatch")
+
             for b in bins:
                 if _coerce_bin_pair(b) is None:
                     issues.append(f"Histogram '{chart_id}' has invalid bin {b!r}")

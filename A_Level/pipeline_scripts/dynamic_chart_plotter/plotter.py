@@ -26,7 +26,7 @@ from .charts import (
     plot_labeled_point,
     plot_shaded_region,
 )
-from .utils import setup_plot_appearance
+from .utils import setup_plot_appearance, _coerce_bin_pair
 
 
 # ============================================================================
@@ -63,19 +63,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
     # ------------------------------------------------------------------------
     # USABILITY DEFAULTS (so visuals actually help)
-    #
-    # 1) For data-reading charts (hist/bar/scatter/cumulative/box), axis numbers
-    #    MUST be shown, otherwise the chart is useless.
-    #
-    #    IMPORTANT: do NOT use setdefault here, because configs coming from the
-    #    model/pipeline often include show_axis_numbers=False implicitly, which
-    #    would permanently suppress ticks. We override to True when needed.
-    #
-    # 2) If multiple curves are drawn on one axes (e.g., two functions),
-    #    curve labels must be enabled so the diagram can be referenced meaningfully.
-    #
-    # 3) If the caller didn't provide a global axes_range, but the first chart has
-    #    visual_features.axes_range, promote it so setup_plot_appearance() can apply it.
     # ------------------------------------------------------------------------
     try:
         chart_types = [
@@ -129,6 +116,73 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         # Never crash plotting due to defaulting logic.
         pass
 
+    # ------------------------------------------------------------------------
+    # HISTOGRAM NORMALISATION (FIX EMPTY HISTOGRAMS)
+    #
+    # Some pipeline outputs provide bins + frequencies but omit "heights".
+    # Our histogram renderer expects "heights" to plot the bars.
+    #
+    # We convert frequency -> frequency density height by dividing by class width.
+    # ------------------------------------------------------------------------
+    try:
+        for c in non_tables:
+            if not isinstance(c, dict):
+                continue
+            if str(c.get("type", "")).strip().lower() != "histogram":
+                continue
+
+            vf = c.get("visual_features")
+            if not isinstance(vf, dict):
+                vf = {}
+                c["visual_features"] = vf
+
+            # If heights are already provided, leave them alone.
+            if vf.get("heights") is not None:
+                continue
+
+            raw_bins = vf.get("bins", [])
+            freqs = vf.get("frequencies", [])
+
+            if not raw_bins or not freqs:
+                continue
+            if len(raw_bins) != len(freqs):
+                continue
+
+            # Parse bins (supports lists/tuples or strings like "[0, 10]")
+            parsed_bins = []
+            ok = True
+            for b in raw_bins:
+                pair = _coerce_bin_pair(b)
+                if pair is None:
+                    ok = False
+                    break
+                lo, hi = pair
+                width = float(hi) - float(lo)
+                if width <= 0:
+                    ok = False
+                    break
+                parsed_bins.append((float(lo), float(hi), width))
+
+            if not ok:
+                continue
+
+            # Compute frequency densities
+            heights = []
+            for (_, _, width), f in zip(parsed_bins, freqs):
+                try:
+                    heights.append(float(f) / float(width))
+                except Exception:
+                    ok = False
+                    break
+
+            if not ok:
+                continue
+
+            vf["heights"] = heights
+    except Exception:
+        # Never crash plotting due to normalization logic.
+        pass
+
     # Determine subplot configuration
     if layout_mode == 'composite' or tables:
         fig, axes = create_composite_layout(config, tables, non_tables)
@@ -138,7 +192,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         axes = {'main': ax}
 
     # Store function objects for later reference
-    # NOTE: some chart types store None (e.g., parametric/scatter), so Optional is required.
     function_registry: Dict[str, Optional[Callable]] = {}
 
     # Process charts (non-tables)
@@ -172,8 +225,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     if 'title' in config and layout_mode == 'composite':
         fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.98)
 
-    # NOTE: avoid calling plt.tight_layout() here because setup_plot_appearance()
-    # already tightens (and composite figures often need the suptitle spacing).
     return fig
 
 
@@ -189,22 +240,18 @@ def create_composite_layout(
 
     # Determine positioning
     if not tables:
-        # No tables, standard layout
         fig, ax = plt.subplots(figsize=(12, 8))
         axes['main'] = ax
         return fig, axes
 
     if not charts:
-        # Only tables, no charts
         fig, ax = plt.subplots(figsize=(12, 6))
         axes['table'] = ax
         return fig, axes
 
-    # Determine table position from first table
     position = tables[0].get('visual_features', {}).get('position', 'below_chart')
 
     if position == 'above_chart':
-        # Table on top, chart below
         fig, (ax_table, ax_chart) = plt.subplots(
             2, 1, figsize=(12, 10),
             gridspec_kw={'height_ratios': [1, 3]}
@@ -213,7 +260,6 @@ def create_composite_layout(
         axes['main'] = ax_chart
 
     elif position == 'below_chart':
-        # Chart on top, table below
         fig, (ax_chart, ax_table) = plt.subplots(
             2, 1, figsize=(12, 10),
             gridspec_kw={'height_ratios': [3, 1]}
@@ -222,7 +268,6 @@ def create_composite_layout(
         axes['table'] = ax_table
 
     elif position == 'beside_chart':
-        # Side-by-side layout
         fig, (ax_chart, ax_table) = plt.subplots(
             1, 2, figsize=(16, 8),
             gridspec_kw={'width_ratios': [2, 1]}
@@ -231,7 +276,6 @@ def create_composite_layout(
         axes['table'] = ax_table
 
     else:  # 'standalone'
-        # Table only
         fig, ax = plt.subplots(figsize=(12, 6))
         axes['table'] = ax
 
@@ -267,7 +311,6 @@ def plot_chart(
     elif chart_type == 'cumulative':
         plot_cumulative_frequency(ax, chart, function_registry)
     elif chart_type == 'table':
-        # Tables are handled separately in layout logic
         return
     else:
         raise ValueError(f"Unsupported chart type: {chart_type}")
