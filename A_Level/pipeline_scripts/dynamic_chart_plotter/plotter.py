@@ -239,7 +239,23 @@ def create_composite_layout(
         return fig, axes
 
     if not charts:
-        fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True)
+        # Table-only: size figure height to content to avoid huge blank space.
+        n_rows = 0
+        try:
+            vf = (tables[0] or {}).get("visual_features") or {}
+            rows = vf.get("rows") or []
+            n_rows = len(rows) if isinstance(rows, list) else 0
+        except Exception:
+            n_rows = 0
+
+        # Header row + body rows. Clamp so it can't explode for long tables.
+        total_rows = max(1, n_rows + 1)
+
+        # Tuned by eye: ~0.55 inches per row + base padding.
+        fig_h = 2.2 + 0.55 * total_rows
+        fig_h = max(3.2, min(10.0, fig_h))
+
+        fig, ax = plt.subplots(figsize=(12, fig_h), constrained_layout=True)
         axes['table'] = ax
         return fig, axes
 
