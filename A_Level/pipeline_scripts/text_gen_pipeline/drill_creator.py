@@ -96,8 +96,22 @@ def create_drill_question(
         # --- SPLIT PATH: Firestore-safe copy vs Plot/Client numeric copy ---
 
         # A. Create a Firestore-safe copy (do NOT overwrite the numeric visual_data)
+        # IMPORTANT: keep TABLE charts unmodified (tables are content, not numeric geometry).
         try:
             sanitized_data = firestore_sanitizer.sanitize_for_firestore(visual_data)
+
+            # Restore any table charts from the original visual_data so tables never get "Firestore-mangled".
+            if isinstance(visual_data, dict) and isinstance(sanitized_data, dict):
+                charts_key = "charts" if "charts" in visual_data else "graphs"
+                orig_charts = visual_data.get(charts_key, []) or []
+                sani_charts = sanitized_data.get(charts_key, []) or []
+
+                if isinstance(orig_charts, list) and isinstance(sani_charts, list) and len(orig_charts) == len(sani_charts):
+                    for i, (orig_c, _) in enumerate(zip(orig_charts, sani_charts)):
+                        if isinstance(orig_c, dict) and str(orig_c.get("type", "")).strip().lower() == "table":
+                            sani_charts[i] = orig_c
+                    sanitized_data[charts_key] = sani_charts
+
             content_object["visual_data_firestore"] = sanitized_data
         except Exception as ex:
             logger.error(f"Failed to sanitize visual_data for Firestore: {ex}")
@@ -107,50 +121,41 @@ def create_drill_question(
         if isinstance(visual_data, dict):
             charts = visual_data.get("charts", visual_data.get("graphs", [])) or []
 
-        has_non_table = any(
-            isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
-            for c in charts
-        )
-        has_only_table = bool(charts) and not has_non_table
+        # ✅ CHANGE: ALWAYS generate an SVG if visual_data exists (including table-only).
+        fig = None
+        try:
+            fig = dynamic_chart_plotter(visual_data)
 
-        if has_only_table:
-            # Keep behaviour: tables-only doesn't need an SVG chart (and avoids confusing empty plots).
-            logger.debug("Visual data is table-only; skipping SVG generation.")
-        else:
-            fig = None
+            buffer = io.BytesIO()
+            fig.savefig(buffer, format="svg")
+            svg_data = buffer.getvalue().decode("utf-8")
+            buffer.close()
+
+            svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+
+            # UPDATED SCHEMA: svg_images array (and legacy svg_image)
+            fig_id = None
+            if charts and isinstance(charts[0], dict):
+                fig_id = charts[0].get("id")
+
+            content_object["svg_images"] = [{
+                "id": fig_id or "figure_1",
+                "label": "Figure 1",
+                "svg_base64": svg_base64,
+                "kind": "chart",
+            }]
+
+            # Backwards compatibility (remove later)
+            content_object["svg_image"] = svg_base64
+
+        except Exception as ex:
+            logger.error(f"Failed to plot drill chart: {ex}")
+        finally:
             try:
-                fig = dynamic_chart_plotter(visual_data)
-
-                buffer = io.BytesIO()
-                fig.savefig(buffer, format="svg")
-                svg_data = buffer.getvalue().decode("utf-8")
-                buffer.close()
-
-                svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
-
-                # UPDATED SCHEMA: svg_images array (and legacy svg_image)
-                fig_id = None
-                if charts and isinstance(charts[0], dict):
-                    fig_id = charts[0].get("id")
-
-                content_object["svg_images"] = [{
-                    "id": fig_id or "figure_1",
-                    "label": "Figure 1",
-                    "svg_base64": svg_base64,
-                    "kind": "chart",
-                }]
-
-                # Backwards compatibility (remove later)
-                content_object["svg_image"] = svg_base64
-
-            except Exception as ex:
-                logger.error(f"Failed to plot drill chart: {ex}")
-            finally:
-                try:
-                    if fig is not None:
-                        plt.close(fig)
-                except Exception:
-                    pass
+                if fig is not None:
+                    plt.close(fig)
+            except Exception:
+                pass
     else:
         logger.debug("No visual data generated.")
 

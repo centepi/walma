@@ -118,11 +118,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
     # ------------------------------------------------------------------------
     # HISTOGRAM NORMALISATION (FIX EMPTY HISTOGRAMS)
-    #
-    # Some pipeline outputs provide bins + frequencies but omit "heights".
-    # Our histogram renderer expects "heights" to plot the bars.
-    #
-    # We convert frequency -> frequency density height by dividing by class width.
     # ------------------------------------------------------------------------
     try:
         for c in non_tables:
@@ -148,7 +143,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
             if len(raw_bins) != len(freqs):
                 continue
 
-            # Parse bins (supports lists/tuples or strings like "[0, 10]")
             parsed_bins = []
             ok = True
             for b in raw_bins:
@@ -166,7 +160,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
             if not ok:
                 continue
 
-            # Compute frequency densities
             heights = []
             for (_, _, width), f in zip(parsed_bins, freqs):
                 try:
@@ -180,15 +173,14 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
             vf["heights"] = heights
     except Exception:
-        # Never crash plotting due to normalization logic.
         pass
 
     # Determine subplot configuration
     if layout_mode == 'composite' or tables:
         fig, axes = create_composite_layout(config, tables, non_tables)
     else:
-        # Standard single-chart layout
-        fig, ax = plt.subplots(figsize=(12, 8))
+        # Standard single-chart layout (use constrained_layout to avoid clipping)
+        fig, ax = plt.subplots(figsize=(12, 8), constrained_layout=True)
         axes = {'main': ax}
 
     # Store function objects for later reference
@@ -199,21 +191,19 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         for chart in non_tables:
             plot_chart(axes['main'], chart, function_registry)
 
-        # Process labeled points
         labeled_points = config.get('labeled_points')
         if isinstance(labeled_points, list):
             for point in labeled_points:
                 if isinstance(point, dict):
                     plot_labeled_point(axes['main'], point)
 
-        # Process shaded regions
         shaded_regions = config.get('shaded_regions')
         if isinstance(shaded_regions, list):
             for region in shaded_regions:
                 if isinstance(region, dict):
                     plot_shaded_region(axes['main'], region, function_registry)
 
-        # Set up the plot appearance for main chart (axis-level only; no tight_layout here)
+        # Axis-level only; DO NOT force tight_layout here.
         setup_plot_appearance(axes['main'], config)
 
     # Process tables
@@ -223,15 +213,12 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
     # Global title if specified (composite only)
     if 'title' in config and layout_mode == 'composite':
-        fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.98)
+        # With constrained_layout, y can be high; keep it slightly inside.
+        fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.99)
 
-    # IMPORTANT: apply figure-level layout once, at the very end.
-    # This prevents clipped table titles / overlapping when multiple panels exist.
-    try:
-        fig.tight_layout()
-    except Exception:
-        # Never crash plotting due to layout.
-        pass
+    # IMPORTANT:
+    # Do NOT call fig.tight_layout() here when constrained_layout is enabled.
+    # tight_layout frequently clips table titles / table content in composite figures.
 
     return fig
 
@@ -246,14 +233,13 @@ def create_composite_layout(
     """
     axes: Dict[str, plt.Axes] = {}
 
-    # Determine positioning
     if not tables:
-        fig, ax = plt.subplots(figsize=(12, 8))
+        fig, ax = plt.subplots(figsize=(12, 8), constrained_layout=True)
         axes['main'] = ax
         return fig, axes
 
     if not charts:
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True)
         axes['table'] = ax
         return fig, axes
 
@@ -261,30 +247,36 @@ def create_composite_layout(
 
     if position == 'above_chart':
         fig, (ax_table, ax_chart) = plt.subplots(
-            2, 1, figsize=(12, 10),
-            gridspec_kw={'height_ratios': [1, 3]}
+            2, 1,
+            figsize=(12, 10),
+            gridspec_kw={'height_ratios': [1, 3]},
+            constrained_layout=True
         )
         axes['table'] = ax_table
         axes['main'] = ax_chart
 
     elif position == 'below_chart':
         fig, (ax_chart, ax_table) = plt.subplots(
-            2, 1, figsize=(12, 10),
-            gridspec_kw={'height_ratios': [3, 1]}
+            2, 1,
+            figsize=(12, 10),
+            gridspec_kw={'height_ratios': [3, 1]},
+            constrained_layout=True
         )
         axes['main'] = ax_chart
         axes['table'] = ax_table
 
     elif position == 'beside_chart':
         fig, (ax_chart, ax_table) = plt.subplots(
-            1, 2, figsize=(16, 8),
-            gridspec_kw={'width_ratios': [2, 1]}
+            1, 2,
+            figsize=(16, 8),
+            gridspec_kw={'width_ratios': [2, 1]},
+            constrained_layout=True
         )
         axes['main'] = ax_chart
         axes['table'] = ax_table
 
     else:  # 'standalone'
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True)
         axes['table'] = ax
 
     return fig, axes

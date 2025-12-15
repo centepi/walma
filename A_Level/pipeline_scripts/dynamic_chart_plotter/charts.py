@@ -35,41 +35,129 @@ from .utils import (
 def plot_table(ax: plt.Axes, table_config: Dict[str, Any]) -> None:
     """
     Plot a table using matplotlib's table functionality.
+
+    Robust to Firestore-sanitized row formats, e.g.:
+      - rows: [["a", "b"], ["c", "d"]] (ideal)
+      - rows: [{"0": "a", "1": "b"}, {"0": "c", "1": "d"}]
+      - rows: [{"0": "['a','b']"}, {"0": "['c','d']"}]  (stringified list inside a dict)
+      - rows: ["['a','b']", "['c','d']"]                (stringified list)
     """
+    import json
+    import ast
+
+    def _parse_stringified_list(s: str) -> Optional[List[Any]]:
+        ss = str(s).strip()
+        if not ss:
+            return None
+        # Try JSON first
+        try:
+            parsed = json.loads(ss)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+        # Then Python literal list like "['a', 'b']"
+        try:
+            parsed = ast.literal_eval(ss)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+        return None
+
+    def _row_to_list(row: Any) -> Optional[List[Any]]:
+        # Already a list/tuple row
+        if isinstance(row, (list, tuple)):
+            return list(row)
+
+        # A dict row: try to interpret as {colIndex: value, ...}
+        if isinstance(row, dict):
+            # If it looks like a single wrapped stringified list, unwrap it.
+            if len(row) == 1:
+                only_val = next(iter(row.values()))
+                if isinstance(only_val, str):
+                    parsed = _parse_stringified_list(only_val)
+                    if parsed is not None:
+                        return parsed
+                # Or a single nested list
+                if isinstance(only_val, (list, tuple)):
+                    return list(only_val)
+
+            # Otherwise: sort keys numerically when possible
+            items = []
+            for k, v in row.items():
+                # keys might be "0", 0, "1" etc.
+                try:
+                    kk = int(k)
+                except Exception:
+                    kk = k
+                items.append((kk, v))
+
+            # Prefer numeric sort if most keys are ints
+            try:
+                items_sorted = sorted(items, key=lambda kv: (isinstance(kv[0], str), kv[0]))
+            except Exception:
+                items_sorted = items
+
+            return [v for _, v in items_sorted]
+
+        # A bare string row that might be "['a','b']"
+        if isinstance(row, str):
+            parsed = _parse_stringified_list(row)
+            if parsed is not None:
+                return parsed
+
+        return None
+
     visual_features = table_config.get('visual_features', {}) or {}
     headers = visual_features.get('headers', []) or []
-    rows = visual_features.get('rows', []) or []
+    raw_rows = visual_features.get('rows', []) or []
     table_style = visual_features.get('table_style', 'standard')
     label = table_config.get('label', '')
 
     # Validate table data
-    if not rows:
+    if not raw_rows:
         print(f"⚠️ No rows found in table '{table_config.get('id', 'unknown')}'")
         return
 
     cleaned_headers = [clean_table_text(h) for h in headers] if headers else []
-    cleaned_rows: List[List[str]] = []
-    for row in rows:
-        cleaned_row = [clean_table_text(cell) for cell in row]
-        cleaned_rows.append(cleaned_row)
 
-    # Prepare table data with cleaned text
-    if cleaned_headers:
-        table_data = [cleaned_headers] + cleaned_rows
-        num_table_rows = len(cleaned_rows) + 1
-        has_header = True
-    else:
-        table_data = cleaned_rows
-        num_table_rows = len(cleaned_rows)
-        has_header = False
+    # Normalize rows into a clean List[List[str]]
+    normalized_rows: List[List[str]] = []
+    for r in raw_rows:
+        row_list = _row_to_list(r)
+        if row_list is None:
+            # Last-ditch: accept single cell row
+            row_list = [r]
+        cleaned = [clean_table_text(cell) for cell in row_list]
+        normalized_rows.append(cleaned)
 
-    # Determine expected column count (use row width when no headers)
+    # Determine expected column count
     expected_cols = len(cleaned_headers) if cleaned_headers else (
-        len(cleaned_rows[0]) if cleaned_rows and len(cleaned_rows[0]) > 0 else 0
+        len(normalized_rows[0]) if normalized_rows and len(normalized_rows[0]) > 0 else 0
     )
     if expected_cols <= 0:
         print(f"⚠️ Could not determine column count for table '{table_config.get('id', 'unknown')}'")
         return
+
+    # Pad / truncate rows to expected_cols (keeps Matplotlib table stable)
+    fixed_rows: List[List[str]] = []
+    for row in normalized_rows:
+        if len(row) < expected_cols:
+            row = row + [""] * (expected_cols - len(row))
+        elif len(row) > expected_cols:
+            row = row[:expected_cols]
+        fixed_rows.append(row)
+
+    # Prepare table data with cleaned text
+    if cleaned_headers:
+        table_data = [cleaned_headers] + fixed_rows
+        num_table_rows = len(fixed_rows) + 1
+        has_header = True
+    else:
+        table_data = fixed_rows
+        num_table_rows = len(fixed_rows)
+        has_header = False
 
     # Generate colors with correct column count
     cell_colors = get_table_colors(num_table_rows, expected_cols, table_style, has_header=has_header)

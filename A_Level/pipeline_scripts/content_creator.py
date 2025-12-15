@@ -11,7 +11,7 @@ from . import response_validator
 from .prompts_presets import build_creator_prompt
 from .constants import CASPolicy
 from . import postprocess_math  # <- math text sanitizer (minimal & safe)
-from .dynamic_chart_plotter import dynamic_chart_plotter, validate_config
+from .dynamic_chart_plotter_Legacy import dynamic_chart_plotter, validate_config
 from . import firestore_sanitizer
 
 import datetime

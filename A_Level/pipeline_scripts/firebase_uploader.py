@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import ast
 from typing import Optional, Dict, Any, List
 
 import firebase_admin
@@ -82,6 +83,26 @@ def _sanitize_visual_data_for_firestore(vd: Dict[str, Any]) -> Dict[str, Any]:
                 new_rows = []
                 if isinstance(rows, list):
                     for r in rows:
+                        # ------------------------------------------------------------------
+                        # FIX: Repair Firestore-mangled rows like {"0": "['a','b']"}
+                        # so the iOS client can map headers -> values reliably.
+                        # ------------------------------------------------------------------
+                        if (
+                            isinstance(r, dict)
+                            and headers
+                            and len(r) == 1
+                            and ("0" in r)
+                            and isinstance(r.get("0"), str)
+                        ):
+                            try:
+                                parsed = ast.literal_eval(r["0"].strip())
+                                if isinstance(parsed, (list, tuple)) and len(parsed) == len(headers):
+                                    row_map = {str(headers[i]): str(parsed[i]) for i in range(len(headers))}
+                                    new_rows.append(row_map)
+                                    continue
+                            except Exception:
+                                pass
+
                         if isinstance(r, dict):
                             new_rows.append({str(k): str(v) for k, v in r.items()})
                         elif isinstance(r, (list, tuple)) and headers and len(r) == len(headers):
