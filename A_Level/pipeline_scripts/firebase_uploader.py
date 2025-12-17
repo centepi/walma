@@ -2,7 +2,7 @@ import os
 import re
 import json
 import ast
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 import firebase_admin
 from firebase_admin import credentials
@@ -17,6 +17,10 @@ XP_TABLE = {
     1: 35, 2: 45, 3: 60, 4: 75, 5: 95, 6: 115, 7: 140, 8: 165,
 }
 
+_NUM_PREFIX_RE = re.compile(r"^(\d+)")
+_DOCID_MAIN_RE = re.compile(r"^(\d+)")
+
+
 def marks_to_difficulty(marks) -> int:
     try:
         m = int(marks or 0)
@@ -30,6 +34,7 @@ def marks_to_difficulty(marks) -> int:
     if m == 7: return 6
     if m == 8: return 7
     return 8
+
 
 def initialize_firebase():
     if not firebase_admin._apps:
@@ -55,6 +60,7 @@ def initialize_firebase():
     except Exception as e:
         logger.error("Firebase client error — %s", e)
         return None
+
 
 def _db_or_raise():
     db = initialize_firebase()
@@ -156,6 +162,121 @@ def _sanitize_svg_images_for_firestore(svg_images: Any) -> List[Dict[str, Any]]:
             cleaned.append(out)
 
     return cleaned
+
+
+def _parse_user_upload_questions_path(collection_path: str) -> Optional[Tuple[str, str]]:
+    """
+    If collection_path is Users/{uid}/Uploads/{uploadId}/Questions, return (uid, uploadId).
+    Else return None.
+    """
+    seg = collection_path.split("/")
+    if (
+        len(seg) >= 5
+        and seg[0] == "Users"
+        and seg[2] == "Uploads"
+        and seg[-1] == "Questions"
+    ):
+        uid = seg[1]
+        upload_id = seg[3]
+        if uid and upload_id:
+            return uid, upload_id
+    return None
+
+
+def _extract_int_prefix(val: object) -> Optional[int]:
+    """Parse a numeric prefix from int/str like 12, '12', '12a', '12-1' -> 12."""
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    s = str(val).strip()
+    if not s:
+        return None
+    m = _NUM_PREFIX_RE.match(s)
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
+
+
+def _compute_max_main_from_questions(col_ref) -> int:
+    """
+    Best-effort scan of existing question docs to infer the maximum main number.
+    Uses:
+      - doc id prefix (preferred)
+      - 'question_number'
+      - 'logical_question_id'
+    """
+    max_n = 0
+    try:
+        for d in col_ref.stream():
+            # 1) doc id
+            try:
+                m = _DOCID_MAIN_RE.match(getattr(d, "id", "") or "")
+                if m:
+                    max_n = max(max_n, int(m.group(1)))
+            except Exception:
+                pass
+
+            # 2) fields
+            try:
+                data = d.to_dict() or {}
+            except Exception:
+                data = {}
+
+            for key in ("question_number", "logical_question_id"):
+                v = _extract_int_prefix(data.get(key))
+                if isinstance(v, int):
+                    max_n = max(max_n, v)
+
+    except Exception as e:
+        logger.warning("Firebase: failed scanning existing questions for max main (%s)", e)
+    return max_n
+
+
+def _allocate_next_main_number(db_client, *, uid: str, upload_id: str) -> int:
+    """
+    Atomically allocate the next main question number for this upload using a parent-doc counter.
+
+    Parent: Users/{uid}/Uploads/{upload_id}
+      - nextQuestionNumber: int (next value to allocate, 1-based)
+    """
+    parent_ref = (
+        db_client.collection("Users")
+                 .document(uid)
+                 .collection("Uploads")
+                 .document(upload_id)
+    )
+    questions_col = parent_ref.collection("Questions")
+
+    def txn_fn(txn):
+        snap = parent_ref.get(transaction=txn)
+        data = snap.to_dict() if snap.exists else {}
+
+        nxt = data.get("nextQuestionNumber")
+        if isinstance(nxt, int) and nxt >= 1:
+            allocated = int(nxt)
+            txn.set(parent_ref, {"nextQuestionNumber": allocated + 1}, merge=True)
+            return allocated
+
+        # Counter missing/uninitialized: infer max once, then seed counter.
+        max_existing = _compute_max_main_from_questions(questions_col)
+        allocated = int(max_existing) + 1
+        txn.set(parent_ref, {"nextQuestionNumber": allocated + 1}, merge=True)
+        return allocated
+
+    try:
+        txn = db_client.transaction()
+        return txn.call(txn_fn)
+    except Exception as e:
+        # Fallback (non-atomic): still try to avoid total failure.
+        logger.error("Firebase: allocation transaction failed for %s/%s — %s", uid, upload_id, e)
+        max_existing = _compute_max_main_from_questions(
+            db_client.collection("Users").document(uid).collection("Uploads").document(upload_id).collection("Questions")
+        )
+        return int(max_existing) + 1
 
 
 # -----------------------------
@@ -374,13 +495,13 @@ def upload_content(db_client, collection_path, document_id, data):
     Behaviour:
     - For *user-upload questions* (paths like
       `Users/{uid}/Uploads/{uploadId}/Questions`), we:
-          • treat `document_id` as the *logical* question id (e.g. "1",
-            "1a", "2mcq"), and
-          • create a UNIQUE Firestore doc id:
-              first try `document_id`, then `document_id-1`,
-              `document_id-2`, ... until a free id is found.
-        This guarantees that appending the same homework again creates
-        additional docs instead of overwriting the existing one.
+          • treat `document_id` as the *logical* source id (e.g. "1", "1a", "2mcq"),
+          • allocate the NEXT sequential main number atomically from the parent upload doc,
+            so concurrent runs cannot collide,
+          • preserve any suffix from the logical id (e.g. "a", "aii") and write:
+              logical_question_id = "<next><suffix>"
+              question_number      = "<next><suffix>"
+          • write the Firestore doc id as "<next><suffix>" (so it sorts/stays unique).
     - For other `Users/...` docs (e.g. `Users/{uid}/Uploads/{uploadId}`),
       we always use the PROVIDED `document_id` and ignore WRITE_MODE.
     - For non-`Users/...` collections (e.g. `Topics`), we keep the
@@ -403,42 +524,41 @@ def upload_content(db_client, collection_path, document_id, data):
 
         doc_ref = None
         exists_snapshot = None
-        logical_id = document_id
-        chosen_doc_id = None  # NEW
+        logical_id = document_id  # what the caller *thinks* this question is (used only for suffix)
+        chosen_doc_id = None
 
         if is_user_upload_question:
-            # --------- VERSIONED IDS FOR QUESTIONS ----------
-            col_ref = db_client.collection(collection_path)
-            base_id = str(document_id or "q").strip() or "q"
-            candidate_id = base_id
-            suffix = 0
+            # ------------------------------------------------------------
+            # ✅ ATOMIC ALLOCATION: next sequential main number per upload
+            # ------------------------------------------------------------
+            parsed = _parse_user_upload_questions_path(collection_path)
+            if not parsed:
+                raise RuntimeError(f"Could not parse uid/upload_id from collection_path='{collection_path}'")
+            uid, upload_id = parsed
 
-            while True:
-                try:
-                    probe_ref = col_ref.document(candidate_id)
-                    snap = probe_ref.get()
-                    if not snap.exists:
-                        doc_ref = probe_ref
-                        chosen_doc_id = candidate_id  # NEW
-                        break
-                    suffix += 1
-                    candidate_id = f"{base_id}-{suffix}"
-                except Exception as e:
-                    logger.warning(
-                        "Firebase: existence probe failed for '%s/%s' (%s); using candidate id.",
-                        collection_path,
-                        candidate_id,
-                        e,
-                    )
-                    doc_ref = col_ref.document(candidate_id)
-                    chosen_doc_id = candidate_id  # NEW
-                    break
+            main_n = _allocate_next_main_number(db_client, uid=uid, upload_id=upload_id)
+
+            # Preserve suffixes like "a", "aii", "-1a" if caller passes them (rare in your new flow)
+            suffix_str = ""
+            try:
+                m = re.match(r"^\d+(.*)$", str(logical_id or "").strip())
+                if m:
+                    suffix_str = m.group(1) or ""
+            except Exception:
+                suffix_str = ""
+
+            display_id = f"{int(main_n)}{suffix_str}".strip()
+            chosen_doc_id = display_id
+
+            col_ref = db_client.collection(collection_path)
+            doc_ref = col_ref.document(chosen_doc_id)
 
             logger.debug(
-                "Firebase: user-upload QUESTION path '%s' — logical_id='%s', chosen doc id='%s'.",
+                "Firebase: user-upload QUESTION path '%s' — allocated main=%s, logical_id='%s', doc_id='%s'.",
                 collection_path,
+                main_n,
                 logical_id,
-                doc_ref.id,
+                chosen_doc_id,
             )
 
         elif is_users_collection:
@@ -509,39 +629,9 @@ def upload_content(db_client, collection_path, document_id, data):
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
         if is_user_upload_question:
-            # --------------------------------------------------
-            # FIX: Compute next available MAIN question number
-            # --------------------------------------------------
-            try:
-                existing_docs = db_client.collection(collection_path).stream()
-                max_main = 0
-                for d in existing_docs:
-                    m = re.match(r"^(\d+)", d.id)
-                    if m:
-                        max_main = max(max_main, int(m.group(1)))
-            except Exception as e:
-                logger.warning(
-                    "Firebase: failed to compute max_main for '%s' (%s); defaulting to 0",
-                    collection_path,
-                    e,
-                )
-                max_main = 0
-
-            # --------------------------------------------------
-            # Rewrite logical id so numbering CONTINUES
-            # --------------------------------------------------
-            new_main = max_main + 1
-
-            # Preserve suffixes like "a", "aii", "-1a" if present
-            suffix_str = ""
-            m = re.match(r"^\d+(.*)$", logical_id or "")
-            if m:
-                suffix_str = m.group(1)
-
-            display_id = f"{new_main}{suffix_str}"
-
-            payload["logical_question_id"] = display_id
-            payload["question_number"] = display_id
+            # Ensure the UI label matches what we actually wrote.
+            payload["logical_question_id"] = chosen_doc_id or str(logical_id or "").strip() or ""
+            payload["question_number"] = chosen_doc_id or str(logical_id or "").strip() or ""
 
             # Per-question timestamp (helps you show “added today” in UI)
             payload.setdefault("added_at", firestore.SERVER_TIMESTAMP)
