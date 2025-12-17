@@ -404,6 +404,7 @@ def upload_content(db_client, collection_path, document_id, data):
         doc_ref = None
         exists_snapshot = None
         logical_id = document_id
+        chosen_doc_id = None  # NEW
 
         if is_user_upload_question:
             # --------- VERSIONED IDS FOR QUESTIONS ----------
@@ -418,6 +419,7 @@ def upload_content(db_client, collection_path, document_id, data):
                     snap = probe_ref.get()
                     if not snap.exists:
                         doc_ref = probe_ref
+                        chosen_doc_id = candidate_id  # NEW
                         break
                     suffix += 1
                     candidate_id = f"{base_id}-{suffix}"
@@ -429,6 +431,7 @@ def upload_content(db_client, collection_path, document_id, data):
                         e,
                     )
                     doc_ref = col_ref.document(candidate_id)
+                    chosen_doc_id = candidate_id  # NEW
                     break
 
             logger.debug(
@@ -507,6 +510,13 @@ def upload_content(db_client, collection_path, document_id, data):
 
         if is_user_upload_question:
             payload.setdefault("logical_question_id", logical_id)
+
+            # NEW: ensure UI label matches the UNIQUE Firestore doc id we actually wrote
+            if chosen_doc_id:
+                payload["question_number"] = chosen_doc_id
+
+            # NEW: per-question timestamp (helps you show “added today” in UI)
+            payload.setdefault("added_at", firestore.SERVER_TIMESTAMP)
 
         # --------------------------------------------------------------------
         # Visual data: ALWAYS make it Firestore-safe (nested arrays etc.)

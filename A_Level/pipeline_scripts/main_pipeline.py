@@ -2,6 +2,9 @@
 import os
 import re
 import json
+import datetime
+from typing import Optional
+
 from config import settings
 from . import utils
 from . import document_analyzer
@@ -53,6 +56,70 @@ def _has_child_id(target_id: str, all_ids: set[str]) -> bool:
 def _main_numeric_id(qid: str) -> str:
     m = re.match(r"(\d+)", str(qid or ""))
     return m.group(1) if m else str(qid or "")
+
+
+# ---------- FIX #3: numbering helpers (append under existing) ----------
+
+_NUM_PREFIX_RE = re.compile(r"^(\d+)")
+
+def _extract_int_prefix(val: object) -> Optional[int]:
+    """Parse a numeric prefix from int/str like 12, '12', '12a', '12-1' -> 12."""
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    s = str(val).strip()
+    if not s:
+        return None
+    m = _NUM_PREFIX_RE.match(s)
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
+
+
+def _get_existing_max_question_number(db_client, *, uid: str, upload_id: str) -> int:
+    """
+    Look at existing docs in Users/{uid}/Uploads/{upload_id}/Questions and return the
+    max numeric question number we can detect.
+
+    We intentionally look at:
+      - field 'question_number'
+      - field 'logical_question_id'
+      - Firestore doc id (e.g. '12', '12-1')
+    """
+    try:
+        coll = (
+            db_client.collection("Users")
+                     .document(uid)
+                     .collection("Uploads")
+                     .document(upload_id)
+                     .collection("Questions")
+        )
+        snap = coll.get()
+    except Exception as e:
+        logger.warning("Could not read existing Questions for %s/%s: %s", uid, upload_id, e)
+        return 0
+
+    max_n = 0
+    for d in getattr(snap, "documents", []) or []:
+        try:
+            data = d.to_dict() or {}
+        except Exception:
+            data = {}
+
+        candidates = [
+            _extract_int_prefix(data.get("question_number")),
+            _extract_int_prefix(data.get("logical_question_id")),
+            _extract_int_prefix(getattr(d, "id", None)),
+        ]
+        for c in candidates:
+            if isinstance(c, int) and c > max_n:
+                max_n = c
+
+    return max_n
 
 
 # ---------- grouping logic ----------
@@ -357,6 +424,8 @@ def run_full_pipeline(
     keep_structure: bool | None = None,
     cas_policy: str | None = None,
     collection_root: str | None = None,
+    uid: Optional[str] = None,
+    upload_id: Optional[str] = None,
 ):
     """The main orchestrator for the 'Self-Contained Skills' generation process."""
     logger.info("--- Starting Full Content Pipeline (Generator–Checker–CAS) ---")
@@ -372,6 +441,23 @@ def run_full_pipeline(
         logger.error("Initialization failed (db/model). Aborting.")
         utils.save_run_report(run_report)
         return
+
+    # If caller didn't pass uid/upload_id, try global fallback (keeps old behavior intact).
+    uid = uid or globals().get("uid")
+    upload_id = upload_id or globals().get("upload_id")
+
+    # Pre-compute append numbering (Fix #3).
+    # If uid/upload_id aren't available (e.g. running standalone), we just don't apply renumbering.
+    next_question_number: Optional[int] = None
+    if uid and upload_id:
+        existing_max = _get_existing_max_question_number(db_client, uid=str(uid), upload_id=str(upload_id))
+        next_question_number = int(existing_max) + 1
+        logger.info(
+            "Append numbering enabled for Users/%s/Uploads/%s — existing max=%s, next=%s",
+            uid, upload_id, existing_max, next_question_number
+        )
+    else:
+        logger.warning("Append numbering disabled (uid/upload_id not provided). Standalone run assumed.")
 
     # 2) Sort and Group Source Documents (PDF folder mode)
     processing_jobs = document_sorter.sort_and_group_documents(settings.INPUT_PDF_DIR)
@@ -599,10 +685,23 @@ def run_full_pipeline(
                         logger.debug(f"{base_name} | {qid} | Removing empty 'visual_data'.")
                         del new_question_object["visual_data"]
 
-                    new_question_id = str(qid)  # use the hierarchical id like '1a', '3ai', or '1' for MCQ synthetic
+                    # ----------------------------
+                    # FIX #3: assign NEXT numeric label under existing max
+                    # ----------------------------
+                    if next_question_number is not None:
+                        new_question_id = str(int(next_question_number))
+                        next_question_number += 1
+                    else:
+                        # Fallback (standalone) — old behavior
+                        new_question_id = str(qid)
+
                     new_question_object["topic"] = base_name
                     new_question_object["question_number"] = new_question_id
                     new_question_object["total_marks"] = (feedback_object or {}).get("marks", 0)
+
+                    # Add “new vs old” info
+                    new_question_object["source_question_id"] = str(qid)
+                    new_question_object["added_at"] = datetime.datetime.utcnow().isoformat() + "Z"
 
                     # Save locally for audit/debug
                     os.makedirs("processed_data", exist_ok=True)
@@ -611,11 +710,14 @@ def run_full_pipeline(
                     # Console summary for upload
                     stem_preview = (new_question_object.get("question_stem") or new_question_object.get("prompt") or "").replace("\n", " ")
                     logger.info(
-                        f"{base_name} | {qid} | Uploading — Marks={new_question_object['total_marks']}, Stem='{stem_preview[:60]}...'"
+                        f"{base_name} | {qid} | Uploading as Q{new_question_id} — Marks={new_question_object['total_marks']}, Stem='{stem_preview[:60]}...'"
                     )
 
                     # Upload via uploader
                     # --- USER UPLOAD TARGET PATH ---
+                    if not uid or not upload_id:
+                        raise RuntimeError("uid/upload_id missing: cannot upload to Users/.../Uploads/.../Questions")
+
                     collection_path = f"Users/{uid}/Uploads/{upload_id}/Questions"
                     ok = firebase_uploader.upload_content(
                         db_client,
