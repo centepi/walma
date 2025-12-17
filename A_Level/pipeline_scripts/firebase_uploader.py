@@ -509,13 +509,41 @@ def upload_content(db_client, collection_path, document_id, data):
         payload["updated_at"] = firestore.SERVER_TIMESTAMP
 
         if is_user_upload_question:
-            payload.setdefault("logical_question_id", logical_id)
+            # --------------------------------------------------
+            # FIX: Compute next available MAIN question number
+            # --------------------------------------------------
+            try:
+                existing_docs = db_client.collection(collection_path).stream()
+                max_main = 0
+                for d in existing_docs:
+                    m = re.match(r"^(\d+)", d.id)
+                    if m:
+                        max_main = max(max_main, int(m.group(1)))
+            except Exception as e:
+                logger.warning(
+                    "Firebase: failed to compute max_main for '%s' (%s); defaulting to 0",
+                    collection_path,
+                    e,
+                )
+                max_main = 0
 
-            # NEW: ensure UI label matches the UNIQUE Firestore doc id we actually wrote
-            if chosen_doc_id:
-                payload["question_number"] = chosen_doc_id
+            # --------------------------------------------------
+            # Rewrite logical id so numbering CONTINUES
+            # --------------------------------------------------
+            new_main = max_main + 1
 
-            # NEW: per-question timestamp (helps you show “added today” in UI)
+            # Preserve suffixes like "a", "aii", "-1a" if present
+            suffix_str = ""
+            m = re.match(r"^\d+(.*)$", logical_id or "")
+            if m:
+                suffix_str = m.group(1)
+
+            display_id = f"{new_main}{suffix_str}"
+
+            payload["logical_question_id"] = display_id
+            payload["question_number"] = display_id
+
+            # Per-question timestamp (helps you show “added today” in UI)
             payload.setdefault("added_at", firestore.SERVER_TIMESTAMP)
 
         # --------------------------------------------------------------------
