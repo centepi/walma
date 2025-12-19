@@ -24,7 +24,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     2) a concrete next action like "compute these derivatives" or "plug into this formula".
     Do NOT just say "recall the definition" — state the relevant definition/formula and show them what to do with it.
     Also, include at least ONE concrete instantiated statement for this specific question, for example:
-    - write down the relevant components (e.g. a metric $g_{ij}$, its inverse $g^{ij}$, a derivative like $\\partial_k g_{ij}$, or a specific nonzero term you can compute next),
+    - write down the relevant components (e.g. a metric $g_{{ij}}$, its inverse $g^{{ij}}$, a derivative like $\\partial_k g_{{ij}}$, or a specific nonzero term you can compute next),
     so the student has something immediate to write and continue from.
 
     === How to give a good Hint ===
@@ -107,6 +107,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
       "reason": "Supportive, actionable hint. State the key formula/idea, include at least one concrete instantiated equation/object for this specific question when appropriate (especially if no work was provided), and state the next concrete action the student should take. Write math in LaTeX like $x^2 + x(5 - 2x) = 6$."
     }}
     """
+
 
 def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text: str) -> str:
     """
