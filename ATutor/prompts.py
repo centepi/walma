@@ -12,16 +12,20 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     You MUST respond ONLY with a JSON object (no code fences, no extra text). The JSON must be valid.
 
     === Hint Goal (most important) ===
-    - Provide an actionable, detailed and specific advice/hint that must contain enough substance that the student can go back to the question and give it a better go.
+    - Provide actionable, detailed, and specific advice that contains enough substance that the student can go back to the question and make real progress.
     - Do not hold a conversation here. The student should be able to read your advice and go straight back to the question.
     - Keep the tone supportive. Do NOT scold or say things like "you haven't made an attempt yet".
+    - Avoid vague prompts like "recall" or "identify". When something is needed, state it directly and show how it applies to this question.
 
     === If the student has little or no work ===
     If the student's work is empty, extremely short, or clearly not a real attempt, treat that as "they don't know how to start".
     In that case, give a supportive starting point that includes BOTH:
-    1) the key definition or formula they should begin with, and
+    1) the key definition or formula they should begin with (written in LaTeX), and
     2) a concrete next action like "compute these derivatives" or "plug into this formula".
     Do NOT just say "recall the definition" — state the relevant definition/formula and show them what to do with it.
+    Also, include at least ONE concrete instantiated statement for this specific question, for example:
+    - write down the relevant components (e.g. a metric $g_{ij}$, its inverse $g^{ij}$, a derivative like $\\partial_k g_{ij}$, or a specific nonzero term you can compute next),
+    so the student has something immediate to write and continue from.
 
     === How to give a good Hint ===
     Your job is to:
@@ -31,7 +35,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
        - partial progress
        - mostly correct but unfinished
        - contains an identifiable mistake
-    3. Give the *next useful piece of information* based on the user's work for THIS question and THIS work. Aim to reference their work and question specifically rather than giving generic advice.
+    3. Give the *next useful piece of information* based on the user's work for THIS question and THIS work. Aim to reference their work and the question specifically rather than giving generic advice.
 
     A good hint is usually ONE of the following:
     - the key idea/concept needed next
@@ -71,7 +75,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     - "analysis" must be either "CORRECT" or "INCORRECT".
       *Interpretation for Hint*: "CORRECT" means the student's work so far is mathematically correct (even if unfinished).
       "INCORRECT" means there is a mistake, missing requirement, or the attempt is not yet correct.
-    - "reason" must be short, supportive, and actionable (a hint).
+    - "reason" must be supportive and actionable (a hint) and must contain enough detail to let the student attempt the next step.
     - If "analysis" is "CORRECT", DO NOT include a question.
 
     === Formatting Rules for JSON Output ===
@@ -100,10 +104,9 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
 
     {{
       "analysis": "CORRECT" or "INCORRECT",
-      "reason": "Brief, supportive hint. State the key formula/idea and the next concrete action the student should take. Write math in LaTeX like $x^2 + x(5 - 2x) = 6$."
+      "reason": "Supportive, actionable hint. State the key formula/idea, include at least one concrete instantiated equation/object for this specific question when appropriate (especially if no work was provided), and state the next concrete action the student should take. Write math in LaTeX like $x^2 + x(5 - 2x) = 6$."
     }}
     """
-
 
 def get_analysis_prompt(question_part: str, solution_text: str, transcribed_text: str) -> str:
     """
