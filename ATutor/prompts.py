@@ -12,7 +12,7 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
     You MUST respond ONLY with a JSON object (no code fences, no extra text). The JSON must be valid.
 
     === Hint Goal (most important) ===
-    - Be concise, but be genuinely actionable. Your advice/hint must contain enough substance that the student can actually do a next step.
+    - Provide an actionable, detailed and specific advice/hint that must contain enough substance that the student can go back to the question and give it a better go.
     - Do not hold a conversation here. The student should be able to read your advice and go straight back to the question.
     - Keep the tone supportive. Do NOT scold or say things like "you haven't made an attempt yet".
 
