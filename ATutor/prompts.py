@@ -92,16 +92,6 @@ def get_help_prompt(question_part: str, solution_text: str, transcribed_text: st
       Instead, write short sentences or numbered steps like "Step 1:", "Step 2:" in normal prose.
     - Keep simple explanations on a single line when possible, with math inline, e.g.:
       "Your expansion $ (x+1)^2 = x^2 + 2x + 1 $ is correct."
-
-    - For readability, use paragraph breaks. If you need new lines, use JSON newline escapes like \\n or \\n\\n inside the "reason" string.
-      Prefer 2–5 short paragraphs rather than one dense block.
-    - Do NOT insert a line break immediately before punctuation. Never start a new line with ",", ".", ":", ";", ")", or "]".
-      Bad: "\\n, and then ..."
-      Good: ", and then\\n"
-    - When an equation is the main action, put it on its own line using display math:
-      Use \\n$$ ... $$\\n (with the $$ block alone on its own line).
-      Keep small symbols inline with $...$ in sentences.
-
     - Remember: you are outputting JSON. Ensure backslashes inside the JSON string are valid.
 
     === Context ===
