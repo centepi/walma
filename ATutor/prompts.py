@@ -29,7 +29,7 @@ In that case:
 - Include at least ONE concrete instantiated object for THIS question (for example: a specific metric component, inverse component, derivative, or nonzero term).
 
 Example of acceptable concreteness:
-"Start by writing the metric components $g_{{11}} = \\dots$ and $g_{{22}} = \\dots$, then compute $\\partial_2 g_{{11}}$."
+"Start by writing the metric components $g_{{11}} = \\\\dots$ and $g_{{22}} = \\\\dots$, then compute $\\\\partial_2 g_{{11}}$."
 
 --- HOW TO DECIDE WHAT TO SAY ---
 1. Read the question and the student's work.
@@ -60,10 +60,10 @@ If the student's input is a single choice label (A–E):
 --- RESPONSE FORMAT (STRICT) ---
 You must return a JSON object with EXACTLY these keys:
 
-{
+{{
   "analysis": "CORRECT" or "INCORRECT",
   "reason": "..."
-}
+}}
 
 - "analysis" means:
   - CORRECT: the work so far is mathematically correct (even if unfinished)
@@ -73,28 +73,28 @@ You must return a JSON object with EXACTLY these keys:
 
 --- JSON & MATH SAFETY RULES (VERY IMPORTANT) ---
 - You are writing JSON directly.
-- Inside ANY JSON string, every LaTeX backslash MUST be written as \\\\ in the JSON source.
+- Inside ANY JSON string, every LaTeX backslash MUST be written as \\\\\\\\ in the JSON source.
   This ensures the parsed string contains a single backslash for MathJax.
 - Example:
-  To produce final text: $R_{{\\mu\\nu}}$
-  Your JSON must contain: $R_{{\\\\mu\\\\nu}}$
-- Never write single-backslash LaTeX commands like \\mu, \\partial, \\Gamma directly in JSON.
+  To produce final text: $R_{{\\\\mu\\\\nu}}$
+  Your JSON must contain: $R_{{\\\\\\\\mu\\\\\\\\nu}}$
+- Never write single-backslash LaTeX commands like \\\\mu, \\\\partial, \\\\Gamma directly in JSON.
   They MUST be doubled.
 
 --- MATH FORMATTING RULES ---
 - All math MUST be inside $...$ or $$...$$.
-- Use standard LaTeX commands (\\frac, \\sqrt, \\partial, \\Gamma, etc.).
-- Do NOT use LaTeX environments (no \\begin{{align}}, \\begin{{equation}}, etc.).
+- Use standard LaTeX commands (\\\\frac, \\\\sqrt, \\\\partial, \\\\Gamma, etc.).
+- Do NOT use LaTeX environments (no \\\\begin{{align}}, \\\\begin{{equation}}, etc.).
 - Do NOT use backticks or code fences.
 - Do NOT escape dollar signs.
 
 --- READABILITY RULES (SAFE) ---
 - You MAY use paragraph breaks inside the "reason" string.
-- Use JSON newline escapes (\\n or \\n\\n) for line breaks.
+- Use JSON newline escapes (\\\\n or \\\\n\\\\n) for line breaks.
 - Prefer short paragraphs over one dense block.
 - Never start a new line with punctuation (",", ".", ":", ";", ")", "]").
 - When an equation is the main action, place it on its own line using display math:
-  \\n$$ ... $$\\n
+  \\\\n$$ ... $$\\\\n
 
 --- CONTEXT ---
 - Question: "{question_part}"
