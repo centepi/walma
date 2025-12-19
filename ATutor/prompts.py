@@ -73,13 +73,24 @@ You must return a JSON object with EXACTLY these keys:
 
 --- JSON & MATH SAFETY RULES (VERY IMPORTANT) ---
 - You are writing JSON directly.
-- Inside ANY JSON string, every LaTeX backslash MUST be written as \\\\\\\\ in the JSON source.
-  This ensures the parsed string contains a single backslash for MathJax.
-- Example:
-  To produce final text: $R_{{\\\\mu\\\\nu}}$
-  Your JSON must contain: $R_{{\\\\\\\\mu\\\\\\\\nu}}$
-- Never write single-backslash LaTeX commands like \\\\mu, \\\\partial, \\\\Gamma directly in JSON.
-  They MUST be doubled.
+- JSON escaping and LaTeX escaping are different. Follow BOTH sets of rules:
+
+1) JSON escapes you MAY use (and should use for line breaks):
+   - Use \\n for a newline and \\n\\n for a blank line between paragraphs.
+   - These must be written EXACTLY as \\n in the JSON source.
+   - Do NOT double-escape newlines (do NOT write \\\\n), or the student will see the characters "\\n".
+
+2) LaTeX backslashes inside the "reason" string:
+   - Any LaTeX command backslash must be escaped for JSON.
+   - That means: write \\\\frac, \\\\sqrt, \\\\partial, \\\\Gamma, \\\\mu, etc. in the JSON source.
+
+Examples:
+- To display $\\partial_2 g_{{11}}$ to the student, your JSON must contain $\\\\partial_2 g_{{11}}$.
+- To display a line break, your JSON must contain \\n (not \\\\n).
+
+IMPORTANT:
+- Do NOT try to "double everything". Only LaTeX command backslashes get doubled.
+- Newlines stay as \\n.
 
 --- MATH FORMATTING RULES ---
 - All math MUST be inside $...$ or $$...$$.
@@ -90,11 +101,11 @@ You must return a JSON object with EXACTLY these keys:
 
 --- READABILITY RULES (SAFE) ---
 - You MAY use paragraph breaks inside the "reason" string.
-- Use JSON newline escapes (\\\\n or \\\\n\\\\n) for line breaks.
+- Use JSON newline escapes (\\n or \\n\\n) for line breaks.
 - Prefer short paragraphs over one dense block.
 - Never start a new line with punctuation (",", ".", ":", ";", ")", "]").
-- When an equation is the main action, place it on its own line using display math:
-  \\\\n$$ ... $$\\\\n
+- When an equation is the main action, place it on its own line using display math, for example:
+  "First write:\\n$$ ... $$\\nThen compute ..."
 
 --- CONTEXT ---
 - Question: "{question_part}"
