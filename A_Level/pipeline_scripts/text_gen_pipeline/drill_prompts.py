@@ -411,6 +411,8 @@ def build_text_drill_prompt(
     {dedent(visual_rules_snippet).strip()}
     
     --- OUTPUT FORMAT ---
+    Do not use the backtick character ` anywhere in any field.
+    Do not wrap $...$ or $$...$$ in backticks. No Markdown inline-code formatting.
     Return a single JSON object.
     {{
         "question_stem": "...",
