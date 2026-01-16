@@ -400,8 +400,24 @@ class UploadTracker:
                 "completed_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP,
             }
+
             if isinstance(question_count, int):
-                patch["questionCount"] = question_count
+                # ✅ Prevent "4 -> 3" regressions when appending.
+                # If the upload already has questionCount and the provided value is smaller/equal,
+                # treat it as a delta (questions created this run) and increment.
+                try:
+                    snap = self.ref.get()
+                    existing = snap.to_dict() if snap.exists else {}
+                    existing_qc = existing.get("questionCount")
+                except Exception:
+                    existing_qc = None
+
+                if isinstance(existing_qc, int) and existing_qc > 0 and question_count <= existing_qc:
+                    patch["questionCount"] = firestore.Increment(int(question_count))
+                else:
+                    # Otherwise assume caller passed an absolute total.
+                    patch["questionCount"] = int(question_count)
+
             self.ref.set(patch, merge=True)
             logger.info(
                 "UploadTracker[%s/%s] complete (unit %s, question_count=%s)",
