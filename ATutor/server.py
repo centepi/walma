@@ -4,12 +4,17 @@ import json
 import re
 import requests
 import google.generativeai as genai
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, status  # ✅ UPDATED
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
 from dotenv import load_dotenv
 import asyncio
+
+from firebase_admin import firestore as admin_firestore  # ✅ NEW
+from utils import FirebaseManager  # ✅ NEW
+from auth_utils import verify_request_and_get_user  # ✅ NEW
+from email_service import send_welcome_email  # ✅ NEW
 
 # Prompts for tutor features
 from prompts import get_analysis_prompt, get_chat_prompt, get_help_prompt
@@ -295,6 +300,52 @@ async def chat_stream(request: ChatRequest):
 
     # plain text streaming; client can rebuild and then strip [[STATUS: ...]] at the end
     return StreamingResponse(event_generator(), media_type="text/plain")
+
+# --- Welcome email endpoint (new, secure + idempotent) ---
+@app.post("/welcome-email")
+async def welcome_email(authorization: str | None = Header(default=None)):
+    """
+    Sends the welcome email ONCE per Firebase user.
+    Requires: Authorization: Bearer <Firebase ID token>
+    """
+    user = verify_request_and_get_user(authorization)
+    uid = user["uid"]
+    email = user.get("email")
+    name = user.get("name")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User token does not include an email. Cannot send welcome email.",
+        )
+
+    db = FirebaseManager().get_db_client()
+
+    # ✅ IMPORTANT: Use the canonical iOS user doc path (`users/{uid}`), NOT legacy `Users/{uid}`
+    user_ref = db.collection("users").document(uid)
+
+    snap = user_ref.get()
+    if snap.exists:
+        data = snap.to_dict() or {}
+        if data.get("welcomeEmailSentAt"):
+            return {"ok": True, "sent": False, "reason": "already_sent"}
+
+    # Send email
+    try:
+        send_welcome_email(to_email=email, first_name=(name or None))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send welcome email: {e}")
+
+    # Mark as sent (idempotency)
+    user_ref.set(
+        {
+            "email": email,
+            "welcomeEmailSentAt": admin_firestore.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
+
+    return {"ok": True, "sent": True}
 
 # ---- Mount feature routers (leaderboard & profile) ----
 app.include_router(leaderboard_router)

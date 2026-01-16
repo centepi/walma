@@ -1,7 +1,7 @@
 # ATutor/auth_utils.py
 # Minimal helper for verifying Firebase ID tokens from HTTP requests.
 
-from typing import Optional, Tuple
+from typing import Optional
 import logging
 
 import firebase_admin
@@ -58,6 +58,43 @@ def verify_request_and_get_uid(authorization_header: Optional[str]) -> str:
         if not uid:
             raise ValueError("Token decoded but missing 'uid'")
         return uid
+    except Exception as e:
+        logging.warning(f"ID token verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired ID token.",
+        )
+
+
+def verify_request_and_get_user(authorization_header: Optional[str]) -> dict:
+    """
+    Verify the Firebase ID token from the Authorization header and return basic user info.
+
+    Returns:
+        {"uid": <uid>, "email": <email or None>, "name": <name or None>}
+
+    Raises HTTP 401 if missing/invalid.
+    """
+    _ensure_firebase_initialized()
+
+    token = _extract_bearer_token(authorization_header)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header. Expected: 'Authorization: Bearer <ID_TOKEN>'",
+        )
+
+    try:
+        decoded = auth.verify_id_token(token)
+        uid = decoded.get("uid")
+        if not uid:
+            raise ValueError("Token decoded but missing 'uid'")
+
+        # These may or may not be present depending on provider and token contents.
+        email = decoded.get("email")
+        name = decoded.get("name")
+
+        return {"uid": uid, "email": email, "name": name}
     except Exception as e:
         logging.warning(f"ID token verification failed: {e}")
         raise HTTPException(
