@@ -389,7 +389,15 @@ class UploadTracker:
             logger.debug("UploadTracker heartbeat failed: %s", e)
 
     def complete(self, *, result_unit_id: str, question_count: Optional[int] = None) -> None:
-        """Mark as complete. Write redundant fields for robust UI filtering."""
+        """
+        Mark as complete.
+
+        ✅ FIX (prevents "+3" etc):
+        - We NEVER Increment here.
+        - `questionCount` is already being maintained live by `event(... inc_question=True)`.
+        - If the caller supplies a number, we treat it as an absolute total and only
+          write it if it is >= the current stored value (monotonic, no double-count).
+        """
         try:
             patch: Dict[str, Any] = {
                 "status": "complete",
@@ -402,9 +410,9 @@ class UploadTracker:
             }
 
             if isinstance(question_count, int):
-                # ✅ Prevent "4 -> 3" regressions when appending.
-                # If the upload already has questionCount and the provided value is smaller/equal,
-                # treat it as a delta (questions created this run) and increment.
+                qc = max(0, int(question_count))
+
+                # Read current server value so we don't accidentally double-add.
                 try:
                     snap = self.ref.get()
                     existing = snap.to_dict() if snap.exists else {}
@@ -412,11 +420,11 @@ class UploadTracker:
                 except Exception:
                     existing_qc = None
 
-                if isinstance(existing_qc, int) and existing_qc > 0 and question_count <= existing_qc:
-                    patch["questionCount"] = firestore.Increment(int(question_count))
+                if isinstance(existing_qc, int):
+                    # Only move forward (never reduce, never inflate by adding)
+                    patch["questionCount"] = max(int(existing_qc), qc)
                 else:
-                    # Otherwise assume caller passed an absolute total.
-                    patch["questionCount"] = int(question_count)
+                    patch["questionCount"] = qc
 
             self.ref.set(patch, merge=True)
             logger.info(
