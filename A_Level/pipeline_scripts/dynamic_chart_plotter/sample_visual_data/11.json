@@ -1,0 +1,9 @@
+{
+  "id": "h1",
+  "type": "histogram",
+  "visual_features": {
+    "hide_values": true,
+    "bins": [[0,5],[5,10],[10,20]],
+    "heights": [2, 4, 1]
+  }
+}

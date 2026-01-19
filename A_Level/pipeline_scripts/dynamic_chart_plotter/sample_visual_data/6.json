@@ -1,0 +1,21 @@
+{
+  "layout": "composite",
+  "title": "Firestore sanitized table test",
+  "charts": [
+    {
+      "id": "t2",
+      "type": "table",
+      "label": "Values",
+      "visual_features": {
+        "position": "standalone",
+        "table_style": "standard",
+        "headers": ["a", "b", "c"],
+        "rows": [
+          {"0": "['1','2','3']"},
+          {"0": "['4','5','6']"},
+          {"0": "['7','8','9']"}
+        ]
+      }
+    }
+  ]
+}

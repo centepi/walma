@@ -1,0 +1,31 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "show_axis_numbers": true,
+  "axes_range": {"x_min": -6, "x_max": 6, "y_min": -6, "y_max": 10},
+  "charts": [
+    {
+      "id": "f1",
+      "type": "function",
+      "label": "y = x^2 - 4",
+      "explicit_function": "x^2 - 4",
+      "visual_features": {
+        "show_label": true,
+        "render_features": true,
+        "reveal_intercepts": true,
+        "x_intercepts": [-2, 2],
+        "y_intercept": -4
+      }
+    },
+    {
+      "id": "f2",
+      "type": "function",
+      "label": "y = 2x + 1",
+      "explicit_function": "2x + 1",
+      "visual_features": {
+        "show_label": true
+      }
+    }
+  ]
+}

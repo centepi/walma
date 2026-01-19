@@ -1,0 +1,36 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "show_axis_numbers": true,
+  "grid": true,
+  "axes_range": {"x_min": 0, "x_max": 10, "y_min": 0, "y_max": 12},
+  "charts": [
+    {
+      "id": "s1",
+      "type": "scatter",
+      "label": "Data points",
+      "visual_features": {
+        "show_label": true,
+        "data_points": [
+          {"x": 1, "y": 2.1},
+          {"x": 2, "y": 2.8},
+          {"x": 3, "y": 4.2},
+          {"x": 4, "y": 5.0},
+          {"x": 5, "y": 6.3},
+          {"x": 6, "y": 7.4},
+          {"x": 7, "y": 8.0},
+          {"x": 8, "y": 9.2},
+          {"x": 9, "y": 10.1}
+        ],
+        "trend_line": {
+          "enabled": true,
+          "reveal": true,
+          "equation": "y = 1.0x + 1.2",
+          "show_label": true,
+          "label": "Trend line"
+        }
+      }
+    }
+  ]
+}

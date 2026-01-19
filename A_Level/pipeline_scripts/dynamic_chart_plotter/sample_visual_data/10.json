@@ -1,0 +1,22 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "show_axis_numbers": true,
+  "axes_range": {"x_min": -6, "x_max": 6, "y_min": -6, "y_max": 6},
+  "charts": [
+    {
+      "id": "rat1",
+      "type": "function",
+      "label": "y = 1/(x-1)",
+      "explicit_function": "1/(x-1)",
+      "visual_features": {
+        "show_label": true,
+        "render_features": true,
+        "reveal_asymptotes": true,
+        "vertical_asymptotes": [1],
+        "horizontal_asymptote": 0
+      }
+    }
+  ]
+}

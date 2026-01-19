@@ -1,0 +1,22 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "equal_aspect": true,
+  "show_axis_numbers": true,
+  "axes_range": {"x_min": -1, "x_max": 6, "y_min": -1, "y_max": 5},
+  "charts": [
+    {
+      "id": "poly1",
+      "type": "polygon",
+      "label": "Triangle ABC",
+      "visual_features": {
+        "show_label": true,
+        "points": [{"x": 0, "y": 0}, {"x": 5, "y": 0}, {"x": 1.5, "y": 4}],
+        "closed": true,
+        "fill": true,
+        "alpha": 0.25
+      }
+    }
+  ]
+}

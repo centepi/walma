@@ -23,9 +23,14 @@ from .charts import (
     plot_box_plot,
     plot_cumulative_frequency,
     plot_table,
+)
+
+from .overlays import (
     plot_labeled_point,
     plot_shaded_region,
+    plot_polygon,
 )
+
 from .utils import setup_plot_appearance, _coerce_bin_pair
 
 
@@ -40,6 +45,18 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     # Validate input
     if not isinstance(config, dict):
         raise TypeError("Config must be a dictionary")
+
+    # ------------------------------------------------------------------------
+    # ACCEPT SINGLE-CHART JSON (quality-of-life for test harness / samples)
+    # If the input looks like a chart object (has "type") and does NOT define
+    # "charts"/"graphs", wrap it automatically.
+    # ------------------------------------------------------------------------
+    if (
+        "charts" not in config
+        and "graphs" not in config
+        and isinstance(config.get("type"), str)
+    ):
+        config = {"charts": [config]}
 
     # Support both 'charts' (new) and 'graphs' (legacy) keys
     charts = config.get('charts', config.get('graphs', []))
@@ -62,6 +79,28 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     ]
 
     # ------------------------------------------------------------------------
+    # PER-CHART "HIDE VALUES" SUPPORT (pedagogy / do not give data away)
+    #
+    # If ANY chart requests hide_values=True AND the caller hasn't explicitly set
+    # show_axis_numbers, we default show_axis_numbers to False.
+    # (This is intentionally global because all non-tables share the same axes.)
+    # ------------------------------------------------------------------------
+    try:
+        if "show_axis_numbers" not in config:
+            wants_hide = False
+            for c in non_tables:
+                if not isinstance(c, dict):
+                    continue
+                vf = c.get("visual_features") or {}
+                if isinstance(vf, dict) and bool(vf.get("hide_values", False)):
+                    wants_hide = True
+                    break
+            if wants_hide:
+                config["show_axis_numbers"] = False
+    except Exception:
+        pass
+
+    # ------------------------------------------------------------------------
     # USABILITY DEFAULTS (so visuals actually help)
     # ------------------------------------------------------------------------
     try:
@@ -71,10 +110,11 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
             if isinstance(c, dict)
         ]
 
+        # Only force axis numbers on if the caller hasn't explicitly decided
+        # AND no chart requested hide_values.
         data_reading_types = {"histogram", "bar", "scatter", "cumulative", "box_plot"}
         if any(t in data_reading_types for t in chart_types):
-            # FORCE axis numbers on for data-reading charts (user needs values to answer).
-            if config.get("show_axis_numbers") is not True:
+            if "show_axis_numbers" not in config:
                 config["show_axis_numbers"] = True
 
         # Promote a chart-level axes_range to global if none was provided
@@ -186,8 +226,22 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     # Store function objects for later reference
     function_registry: Dict[str, Optional[Callable]] = {}
 
+    # ------------------------------------------------------------------------
+    # A2 FIX: apply axes limits/aspect BEFORE plotting curves.
+    # This ensures explicit and parametric plots sample/render in the intended viewport.
+    # ------------------------------------------------------------------------
+    def _apply_preplot_viewport(ax: plt.Axes, cfg: Dict[str, Any]) -> None:
+        axes_range = cfg.get("global_axes_range", cfg.get("axes_range"))
+        if isinstance(axes_range, dict):
+            ax.set_xlim(axes_range.get("x_min", -10), axes_range.get("x_max", 10))
+            ax.set_ylim(axes_range.get("y_min", -10), axes_range.get("y_max", 10))
+        if cfg.get("equal_aspect"):
+            ax.set_aspect("equal", adjustable="box")
+
     # Process charts (non-tables)
     if 'main' in axes:
+        _apply_preplot_viewport(axes['main'], config)
+
         for chart in non_tables:
             plot_chart(axes['main'], chart, function_registry)
 
@@ -215,10 +269,6 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     if 'title' in config and layout_mode == 'composite':
         # With constrained_layout, y can be high; keep it slightly inside.
         fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.99)
-
-    # IMPORTANT:
-    # Do NOT call fig.tight_layout() here when constrained_layout is enabled.
-    # tight_layout frequently clips table titles / table content in composite figures.
 
     return fig
 
@@ -326,6 +376,8 @@ def plot_chart(
         plot_box_plot(ax, chart, function_registry)
     elif chart_type == 'cumulative':
         plot_cumulative_frequency(ax, chart, function_registry)
+    elif chart_type == 'polygon':
+        plot_polygon(ax, chart, function_registry)
     elif chart_type == 'table':
         return
     else:

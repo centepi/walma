@@ -1,0 +1,18 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "Frequency density",
+  "show_axis_numbers": true,
+  "charts": [
+    {
+      "id": "h1",
+      "type": "histogram",
+      "label": "Histogram",
+      "visual_features": {
+        "show_label": true,
+        "bins": [[0, 5], [5, 10], [10, 20]],
+        "frequencies": [10, 15, 20]
+      }
+    }
+  ]
+}

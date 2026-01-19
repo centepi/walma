@@ -1,0 +1,16 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "show_axis_numbers": true,
+  "axes_range": {"x_min": -10, "x_max": 10, "y_min": -10, "y_max": 10},
+  "charts": [
+    {
+      "id": "f1",
+      "type": "function",
+      "label": "y = x^2",
+      "explicit_function": "x^2",
+      "visual_features": {"show_label": true}
+    }
+  ]
+}

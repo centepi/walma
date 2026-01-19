@@ -50,16 +50,33 @@ def get_color_cycle(graph_id: str) -> str:
 # SAFE-ish EXPRESSION EVAL
 # ============================================================================
 
-def evaluate_function(func_str: str, x_vals: np.ndarray) -> np.ndarray:
+def evaluate_function(func_str: str, x_vals: np.ndarray, var_name: str = "x") -> np.ndarray:
     """
     Safely evaluate a mathematical function string.
+
+    Notes:
+    - Default variable is 'x' for explicit functions.
+    - For parametric curves, call with var_name='t' so expressions like 'sin(t)' work.
     """
     try:
         import re
 
         s = str(func_str)
-
         s = s.replace("^", "**")
+
+        # Variable binding (default: x; parametric: t)
+        v = x_vals
+        var_name = str(var_name or "x").strip() or "x"
+
+        # Insert implicit multiplication (common A-level notation):
+        # 2x -> 2*x, 1.0x -> 1.0*x, 2(x+1) -> 2*(x+1), x(x+1) -> x*(x+1)
+        #
+        # IMPORTANT: do NOT break function calls like cos(t), sin(t).
+        s = re.sub(r"(\d+(?:\.\d+)?)\s*([a-zA-Z])", r"\1*\2", s)  # number then variable
+        s = re.sub(r"(\d+(?:\.\d+)?)\s*\(", r"\1*(", s)          # number then (
+        s = re.sub(rf"\b{re.escape(var_name)}\s*\(", f"{var_name}*(", s)  # ONLY actual variable then (
+        s = re.sub(r"\)\s*([a-zA-Z])", r")*\1", s)              # )x -> )*x
+        s = re.sub(r"\)\s*\(", r")*(", s)                       # )( -> )*(
 
         fn_map = [
             ("arcsin", "np.arcsin"),
@@ -82,17 +99,15 @@ def evaluate_function(func_str: str, x_vals: np.ndarray) -> np.ndarray:
 
         s = re.sub(r"\bpi\b", "np.pi", s)
 
-        x = x_vals
-
         with np.errstate(all="ignore"):
             y_vals = eval(
                 s,
                 {"__builtins__": {}},
-                {"np": np, "x": x},
+                {"np": np, var_name: v},
             )
 
         if np.isscalar(y_vals):
-            y_vals = np.full_like(x_vals, y_vals, dtype=float)
+            y_vals = np.full_like(v, y_vals, dtype=float)
 
         return np.asarray(y_vals, dtype=float)
 
@@ -230,14 +245,16 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
       clip titles/labels in composite (chart+table) figures.
     - Layout should be applied once in plotter.py after all subplots are drawn.
     """
-    ax.set_xlabel(config.get("x_label", "x"), fontsize=13, fontweight="bold")
-    ax.set_ylabel(config.get("y_label", "y"), fontsize=13, fontweight="bold")
+    hide_axis_labels = bool(config.get("hide_axis_labels", False))
+    if not hide_axis_labels:
+        ax.set_xlabel(config.get("x_label", "x"), fontsize=13, fontweight="bold")
+        ax.set_ylabel(config.get("y_label", "y"), fontsize=13, fontweight="bold")
+    else:
+        ax.set_xlabel("")
+        ax.set_ylabel("")
 
     if "title" in config:
         ax.set_title(config["title"], fontsize=15, fontweight="bold", pad=20)
-
-    if config.get("grid", True):
-        ax.grid(True, alpha=0.3, which=config.get("grid_style", "major"))
 
     axes_range = config.get("global_axes_range", config.get("axes_range"))
     if isinstance(axes_range, dict):
@@ -246,11 +263,29 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
 
     show_nums = bool(config.get("show_axis_numbers", False))
     if not show_nums:
+        # Hide values: remove tick labels + tick marks, but KEEP the x/y axis lines.
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax.tick_params(length=0)
+
+        # Default: no grid in hide-values mode unless explicitly requested.
+        if "grid" not in config:
+            ax.grid(False)
+        else:
+            if config.get("grid", True):
+                ax.grid(True, alpha=0.3, which=config.get("grid_style", "major"))
+            else:
+                ax.grid(False)
+
+        # Keep only the actual axes (left/bottom). Hide the frame (top/right).
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_visible(True)
+        ax.spines["bottom"].set_visible(True)
     else:
         ax.tick_params(length=4)
+        if config.get("grid", True):
+            ax.grid(True, alpha=0.3, which=config.get("grid_style", "major"))
 
     handles, labels = ax.get_legend_handles_labels()
     pairs = [(h, l) for h, l in zip(handles, labels) if str(l).strip()]
@@ -264,7 +299,6 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
     if config.get("axes_through_origin"):
         ax.axhline(0, color="k", alpha=0.3, linewidth=0.8)
         ax.axvline(0, color="k", alpha=0.3, linewidth=0.8)
-
 
 # ============================================================================
 # VALIDATION
@@ -296,8 +330,25 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
         if chart_type == "function" and "explicit_function" not in chart:
             issues.append(f"Chart '{chart_id}' missing explicit_function")
 
-        elif chart_type == "parametric" and "parametric_function" not in chart:
-            issues.append(f"Chart '{chart_id}' missing parametric_function")
+        elif chart_type == "parametric":
+            pf = chart.get("parametric_function")
+            pr = chart.get("parameter_range")
+
+            if not isinstance(pf, dict):
+                issues.append(f"Chart '{chart_id}' missing parametric_function")
+            else:
+                if not str(pf.get("x", "")).strip():
+                    issues.append(f"Parametric chart '{chart_id}' missing parametric_function.x")
+                if not str(pf.get("y", "")).strip():
+                    issues.append(f"Parametric chart '{chart_id}' missing parametric_function.y")
+
+            if not isinstance(pr, dict):
+                issues.append(f"Parametric chart '{chart_id}' missing parameter_range")
+            else:
+                if pr.get("t_min", None) is None:
+                    issues.append(f"Parametric chart '{chart_id}' missing parameter_range.t_min")
+                if pr.get("t_max", None) is None:
+                    issues.append(f"Parametric chart '{chart_id}' missing parameter_range.t_max")
 
         elif chart_type == "histogram":
             vf = chart.get("visual_features", {}) or {}
@@ -307,7 +358,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
             if len(bins) != len(freqs):
                 issues.append(f"Histogram '{chart_id}' bins/frequencies mismatch")
 
-            # NEW: warn if heights are missing / mismatched (so we know we’ll infer)
             heights = vf.get("heights")
             if heights is None:
                 issues.append(

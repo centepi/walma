@@ -329,6 +329,11 @@ def build_creator_prompt(
         ]
     }}
 
+    **Key Points for Parametric Curves:**
+    - Use `t` as the parameter variable (do NOT use `x`/`u`/`\\theta` as the parameter name).
+    - `parametric_function.x` and `parametric_function.y` must be expressions in terms of `t`.
+    - Expressions must be Python-compatible / evaluable (e.g., `3*cos(t)`, `2*sin(t)`, `t**2 - 1`, `exp(t)`).
+
     ---
 
     ### **TYPE 8: TABLES**

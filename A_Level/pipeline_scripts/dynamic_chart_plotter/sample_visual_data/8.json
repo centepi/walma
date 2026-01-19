@@ -1,0 +1,18 @@
+{
+  "layout": "single",
+  "x_label": "x",
+  "y_label": "y",
+  "equal_aspect": true,
+  "show_axis_numbers": true,
+  "axes_range": {"x_min": -2, "x_max": 2, "y_min": -2, "y_max": 2},
+  "charts": [
+    {
+      "id": "p1",
+      "type": "parametric",
+      "label": "Circle",
+      "parametric_function": {"x": "cos(t)", "y": "sin(t)"},
+      "parameter_range": {"t_min": 0, "t_max": 6.283185307},
+      "visual_features": {"show_label": true}
+    }
+  ]
+}
