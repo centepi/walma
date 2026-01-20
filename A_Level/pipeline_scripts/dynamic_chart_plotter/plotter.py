@@ -11,7 +11,7 @@ All helpers (appearance, evaluation, etc.) live in `utils.py`.
 """
 
 import matplotlib.pyplot as plt
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 
 # Local imports (kept light to avoid circular imports)
 from .charts import (
@@ -238,6 +238,70 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         if cfg.get("equal_aspect"):
             ax.set_aspect("equal", adjustable="box")
 
+    # ------------------------------------------------------------------------
+    # A3 FIX: robust auto-fit so circles/geometry aren’t clipped.
+    #
+    # If the caller did NOT provide axes_range/global_axes_range, we autoscale to
+    # plotted artists and add a small padding margin so full shapes stay in view.
+    #
+    # IMPORTANT: We do NOT override explicit axes_range (teacher intent).
+    # ------------------------------------------------------------------------
+    def _has_explicit_axes_range(cfg: Dict[str, Any]) -> bool:
+        ar = cfg.get("global_axes_range", cfg.get("axes_range"))
+        return isinstance(ar, dict)
+
+    def _autoscale_with_padding(ax: plt.Axes, pad_frac: float = 0.06) -> None:
+        try:
+            ax.relim(visible_only=True)
+            ax.autoscale_view()
+
+            x0, x1 = ax.get_xlim()
+            y0, y1 = ax.get_ylim()
+
+            dx = float(x1) - float(x0)
+            dy = float(y1) - float(y0)
+
+            # Avoid zero-size padding
+            if dx == 0:
+                dx = 1.0
+            if dy == 0:
+                dy = 1.0
+
+            px = dx * float(pad_frac)
+            py = dy * float(pad_frac)
+
+            ax.set_xlim(x0 - px, x1 + px)
+            ax.set_ylim(y0 - py, y1 + py)
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------------
+    # A3 FIX: accept labeled points from either:
+    # - top-level config["labeled_points"]
+    # - per-chart chart["labeled_points"]
+    # - per-chart visual_features["labeled_points"]
+    #
+    # This lets the generator attach labels locally without needing top-level.
+    # ------------------------------------------------------------------------
+    def _iter_all_labeled_points(cfg: Dict[str, Any], charts_list: List[Dict[str, Any]]):
+        pts = []
+        lp = cfg.get("labeled_points")
+        if isinstance(lp, list):
+            pts.extend([p for p in lp if isinstance(p, dict)])
+
+        for c in charts_list:
+            if not isinstance(c, dict):
+                continue
+            lp2 = c.get("labeled_points")
+            if isinstance(lp2, list):
+                pts.extend([p for p in lp2 if isinstance(p, dict)])
+            vf = c.get("visual_features")
+            if isinstance(vf, dict):
+                lp3 = vf.get("labeled_points")
+                if isinstance(lp3, list):
+                    pts.extend([p for p in lp3 if isinstance(p, dict)])
+        return pts
+
     # Process charts (non-tables)
     if 'main' in axes:
         _apply_preplot_viewport(axes['main'], config)
@@ -245,17 +309,19 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         for chart in non_tables:
             plot_chart(axes['main'], chart, function_registry)
 
-        labeled_points = config.get('labeled_points')
-        if isinstance(labeled_points, list):
-            for point in labeled_points:
-                if isinstance(point, dict):
-                    plot_labeled_point(axes['main'], point)
+        # Plot labeled points (support top-level + per-chart)
+        for point in _iter_all_labeled_points(config, non_tables):
+            plot_labeled_point(axes['main'], point)
 
         shaded_regions = config.get('shaded_regions')
         if isinstance(shaded_regions, list):
             for region in shaded_regions:
                 if isinstance(region, dict):
                     plot_shaded_region(axes['main'], region, function_registry)
+
+        # If no explicit axes_range was supplied, autoscale after all artists exist.
+        if not _has_explicit_axes_range(config):
+            _autoscale_with_padding(axes['main'])
 
         # Axis-level only; DO NOT force tight_layout here.
         setup_plot_appearance(axes['main'], config)

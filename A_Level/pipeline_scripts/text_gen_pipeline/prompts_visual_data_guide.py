@@ -3,6 +3,7 @@ prompts_visual_data_guide.py — Canonical visual_data specification for ALMA pr
 
 This file contains ONLY:
 - VISUAL_RULES_SNIPPET (the full visual_data guide block)
+- small helpers to retrieve the relevant snippet(s)
 
 It intentionally does NOT contain:
 - prompt-builder functions
@@ -13,16 +14,65 @@ Keep it “boring + stable”.
 """
 
 from textwrap import dedent
+from typing import Iterable, Optional, Set
 
 # NOTE:
-# - This is kept as a RAW string (r""") so backslashes like \\theta stay exactly as written.
-# - We still pass it through dedent() when injecting it into prompts.
-VISUAL_RULES_SNIPPET = r"""
+# - These are kept as RAW strings (r""") so backslashes like \\theta stay exactly as written.
+# - We still pass them through dedent() when injecting them into prompts.
+#
+# IMPORTANT GOAL (per your request):
+# - The model should NOT have to read every chart type every time.
+# - We keep a short CORE snippet + per-type snippets.
+# - Callers (e.g., drill_prompts.py) choose ONE type and inject only that.
+#
+# Backwards compatibility:
+# - VISUAL_RULES_SNIPPET remains as the "full" block (CORE + ALL types).
+# - New helper lets you request CORE + only specific types.
+
+
+# ============================================================================
+# CORE (ALWAYS INCLUDED WHEN REQUESTING SNIPPETS)
+# ============================================================================
+
+_VISUAL_RULES_CORE = r"""
 **'visual_data' STRUCTURE - COMPREHENSIVE GUIDE**:
 
-The 'visual_data' object adapts its structure based on the chart type being visualized. Always include a 'charts' array (not 'graphs' for non-explicit-function charts). Your `visual_data` MAY contain one **or more** chart objects. If your question text refers to multiple diagrams/graphs, you MUST include multiple chart objects in the `charts` array. Choose the appropriate structure for each chart object you include.
+The `visual_data` object adapts its structure based on the chart type being visualized.
+
+**IMPORTANT**:
+- Always include a `"charts"` array at the top-level of `visual_data`.
+- Do NOT use `"graphs"` in new content (legacy only). Use `"charts"`.
+
+**MULTI-DIAGRAM RULE**:
+Your `visual_data` MAY contain one **or more** chart objects.
+If your question text refers to multiple diagrams/graphs, you MUST include multiple chart objects in the `charts` array.
+
 ---
 
+**JSON TECHNICAL RULES**:
+
+- **Backslashes & math fences for LaTeX (VERY IMPORTANT)**:
+  - You are writing a JSON object directly. Inside any JSON string, every backslash in a LaTeX command **must be escaped as `\\\\`** in the JSON source so that, after JSON parsing, the final string seen by the student has a **single** backslash.
+  - All LaTeX commands MUST still live **inside** `$...$` or `$$...$$` in the final string. The dollar signs are written literally in JSON; only the backslashes are doubled.
+  - For example, to produce the final text:
+    - `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`
+    your JSON must contain:
+    - `"question_stem": "Let $H = \\\\ell^2(\\\\mathbb{N})$ and $y \\\\in \\\\operatorname{Ran}(T)$."`
+    After JSON parsing, this becomes `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`, which MathJax renders correctly.
+  - Never output bare `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`, `\\|Ax_n\\|` with only a **single** backslash **in the JSON source** (for example `"x_n \\rightharpoonup 0"`). That is invalid JSON and will cause the entire response to be rejected with an `Invalid \\escape` error. In JSON, the source must be `\\\\mathbb{N}`, `\\\\infty`, `\\\\rightharpoonup`, etc., so that the parsed string has `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`.
+- Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
+- Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
+- If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n` in the JSON source):
+  - ✅ CORRECT JSON: `"question_stem": "Sentence one.\\nSentence two."`  (after parsing, this becomes two lines.)
+  - ❌ INCORRECT JSON: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string.)
+- Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
+"""
+
+# ============================================================================
+# TYPE SNIPPETS (CALLER SHOULD SELECT ONE MOST OF THE TIME)
+# ============================================================================
+
+_VISUAL_RULES_TYPE_FUNCTION = r"""
 ### **TYPE 1: EXPLICIT MATHEMATICAL FUNCTIONS (y = f(x))**
 Use this for traditional function plots, parabolas, polynomials, trigonometric functions, etc.
 
@@ -48,12 +98,15 @@ Structure:
                     "x_max": 5,
                     "y_min": 0,
                     "y_max": 10
-                }
+                },
+
+                "hide_values": false,                // optional; if true, axis numbers are hidden
+                "show_label": false                  // optional; if true, legend label may appear
             }
         }
     ],
     "labeled_points": [
-        {"label": "A", "x": 1.0, "y": 4.0}
+        {"label": "A", "x": 1.0, "y": 4.0, "reveal": false}
     ], // Optional
     "shaded_regions": [
         {
@@ -64,9 +117,9 @@ Structure:
         }
     ] // Optional
 }
+"""
 
----
-
+_VISUAL_RULES_TYPE_HISTOGRAM = r"""
 ### **TYPE 2: HISTOGRAMS**
 Use this for frequency distributions, grouped data, or continuous data analysis.
 
@@ -91,7 +144,9 @@ Structure:
                     "x_max": 195,
                     "y_min": 0,
                     "y_max": 20
-                }
+                },
+
+                "hide_values": false
             }
         }
     ]
@@ -103,9 +158,9 @@ Structure:
 - All intervals should be contiguous and non-overlapping
 - Do NOT include frequency density; use raw frequencies
 - Include axes_range to ensure proper scaling
+"""
 
----
-
+_VISUAL_RULES_TYPE_BAR = r"""
 ### **TYPE 3: BAR CHARTS**
 Use this for categorical data, discrete comparisons, or grouped data.
 
@@ -125,7 +180,9 @@ Structure:
                     "x_max": 3.5,
                     "y_min": 0,
                     "y_max": 60
-                }
+                },
+
+                "hide_values": false
             }
         }
     ]
@@ -136,9 +193,9 @@ Structure:
 - "values": Array of bar heights (numbers, must match category count)
 - Categories are typically on x-axis
 - Use for discrete, non-continuous data
+"""
 
----
-
+_VISUAL_RULES_TYPE_SCATTER = r"""
 ### **TYPE 4: SCATTER PLOTS**
 Use this for correlation analysis, bivariate data, or point relationships.
 
@@ -166,7 +223,9 @@ Structure:
                     "x_max": 60,
                     "y_min": 20000,
                     "y_max": 90000
-                }
+                },
+
+                "hide_values": false
             }
         }
     ]
@@ -176,9 +235,9 @@ Structure:
 - "data_points": Array of {x, y} coordinate pairs
 - "trend_line": Optional object with enabled flag and equation string
 - Use for bivariate relationships or correlation studies
+"""
 
----
-
+_VISUAL_RULES_TYPE_BOX = r"""
 ### **TYPE 5: BOX PLOTS / BOX-AND-WHISKER PLOTS**
 Use this for distribution, quartiles, and outlier detection.
 
@@ -206,7 +265,9 @@ Structure:
                     "x_max": 1.5,
                     "y_min": 30,
                     "y_max": 120
-                }
+                },
+
+                "hide_values": false
             }
         }
     ]
@@ -216,9 +277,9 @@ Structure:
 - "min_values", "q1_values", "median_values", "q3_values", "max_values": Five-number summary
 - "outliers": Optional array of individual outlier points
 - Use for statistical distribution analysis
+"""
 
----
-
+_VISUAL_RULES_TYPE_CUMULATIVE = r"""
 ### **TYPE 6: CUMULATIVE FREQUENCY CURVES**
 Use this for cumulative distributions or percentage analysis.
 
@@ -238,7 +299,9 @@ Structure:
                     "x_max": 55,
                     "y_min": 0,
                     "y_max": 45
-                }
+                },
+
+                "hide_values": false
             }
         }
     ]
@@ -248,9 +311,9 @@ Structure:
 - "upper_class_boundaries": Array of class boundaries
 - "cumulative_frequencies": Running total of frequencies
 - Use for percentile analysis and quartile determination
+"""
 
----
-
+_VISUAL_RULES_TYPE_PARAMETRIC = r"""
 ### **TYPE 7: PARAMETRIC CURVES**
 Use this for parametric equations or advanced function representations.
 
@@ -276,7 +339,10 @@ Structure:
                     "x_max": 4,
                     "y_min": -3,
                     "y_max": 3
-                }
+                },
+
+                "hide_values": false,
+                "show_label": false
             }
         }
     ]
@@ -286,8 +352,9 @@ Structure:
 - Use `t` as the parameter variable (do NOT use `x`/`u`/`\\theta` as the parameter name).
 - `parametric_function.x` and `parametric_function.y` must be expressions in terms of `t`.
 - Expressions must be Python-compatible / evaluable (e.g., `cos(t)`, `sin(t)`, `t**2`).
----
+"""
 
+_VISUAL_RULES_TYPE_TABLE = r"""
 ### **TYPE 8: TABLES**
 Use this for displaying raw data, frequency distributions, two-way tables, function values, or summary statistics.
 
@@ -314,9 +381,9 @@ Structure:
         }
     ]
 }
+"""
 
----
-
+_VISUAL_RULES_TYPE_COMPOSITE = r"""
 ### **TYPE 9: COMPOSITE (CHART + TABLE)**
 Use this when you need to display both a chart and its underlying data table together.
 
@@ -355,28 +422,113 @@ Structure:
     ],
     "layout": "composite"  // Triggers multi-panel layout
 }
-
-**JSON TECHNICAL RULES**:
-- **Backslashes & math fences for LaTeX (VERY IMPORTANT)**:
-  - You are writing a JSON object directly. Inside any JSON string, every backslash in a LaTeX command **must be escaped as `\\\\`** in the JSON source so that, after JSON parsing, the final string seen by the student has a **single** backslash.
-  - All LaTeX commands MUST still live **inside** `$...$` or `$$...$$` in the final string. The dollar signs are written literally in JSON; only the backslashes are doubled.
-  - For example, to produce the final text:
-    - `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`
-    your JSON must contain:
-    - `"question_stem": "Let $H = \\\\ell^2(\\\\mathbb{N})$ and $y \\\\in \\\\operatorname{Ran}(T)$."`
-    After JSON parsing, this becomes `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`, which MathJax renders correctly.
-  - Never output bare `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`, `\\|Ax_n\\|` with only a **single** backslash **in the JSON source** (for example `"x_n \\rightharpoonup 0"`). That is invalid JSON and will cause the entire response to be rejected with an `Invalid \\escape` error. In JSON, the source must be `\\\\mathbb{N}`, `\\\\infty`, `\\\\rightharpoonup`, etc., so that the parsed string has `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`.
-- Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
-- Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
-- If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n` in the JSON source):
-  - ✅ CORRECT JSON: `"question_stem": "Sentence one.\\nSentence two."`  (after parsing, this becomes two lines.)
-  - ❌ INCORRECT JSON: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string.)
-- Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
 """
 
-def get_visual_rules_snippet() -> str:
+# NOTE: We are adding a "geometry" type entry so the prompt can request polygons/circles/lines
+# (This is the piece that will stop the model from only emitting "function" charts for Euclidean geometry.)
+_VISUAL_RULES_TYPE_GEOMETRY = r"""
+### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (POLYGONS, SEGMENTS, CIRCLES)**
+Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, etc.).
+Prefer this over "function" unless you truly need a coordinate graph.
+
+Structure (example):
+{
+  "charts": [
+    {
+      "id": "geo1",
+      "type": "geometry",
+      "label": "Diagram",
+      "visual_features": {
+        "axes_range": {"x_min": -1, "x_max": 11, "y_min": -1, "y_max": 8},
+        "equal_aspect": true,
+        "hide_values": true
+      },
+
+      "objects": [
+        {"type": "point", "id": "A", "x": 1, "y": 1, "reveal": true},
+        {"type": "point", "id": "B", "x": 9, "y": 1, "reveal": true},
+        {"type": "point", "id": "C", "x": 4, "y": 6, "reveal": true},
+
+        {"type": "segment", "from": "A", "to": "B"},
+        {"type": "segment", "from": "B", "to": "C"},
+        {"type": "segment", "from": "C", "to": "A"},
+
+        {"type": "circle", "center": "A", "radius": 3.5},
+        {"type": "label", "target": "A", "text": "A", "offset": [10, 10], "reveal": true}
+      ]
+    }
+  ]
+}
+
+**Key Points for Geometry:**
+- Use `"objects"` to define the diagram primitives.
+- Points should have `"id"` so other objects can reference them by name.
+- Use `"label"` objects when you want visible point labels.
+- Set `"equal_aspect": true` to avoid stretched circles.
+- Prefer `"hide_values": true` so axis numbers do not appear in Euclidean diagrams.
+- Do NOT ask the student to draw; the diagram must be sufficient to solve the question.
+"""
+
+# Map of normalized type names -> snippets
+_TYPE_TO_SNIPPET = {
+    "function": _VISUAL_RULES_TYPE_FUNCTION,
+    "histogram": _VISUAL_RULES_TYPE_HISTOGRAM,
+    "bar": _VISUAL_RULES_TYPE_BAR,
+    "scatter": _VISUAL_RULES_TYPE_SCATTER,
+    "box_plot": _VISUAL_RULES_TYPE_BOX,
+    "cumulative": _VISUAL_RULES_TYPE_CUMULATIVE,
+    "parametric": _VISUAL_RULES_TYPE_PARAMETRIC,
+    "table": _VISUAL_RULES_TYPE_TABLE,
+    "composite": _VISUAL_RULES_TYPE_COMPOSITE,
+    "geometry": _VISUAL_RULES_TYPE_GEOMETRY,
+}
+
+
+def _normalize_types(types: Optional[Iterable[str]]) -> Set[str]:
+    out: Set[str] = set()
+    if not types:
+        return out
+    for t in types:
+        s = str(t or "").strip().lower()
+        if s:
+            out.add(s)
+    return out
+
+
+def get_visual_rules_snippet(
+    *,
+    only_types: Optional[Iterable[str]] = None,
+    include_core: bool = True,
+) -> str:
     """
-    Return the visual rules snippet with consistent indentation removed.
-    This is a helper so callers don't forget to dedent().
+    Return a visual rules snippet.
+
+    Usage:
+    - Default (only_types=None): returns the FULL guide (CORE + all types).
+    - only_types=["geometry"]: returns CORE + geometry block only.
+    - only_types=["histogram","table"]: returns CORE + those blocks.
+
+    This helper is intentionally small and "boring".
     """
-    return dedent(VISUAL_RULES_SNIPPET).strip()
+    wanted = _normalize_types(only_types)
+
+    chunks = []
+    if include_core:
+        chunks.append(_VISUAL_RULES_CORE.strip())
+
+    if not wanted:
+        # Full guide
+        for _, snippet in _TYPE_TO_SNIPPET.items():
+            chunks.append(snippet.strip())
+    else:
+        # Specific types only
+        for t in wanted:
+            snippet = _TYPE_TO_SNIPPET.get(t)
+            if snippet:
+                chunks.append(snippet.strip())
+
+    return dedent("\n\n---\n\n".join(chunks)).strip()
+
+
+# Backwards compatibility: keep the old name that means "everything".
+VISUAL_RULES_SNIPPET = get_visual_rules_snippet()
