@@ -462,8 +462,9 @@ Structure (example):
 
 **Key Points for Geometry:**
 - Use `"objects"` to define the diagram primitives.
-- Points should have `"id"` so other objects can reference them by name.
-- Use `"label"` objects when you want visible point labels.
+- Every point that is referenced by name anywhere (e.g., A, B, C, O, T, P, etc.) must appear as a `"point"` object with that exact `"id"`.
+- If the question text mentions named points/lines (A, B, C, O, T, P, ...), you must include visible labels for them using `"label"` objects (with `"reveal": true). Do not omit labels in that case.
+- `"label.target"` must match an existing point `"id"` exactly (case-sensitive).
 - Set `"equal_aspect": true` to avoid stretched circles.
 - Prefer `"hide_values": true` so axis numbers do not appear in Euclidean diagrams.
 - Do NOT ask the student to draw; the diagram must be sufficient to solve the question.

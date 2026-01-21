@@ -22,6 +22,7 @@ import datetime
 import io
 import base64
 import matplotlib.pyplot as plt
+import matplotlib as mpl  # ✅ NEW: for local SVG font settings
 
 logger = utils.setup_logger(__name__)
 
@@ -550,12 +551,19 @@ def create_question(
             fig = dynamic_chart_plotter(visual_data)
 
             buffer = io.BytesIO()
-            fig.savefig(
-                buffer,
-                format="svg",
-                bbox_inches="tight",
-                pad_inches=0.02,
-            )
+
+            # ✅ SURGICAL FIX:
+            # Ensure Matplotlib emits real SVG <text> nodes (not paths).
+            # This prevents downstream failures like:
+            #   "SVG contains 0 <text> nodes"
+            with mpl.rc_context({"svg.fonttype": "none"}):
+                fig.savefig(
+                    buffer,
+                    format="svg",
+                    bbox_inches="tight",
+                    pad_inches=0.02,
+                )
+
             svg_data = buffer.getvalue().decode("utf-8")
             buffer.close()
 
