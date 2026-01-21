@@ -31,6 +31,9 @@ from .overlays import (
     plot_polygon,
 )
 
+# NEW: geometry renderer + bounds helper
+from .geometry import plot_geometry, compute_geometry_bounds
+
 from .utils import setup_plot_appearance, _coerce_bin_pair
 
 
@@ -154,6 +157,26 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
                 c["label"] = candidate
     except Exception:
         # Never crash plotting due to defaulting logic.
+        pass
+
+    # ------------------------------------------------------------------------
+    # GEOMETRY AUTO-BOUNDS (so diagrams don't disappear off-frame)
+    #
+    # If ANY chart is type="geometry" and the caller did not explicitly provide
+    # axes_range/global_axes_range, compute sensible bounds from geometry objects.
+    # ------------------------------------------------------------------------
+    try:
+        if not config.get("global_axes_range") and not config.get("axes_range"):
+            has_geometry = any(
+                isinstance(c, dict) and str(c.get("type", "")).strip().lower() == "geometry"
+                for c in non_tables
+            )
+            if has_geometry:
+                bounds = compute_geometry_bounds({"charts": non_tables})
+                if isinstance(bounds, dict):
+                    config["axes_range"] = bounds
+                    config.setdefault("equal_aspect", True)
+    except Exception:
         pass
 
     # ------------------------------------------------------------------------
@@ -444,6 +467,8 @@ def plot_chart(
         plot_cumulative_frequency(ax, chart, function_registry)
     elif chart_type == 'polygon':
         plot_polygon(ax, chart, function_registry)
+    elif chart_type == 'geometry':
+        plot_geometry(ax, chart, function_registry)
     elif chart_type == 'table':
         return
     else:
