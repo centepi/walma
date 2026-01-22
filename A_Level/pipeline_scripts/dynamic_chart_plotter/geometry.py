@@ -83,6 +83,77 @@ def _apply_geometry_viewport(ax: plt.Axes, chart: Dict[str, Any]) -> None:
             pass
 
 
+def _looks_like_label_id(pid: str) -> bool:
+    """
+    Heuristic: only auto-label 'nice' point ids (A, B, O, P, Q, M, A1, etc).
+    Avoid long internal ids.
+    """
+    s = str(pid or "").strip()
+    if not s:
+        return False
+    if s.startswith("_"):
+        return False
+    if len(s) <= 3:
+        return True
+    # allow simple patterns like "A1", "P2"
+    if len(s) <= 4 and any(ch.isdigit() for ch in s) and any(ch.isalpha() for ch in s):
+        return True
+    return False
+
+
+def _normalize_arc_angles(theta1: float, theta2: float) -> Tuple[float, float]:
+    """
+    Matplotlib Arc draws from theta1 to theta2 in degrees.
+    Ensure theta2 >= theta1 by adding 360 if needed.
+    """
+    t1 = float(theta1)
+    t2 = float(theta2)
+    while t2 < t1:
+        t2 += 360.0
+    return t1, t2
+
+
+def _semicircle_from_diameter(
+    a: Tuple[float, float],
+    b: Tuple[float, float],
+    side: str = "left",
+) -> Tuple[Tuple[float, float], float, float, float]:
+    """
+    Build semicircle arc params (center, radius, theta1_deg, theta2_deg) from diameter endpoints a,b.
+
+    - center: midpoint of AB
+    - radius: |AB|/2
+    - side:
+        "left"  => take the semicircle to the LEFT of the directed segment A->B (CCW sweep)
+        "right" => take the semicircle to the RIGHT of the directed segment A->B (the other half)
+    """
+    (x1, y1) = a
+    (x2, y2) = b
+    cx = 0.5 * (x1 + x2)
+    cy = 0.5 * (y1 + y2)
+    r = 0.5 * math.hypot(x2 - x1, y2 - y1)
+    if r <= 0:
+        return (cx, cy), 0.0, 0.0, 0.0
+
+    ang1 = math.degrees(math.atan2(y1 - cy, x1 - cx))
+    ang2 = math.degrees(math.atan2(y2 - cy, x2 - cx))
+
+    # The two endpoints are opposite points on the circle, so ang2 ≈ ang1 ± 180.
+    # Pick which half by choosing the start angle:
+    s = str(side or "left").strip().lower()
+    if s in {"right", "cw", "clockwise"}:
+        # use the opposite endpoint as start => other semicircle
+        theta1 = ang2
+        theta2 = ang2 + 180.0
+    else:
+        # default: left / ccw side from A->B
+        theta1 = ang1
+        theta2 = ang1 + 180.0
+
+    theta1, theta2 = _normalize_arc_angles(theta1, theta2)
+    return (cx, cy), r, theta1, theta2
+
+
 # ============================================================================
 # BOUNDS HELPERS
 # ============================================================================
@@ -108,7 +179,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     xs: List[float] = []
     ys: List[float] = []
 
-    # ✅ Track whether any circle exists so we can square the viewport.
+    # ✅ Track whether any circle-ish object exists so we can square the viewport.
     saw_circle = False
 
     # --- chart-driven bounds ---
@@ -122,8 +193,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
 
         # --------------------------------------------------------------------
         # NEW: unified "geometry" chart schema (ALMA visual_data)
-        # chart.type == "geometry" and chart.objects contains primitives:
-        # point/segment/circle/label/text/angle_marker...
         # --------------------------------------------------------------------
         if t == "geometry":
             objects = c.get("objects") or []
@@ -145,14 +214,13 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     xs.append(x)
                     ys.append(y)
 
-            # Include extents for circles + free text positions
+            # Include extents for circles/semicircles + free text positions
             for obj in objects:
                 if not isinstance(obj, dict):
                     continue
                 ot = str(obj.get("type", "")).strip().lower()
 
                 if ot == "circle":
-                    # center may be a point id (string) in ALMA schema
                     center_id = obj.get("center")
                     r = _safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
@@ -160,6 +228,18 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         cx, cy = pt[center_id]
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
+
+                elif ot == "semicircle":
+                    # bounds = full circle bounds (safe) to prevent clipping
+                    dia = obj.get("diameter")
+                    if isinstance(dia, list) and len(dia) >= 2:
+                        a_id, b_id = dia[0], dia[1]
+                        if isinstance(a_id, str) and isinstance(b_id, str) and a_id in pt and b_id in pt:
+                            saw_circle = True
+                            (cx, cy), r, _, _ = _semicircle_from_diameter(pt[a_id], pt[b_id], side=obj.get("side", "left"))
+                            if r > 0:
+                                xs.extend([cx - r, cx + r])
+                                ys.extend([cy - r, cy + r])
 
                 elif ot == "text":
                     tx = _safe_float(obj.get("x"))
@@ -169,7 +249,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         ys.append(ty)
 
                 elif ot == "label":
-                    # labels are attached to a target point id; keep bounds at that point
                     target = obj.get("target")
                     if isinstance(target, str) and target in pt:
                         x, y = pt[target]
@@ -192,7 +271,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         pass
 
         elif t == "circle":
-            # Support: center + radius
             try:
                 cx = float(vf.get("center", {}).get("x"))
                 cy = float(vf.get("center", {}).get("y"))
@@ -202,7 +280,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     xs.extend([cx - r, cx + r])
                     ys.extend([cy - r, cy + r])
             except Exception:
-                # Support alt: through points (center + point_on_circle)
                 try:
                     cx = float(vf.get("center", {}).get("x"))
                     cy = float(vf.get("center", {}).get("y"))
@@ -218,7 +295,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
 
         elif t in {"segment", "ray"}:
             a = vf.get("a") or vf.get("start")
-            b = vf.get("b") or vf.get("end")  # for ray, "end" is just a direction hint
+            b = vf.get("b") or vf.get("end")
             for p in (a, b):
                 try:
                     xs.append(float(p["x"]))
@@ -227,7 +304,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     pass
 
         elif t == "arc":
-            # Arc around a center, radius
             try:
                 cx = float(vf.get("center", {}).get("x"))
                 cy = float(vf.get("center", {}).get("y"))
@@ -257,7 +333,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     y_min = float(min(ys))
     y_max = float(max(ys))
 
-    # Handle degenerate case (all points same)
     dx = max(1e-6, x_max - x_min)
     dy = max(1e-6, y_max - y_min)
 
@@ -280,7 +355,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     dx = max(1e-6, x_max - x_min)
     dy = max(1e-6, y_max - y_min)
 
-    # ✅ FIX: if a circle exists, force a square viewport around the overall content.
+    # ✅ FIX: if a circle-ish object exists, force a square viewport around the overall content.
     if saw_circle:
         cx = 0.5 * (x_min + x_max)
         cy = 0.5 * (y_min + y_max)
@@ -292,7 +367,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
             "y_max": cy + half,
         }
 
-    # Non-circle geometry: still use uniform padding so skinny dimension isn’t under-padded.
     return {
         "x_min": x_min - pad,
         "x_max": x_max + pad,
@@ -340,6 +414,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         {"type":"point","id":"A","x":0,"y":6,"reveal":true},
         {"type":"segment","from":"A","to":"B","line_style":"dashed"},
         {"type":"circle","center":"O","radius":5.0},
+        {"type":"semicircle","diameter":["C","D"],"side":"left"},
         {"type":"label","target":"A","text":"A","offset":[-15,10],"reveal":true},
         {"type":"text","x":5,"y":6.5,"text":"$10 \\\\text{ cm}$"}
       ],
@@ -349,6 +424,13 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         "hide_values": true
       }
     }
+
+    Notes:
+    - Point IDs are the source of truth for geometry references.
+    - Unknown object types are ignored (never crash).
+    - `reveal:false` objects are skipped (construction lines/points).
+    - ✅ Auto-label fallback: if the generator forgets labels, revealed points get a label (unless an explicit label exists).
+    - ✅ Semicircle support: `{"type":"semicircle","diameter":["C","D"],"side":"left|right"}`.
     """
     if not isinstance(chart, dict):
         return
@@ -376,7 +458,20 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
     graph_id = str(chart.get("id", "geo")).strip() or "geo"
     base_col = get_color_cycle(graph_id)
 
-    # 1) Draw segments/rays/arcs/circles first (so labels sit on top)
+    # Track explicit labels so we can auto-label only missing ones.
+    explicitly_labeled: set[str] = set()
+    for obj in objects:
+        if not isinstance(obj, dict):
+            continue
+        if bool(obj.get("reveal", True)) is False:
+            continue
+        if str(obj.get("type", "")).strip().lower() != "label":
+            continue
+        tgt = obj.get("target")
+        if isinstance(tgt, str) and tgt.strip():
+            explicitly_labeled.add(tgt.strip())
+
+    # 1) Draw segments/rays/arcs/circles/semicircles first (so labels sit on top)
     for obj in objects:
         if not isinstance(obj, dict):
             continue
@@ -436,6 +531,32 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 )
                 ax.add_patch(patch)
 
+        elif ot == "semicircle":
+            # Semicircle defined by diameter endpoints (point ids)
+            dia = obj.get("diameter")
+            if isinstance(dia, list) and len(dia) >= 2:
+                a_id, b_id = dia[0], dia[1]
+                if isinstance(a_id, str) and isinstance(b_id, str) and a_id in points and b_id in points:
+                    side = obj.get("side", "left")
+                    (cx, cy), r, th1, th2 = _semicircle_from_diameter(points[a_id], points[b_id], side=side)
+                    if r > 0:
+                        lw = float(obj.get("linewidth", 2.0))
+                        col = obj.get("color") or base_col
+                        ls = _line_style_to_matplotlib(obj.get("line_style"))
+                        patch = Arc(
+                            (cx, cy),
+                            width=2 * r,
+                            height=2 * r,
+                            angle=0,
+                            theta1=th1,
+                            theta2=th2,
+                            color=col,
+                            linewidth=lw,
+                            linestyle=ls,
+                            zorder=4,
+                        )
+                        ax.add_patch(patch)
+
         elif ot == "arc":
             center_id = obj.get("center")
             r = _safe_float(obj.get("radius"))
@@ -450,13 +571,14 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 lw = float(obj.get("linewidth", 2.0))
                 col = obj.get("color") or base_col
                 ls = _line_style_to_matplotlib(obj.get("line_style"))
+                t1, t2 = _normalize_arc_angles(th1, th2)
                 patch = Arc(
                     (cx, cy),
                     width=2 * r,
                     height=2 * r,
                     angle=0,
-                    theta1=th1,
-                    theta2=th2,
+                    theta1=t1,
+                    theta2=t2,
                     color=col,
                     linewidth=lw,
                     linestyle=ls,
@@ -579,6 +701,44 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 va="center",
                 zorder=6,
             )
+
+    # ✅ Auto-label fallback: if the generator forgot labels, label revealed points.
+    # Do this AFTER explicit labels so explicit always wins (and we avoid duplication).
+    for obj in objects:
+        if not isinstance(obj, dict):
+            continue
+        if str(obj.get("type", "")).strip().lower() != "point":
+            continue
+        if bool(obj.get("reveal", True)) is False:
+            continue
+
+        pid = str(obj.get("id", "")).strip()
+        if pid not in points:
+            continue
+        if pid in explicitly_labeled:
+            continue
+        if not _looks_like_label_id(pid):
+            continue
+
+        # allow opt-out per point
+        if bool(obj.get("auto_label", True)) is False:
+            continue
+
+        (x, y) = points[pid]
+        col = obj.get("label_color") or "black"
+        fontsize = int(obj.get("label_fontsize", 12))
+        # small consistent offset, so labels are visible
+        ax.annotate(
+            pid,
+            xy=(x, y),
+            xytext=(6, 6),
+            textcoords="offset points",
+            ha="left",
+            va="bottom",
+            color=col,
+            fontsize=fontsize,
+            zorder=6,
+        )
 
 
 # ============================================================================
@@ -761,13 +921,14 @@ def plot_arc(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     lw = float(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
+    t1, t2 = _normalize_arc_angles(th1, th2)
     patch = Arc(
         (cx, cy),
         width=2 * r,
         height=2 * r,
         angle=0,
-        theta1=th1,
-        theta2=th2,
+        theta1=t1,
+        theta2=t2,
         color=col,
         linewidth=lw,
         zorder=4,

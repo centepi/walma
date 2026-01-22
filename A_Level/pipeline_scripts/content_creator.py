@@ -459,7 +459,7 @@ def _visual_data_has_geometry(vd: Any) -> bool:
             t = str(c.get("type", "")).strip().lower()
             if t == "geometry":
                 return True
-            if t in {"circle", "segment", "ray", "arc", "polygon"}:
+            if t in {"circle", "segment", "ray", "arc", "polygon", "semicircle"}:
                 return True
         return False
     except Exception:
@@ -603,8 +603,6 @@ def create_question(
         try:
             fig = dynamic_chart_plotter(visual_data)
 
-            buffer = io.BytesIO()
-
             # ✅ SURGICAL FIX:
             # - svg.fonttype="none" => real <text> nodes
             # - pad_inches increased => prevent stroke clipping (circles/lines at edge)
@@ -614,25 +612,31 @@ def create_question(
             except Exception:
                 pass
 
-            with mpl.rc_context({"svg.fonttype": "none"}):
-                fig.savefig(
-                    buffer,
-                    format="svg",
-                    bbox_inches="tight",
-                    pad_inches=0.14,
-                )
-
-            svg_data = buffer.getvalue().decode("utf-8")
-            buffer.close()
+            with io.BytesIO() as buffer:
+                with mpl.rc_context({"svg.fonttype": "none"}):
+                    fig.savefig(
+                        buffer,
+                        format="svg",
+                        bbox_inches="tight",
+                        pad_inches=0.14,
+                    )
+                svg_data = buffer.getvalue().decode("utf-8")
 
             svg_base64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
 
+            # Prefer a non-table chart id if available, otherwise fall back.
             fig_id = None
             if isinstance(visual_data, dict):
                 charts_for_id = visual_data.get("charts", visual_data.get("graphs", [])) or []
                 if isinstance(charts_for_id, list) and charts_for_id:
-                    first = charts_for_id[0] if isinstance(charts_for_id[0], dict) else {}
-                    fig_id = first.get("id")
+                    chosen = None
+                    for c in charts_for_id:
+                        if isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table":
+                            chosen = c
+                            break
+                    if chosen is None:
+                        chosen = charts_for_id[0] if isinstance(charts_for_id[0], dict) else {}
+                    fig_id = (chosen or {}).get("id")
 
             content_object["svg_images"] = [{
                 "id": fig_id or "figure_1",
