@@ -108,6 +108,9 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     xs: List[float] = []
     ys: List[float] = []
 
+    # ✅ Track whether any circle exists so we can square the viewport.
+    saw_circle = False
+
     # --- chart-driven bounds ---
     for c in charts:
         if not isinstance(c, dict):
@@ -153,6 +156,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     center_id = obj.get("center")
                     r = _safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
+                        saw_circle = True
                         cx, cy = pt[center_id]
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
@@ -193,8 +197,10 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                 cx = float(vf.get("center", {}).get("x"))
                 cy = float(vf.get("center", {}).get("y"))
                 r = float(vf.get("radius"))
-                xs.extend([cx - r, cx + r])
-                ys.extend([cy - r, cy + r])
+                if r > 0:
+                    saw_circle = True
+                    xs.extend([cx - r, cx + r])
+                    ys.extend([cy - r, cy + r])
             except Exception:
                 # Support alt: through points (center + point_on_circle)
                 try:
@@ -203,8 +209,10 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     px = float(vf.get("point_on_circle", {}).get("x"))
                     py = float(vf.get("point_on_circle", {}).get("y"))
                     r = math.hypot(px - cx, py - cy)
-                    xs.extend([cx - r, cx + r])
-                    ys.extend([cy - r, cy + r])
+                    if r > 0:
+                        saw_circle = True
+                        xs.extend([cx - r, cx + r])
+                        ys.extend([cy - r, cy + r])
                 except Exception:
                     pass
 
@@ -224,8 +232,9 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                 cx = float(vf.get("center", {}).get("x"))
                 cy = float(vf.get("center", {}).get("y"))
                 r = float(vf.get("radius"))
-                xs.extend([cx - r, cx + r])
-                ys.extend([cy - r, cy + r])
+                if r > 0:
+                    xs.extend([cx - r, cx + r])
+                    ys.extend([cy - r, cy + r])
             except Exception:
                 pass
 
@@ -252,8 +261,9 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     dx = max(1e-6, x_max - x_min)
     dy = max(1e-6, y_max - y_min)
 
-    pad_x = dx * float(pad_frac)
-    pad_y = dy * float(pad_frac)
+    # ✅ FIX: uniform padding based on dominant span (prevents “too vertical” + circle clipping)
+    span = max(dx, dy)
+    pad = span * float(pad_frac)
 
     # Ensure minimum visible span
     min_span = 1.0
@@ -266,11 +276,28 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
         y_min = cy - 0.5 * min_span
         y_max = cy + 0.5 * min_span
 
+    # Recompute after min-span expansion
+    dx = max(1e-6, x_max - x_min)
+    dy = max(1e-6, y_max - y_min)
+
+    # ✅ FIX: if a circle exists, force a square viewport around the overall content.
+    if saw_circle:
+        cx = 0.5 * (x_min + x_max)
+        cy = 0.5 * (y_min + y_max)
+        half = 0.5 * max(dx, dy) + pad
+        return {
+            "x_min": cx - half,
+            "x_max": cx + half,
+            "y_min": cy - half,
+            "y_max": cy + half,
+        }
+
+    # Non-circle geometry: still use uniform padding so skinny dimension isn’t under-padded.
     return {
-        "x_min": x_min - pad_x,
-        "x_max": x_max + pad_x,
-        "y_min": y_min - pad_y,
-        "y_max": y_max + pad_y,
+        "x_min": x_min - pad,
+        "x_max": x_max + pad,
+        "y_min": y_min - pad,
+        "y_max": y_max + pad,
     }
 
 
@@ -322,11 +349,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         "hide_values": true
       }
     }
-
-    Notes:
-    - We treat point IDs as the source of truth for geometry references.
-    - Unknown object types are ignored (never crash).
-    - `reveal:false` objects are skipped (construction lines/points).
     """
     if not isinstance(chart, dict):
         return
@@ -415,7 +437,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 ax.add_patch(patch)
 
         elif ot == "arc":
-            # Optional: allow arc defined by center id + radius + theta1/theta2 in degrees
             center_id = obj.get("center")
             r = _safe_float(obj.get("radius"))
             th1 = _safe_float(obj.get("theta1_deg"))
@@ -444,7 +465,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 ax.add_patch(patch)
 
         elif ot == "polygon":
-            # Optional: polygon by explicit point ids list
             pids = obj.get("points") or []
             if isinstance(pids, list) and len(pids) >= 3 and all(isinstance(p, str) for p in pids):
                 xy: List[Tuple[float, float]] = []
@@ -473,7 +493,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     ax.add_patch(patch)
 
         elif ot == "angle_marker":
-            # Minimal support: draw a small arc at vertex between two rays given by corner_points [p1, v, p2]
             at_id = obj.get("at")
             cps = obj.get("corner_points") or []
             if isinstance(at_id, str) and at_id in points and isinstance(cps, list) and len(cps) == 3:
@@ -530,8 +549,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 dx = dx if dx is not None else 0.0
                 dy = dy if dy is not None else 0.0
 
-                # Offsets are in "screen-ish" units from generator; treat them as points.
-                # Use annotate so offsets don't distort axes bounds.
                 col = obj.get("color") or "black"
                 ax.annotate(
                     text,
@@ -569,23 +586,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
 # ============================================================================
 
 def plot_polygon_geom(ax: plt.Axes, chart: Dict[str, Any]) -> None:
-    """
-    Geometry polygon (triangle/quadrilateral/etc).
-
-    Expected:
-    {
-      "id":"poly1",
-      "type":"polygon",
-      "label":"Triangle",
-      "visual_features":{
-        "points":[{"x":0,"y":0},{"x":4,"y":0},{"x":1,"y":3}],
-        "closed": true,
-        "fill": false,
-        "alpha": 0.15,
-        "linewidth": 2.0
-      }
-    }
-    """
     graph_id = str(chart.get("id", "poly")).strip() or "poly"
     vf = chart.get("visual_features") or {}
     if not isinstance(vf, dict):
@@ -627,24 +627,6 @@ def plot_polygon_geom(ax: plt.Axes, chart: Dict[str, Any]) -> None:
 
 
 def plot_circle(ax: plt.Axes, chart: Dict[str, Any]) -> None:
-    """
-    Circle primitive.
-
-    Expected:
-    {
-      "id":"c1",
-      "type":"circle",
-      "label":"(optional)",
-      "visual_features":{
-        "center":{"x":0,"y":0},
-        "radius": 3.0,                    // OR use point_on_circle instead of radius
-        "point_on_circle":{"x":3,"y":0},  // optional alternative to radius
-        "fill": false,
-        "alpha": 0.10,
-        "linewidth": 2.0
-      }
-    }
-    """
     graph_id = str(chart.get("id", "c")).strip() or "c"
     vf = chart.get("visual_features") or {}
     if not isinstance(vf, dict):
@@ -700,20 +682,6 @@ def plot_circle(ax: plt.Axes, chart: Dict[str, Any]) -> None:
 
 
 def plot_segment(ax: plt.Axes, chart: Dict[str, Any]) -> None:
-    """
-    Line segment primitive.
-
-    Expected:
-    {
-      "id":"s1",
-      "type":"segment",
-      "visual_features":{
-        "a":{"x":0,"y":0},
-        "b":{"x":4,"y":2},
-        "linewidth": 2.0
-      }
-    }
-    """
     graph_id = str(chart.get("id", "seg")).strip() or "seg"
     vf = chart.get("visual_features") or {}
     if not isinstance(vf, dict):
@@ -737,21 +705,6 @@ def plot_segment(ax: plt.Axes, chart: Dict[str, Any]) -> None:
 
 
 def plot_ray(ax: plt.Axes, chart: Dict[str, Any]) -> None:
-    """
-    Ray primitive: starts at a point and extends in the direction of another point.
-
-    Expected:
-    {
-      "id":"r1",
-      "type":"ray",
-      "visual_features":{
-        "start":{"x":0,"y":0},
-        "through":{"x":2,"y":1},
-        "length": 100,          // optional; default extends to edge using a big length
-        "linewidth": 2.0
-      }
-    }
-    """
     graph_id = str(chart.get("id", "ray")).strip() or "ray"
     vf = chart.get("visual_features") or {}
     if not isinstance(vf, dict):
@@ -787,22 +740,6 @@ def plot_ray(ax: plt.Axes, chart: Dict[str, Any]) -> None:
 
 
 def plot_arc(ax: plt.Axes, chart: Dict[str, Any]) -> None:
-    """
-    Arc primitive (useful for angle/arc markers).
-
-    Expected:
-    {
-      "id":"a1",
-      "type":"arc",
-      "visual_features":{
-        "center":{"x":0,"y":0},
-        "radius": 2.0,
-        "theta1_deg": 0,
-        "theta2_deg": 60,
-        "linewidth": 2.0
-      }
-    }
-    """
     graph_id = str(chart.get("id", "arc")).strip() or "arc"
     vf = chart.get("visual_features") or {}
     if not isinstance(vf, dict):
@@ -855,7 +792,7 @@ def plot_angle_marker(
     Draw a simple angle arc at 'vertex' between rays vertex->p1 and vertex->p2.
     """
     vx, vy = vertex
-    a1 = math.degrees(math_attach := math.atan2(p1[1] - vy, p1[0] - vx))
+    a1 = math.degrees(math.atan2(p1[1] - vy, p1[0] - vx))
     a2 = math.degrees(math.atan2(p2[1] - vy, p2[0] - vx))
 
     # Normalize sweep to shortest positive direction
