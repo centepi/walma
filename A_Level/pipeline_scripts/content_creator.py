@@ -440,6 +440,52 @@ def _build_auto_context_header(full_reference_text: str, target_part_content: st
 
 
 # -------------------------
+# Geometry detection (SVG bounds defaults)
+# -------------------------
+
+def _visual_data_has_geometry(vd: Any) -> bool:
+    """
+    Heuristic: if any chart is type 'geometry' or legacy geometry primitives, treat as geometry-heavy.
+    """
+    try:
+        if not isinstance(vd, dict):
+            return False
+        charts = vd.get("charts", vd.get("graphs", [])) or []
+        if not isinstance(charts, list):
+            return False
+        for c in charts:
+            if not isinstance(c, dict):
+                continue
+            t = str(c.get("type", "")).strip().lower()
+            if t == "geometry":
+                return True
+            if t in {"circle", "segment", "ray", "arc", "polygon"}:
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def _apply_geometry_svg_defaults(vd: Dict[str, Any]) -> None:
+    """
+    If the generator did not explicitly decide, apply sensible defaults for geometry:
+    - hide axis labels (removes huge bbox margins)
+    - enforce equal aspect (round circles)
+    - keep axis numbers hidden
+    This prevents tall/skinny SVG viewBoxes and circle clipping.
+    """
+    if not isinstance(vd, dict):
+        return
+    if not _visual_data_has_geometry(vd):
+        return
+
+    # Only set if the generator didn't explicitly decide.
+    vd.setdefault("hide_axis_labels", True)
+    vd.setdefault("equal_aspect", True)
+    vd.setdefault("show_axis_numbers", False)
+
+
+# -------------------------
 # Main API
 # -------------------------
 def create_question(
@@ -508,6 +554,13 @@ def create_question(
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
 
+        # ✅ NEW: geometry-specific defaults so SVG bounds aren't insane.
+        try:
+            if isinstance(visual_data, dict):
+                _apply_geometry_svg_defaults(visual_data)
+        except Exception:
+            pass
+
         # Always validate, but do not gate plotting on validation.
         try:
             issues = validate_config(visual_data)
@@ -553,15 +606,20 @@ def create_question(
             buffer = io.BytesIO()
 
             # ✅ SURGICAL FIX:
-            # Ensure Matplotlib emits real SVG <text> nodes (not paths).
-            # This prevents downstream failures like:
-            #   "SVG contains 0 <text> nodes"
+            # - svg.fonttype="none" => real <text> nodes
+            # - pad_inches increased => prevent stroke clipping (circles/lines at edge)
+            # - disable constrained_layout at save time => prevents weird extra whitespace with tight bbox
+            try:
+                fig.set_constrained_layout(False)
+            except Exception:
+                pass
+
             with mpl.rc_context({"svg.fonttype": "none"}):
                 fig.savefig(
                     buffer,
                     format="svg",
                     bbox_inches="tight",
-                    pad_inches=0.02,
+                    pad_inches=0.14,
                 )
 
             svg_data = buffer.getvalue().decode("utf-8")
