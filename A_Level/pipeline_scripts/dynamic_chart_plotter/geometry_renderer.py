@@ -93,6 +93,17 @@ def _draw_radial_edge(
     ax.plot([x0, x1], [y0, y1], color=color, linewidth=linewidth, linestyle=linestyle, zorder=zorder)
 
 
+def _safe_linewidth(x: Any, default: float = 2.0) -> float:
+    """Clamp linewidth to a sensible positive value so edges don't vanish."""
+    try:
+        v = float(x)
+        if not math.isfinite(v) or v <= 0:
+            return float(default)
+        return v
+    except Exception:
+        return float(default)
+
+
 # ============================================================================
 # GEOMETRY (ALMA) RENDERER
 # ============================================================================
@@ -105,23 +116,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
       - point, segment, ray, circle, semicircle, arc, polygon, angle_marker, label, text
       - sector: proper sector with arc + two radii (+ optional fill)
       - annular_sector: ring sector between r_inner and r_outer (+ optional fill)
-
-    Sector schema options:
-
-    A) Angles provided:
-      {"type":"sector","center":"O","radius":6,"theta1_deg":20,"theta2_deg":110}
-
-    B) Endpoints provided (angles inferred):
-      {"type":"sector","center":"O","radius":6,"from":"A","to":"B"}
-
-    Optional:
-      - fill: bool (default False)
-      - alpha: float (default 0.15)
-      - linewidth, line_style, color
-
-    Annular sector schema:
-      {"type":"annular_sector","center":"O","r_inner":4,"r_outer":7,"theta1_deg":20,"theta2_deg":110}
-      (also supports from/to)
 
     Notes:
       - Unknown object types are ignored (never crash).
@@ -182,7 +176,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
             if isinstance(a_id, str) and isinstance(b_id, str) and a_id in points and b_id in points:
                 (x1, y1) = points[a_id]
                 (x2, y2) = points[b_id]
-                lw = float(obj.get("linewidth", 2.0))
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 ls = line_style_to_matplotlib(obj.get("line_style"))
                 col = obj.get("color") or base_col
                 ax.plot([x1, x2], [y1, y2], linewidth=lw, linestyle=ls, color=col, zorder=3)
@@ -201,7 +195,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     length = float(obj.get("length", 100.0))
                     x_end = x1 + dx * length
                     y_end = y1 + dy * length
-                    lw = float(obj.get("linewidth", 2.0))
+                    lw = _safe_linewidth(obj.get("linewidth", 2.0))
                     ls = line_style_to_matplotlib(obj.get("line_style"))
                     col = obj.get("color") or base_col
                     ax.plot([x1, x_end], [y1, y_end], linewidth=lw, linestyle=ls, color=col, zorder=3)
@@ -213,7 +207,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 (cx, cy) = points[center_id]
                 fill = bool(obj.get("fill", False))
                 alpha = float(obj.get("alpha", 0.10)) if fill else 1.0
-                lw = float(obj.get("linewidth", 2.0))
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 col = obj.get("color") or base_col
                 patch = Circle(
                     (cx, cy),
@@ -235,7 +229,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     side = obj.get("side", "left")
                     (cx, cy), r, th1, th2 = semicircle_from_diameter(points[a_id], points[b_id], side=side)
                     if r > 0:
-                        lw = float(obj.get("linewidth", 2.0))
+                        lw = _safe_linewidth(obj.get("linewidth", 2.0))
                         col = obj.get("color") or base_col
                         ls = line_style_to_matplotlib(obj.get("line_style"))
                         patch = Arc(
@@ -255,18 +249,22 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         elif ot == "arc":
             center_id = obj.get("center")
             r = safe_float(obj.get("radius"))
-            th1 = safe_float(obj.get("theta1_deg"))
-            th2 = safe_float(obj.get("theta2_deg"))
-            if (
-                isinstance(center_id, str) and center_id in points
-                and r is not None and r > 0
-                and th1 is not None and th2 is not None
-            ):
+            if isinstance(center_id, str) and center_id in points and r is not None and r > 0:
                 (cx, cy) = points[center_id]
-                lw = float(obj.get("linewidth", 2.0))
+
+                th1 = safe_float(obj.get("theta1_deg"))
+                th2 = safe_float(obj.get("theta2_deg"))
+                if th1 is not None and th2 is not None:
+                    t1, t2 = normalize_arc_angles(th1, th2)
+                else:
+                    angs = resolve_sector_angles((cx, cy), points, obj)
+                    if angs is None:
+                        continue
+                    t1, t2 = angs
+
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 col = obj.get("color") or base_col
                 ls = line_style_to_matplotlib(obj.get("line_style"))
-                t1, t2 = normalize_arc_angles(th1, th2)
                 patch = Arc(
                     (cx, cy),
                     width=2 * r,
@@ -277,7 +275,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     color=col,
                     linewidth=lw,
                     linestyle=ls,
-                    zorder=4,
+                    zorder=6,
                 )
                 ax.add_patch(patch)
 
@@ -292,18 +290,18 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 t1, t2 = angs
 
                 col = obj.get("color") or base_col
-                lw = float(obj.get("linewidth", 2.0))
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 ls = line_style_to_matplotlib(obj.get("line_style"))
                 fill = bool(obj.get("fill", False))
                 alpha = float(obj.get("alpha", 0.15)) if fill else 1.0
 
-                # Wedge gives a real sector (arc + two radii) in one patch.
+                # Fill via Wedge...
                 wedge = Wedge(
                     center_xy,
                     r,
                     t1,
                     t2,
-                    width=None,  # full sector
+                    width=None,
                     facecolor=col if fill else "none",
                     edgecolor=col,
                     linewidth=lw,
@@ -312,6 +310,26 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     zorder=3,
                 )
                 ax.add_patch(wedge)
+
+                # ✅ ...but ALWAYS draw the curved boundary explicitly (Wedge edge can disappear on some backends).
+                arc = Arc(
+                    center_xy,
+                    width=2 * r,
+                    height=2 * r,
+                    angle=0,
+                    theta1=t1,
+                    theta2=t2,
+                    color=col,
+                    linewidth=lw,
+                    linestyle=ls,
+                    zorder=7,
+                )
+                ax.add_patch(arc)
+
+                # Optional: ensure radial edges exist even if wedge edge flakes
+                if bool(obj.get("draw_radial_edges", True)):
+                    _draw_radial_edge(ax, center_xy, 0.0, r, t1, color=col, linewidth=lw, linestyle=ls, zorder=7)
+                    _draw_radial_edge(ax, center_xy, 0.0, r, t2, color=col, linewidth=lw, linestyle=ls, zorder=7)
 
         elif ot == "annular_sector":
             center_id = obj.get("center")
@@ -329,12 +347,11 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 t1, t2 = angs
 
                 col = obj.get("color") or base_col
-                lw = float(obj.get("linewidth", 2.0))
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 ls = line_style_to_matplotlib(obj.get("line_style"))
                 fill = bool(obj.get("fill", False))
                 alpha = float(obj.get("alpha", 0.15)) if fill else 1.0
 
-                # Wedge with width makes an annular (ring) sector.
                 width = float(r_out - r_in)
                 wedge = Wedge(
                     center_xy,
@@ -351,10 +368,38 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 )
                 ax.add_patch(wedge)
 
-                # Optional: emphasize radial boundaries (helps when fill=False)
+                # ✅ ALWAYS draw outer + inner curved boundaries explicitly.
+                outer_arc = Arc(
+                    center_xy,
+                    width=2 * r_out,
+                    height=2 * r_out,
+                    angle=0,
+                    theta1=t1,
+                    theta2=t2,
+                    color=col,
+                    linewidth=lw,
+                    linestyle=ls,
+                    zorder=7,
+                )
+                ax.add_patch(outer_arc)
+
+                inner_arc = Arc(
+                    center_xy,
+                    width=2 * r_in,
+                    height=2 * r_in,
+                    angle=0,
+                    theta1=t1,
+                    theta2=t2,
+                    color=col,
+                    linewidth=lw,
+                    linestyle=ls,
+                    zorder=7,
+                )
+                ax.add_patch(inner_arc)
+
                 if bool(obj.get("draw_radial_edges", True)):
-                    _draw_radial_edge(ax, center_xy, r_in, r_out, t1, color=col, linewidth=lw, linestyle=ls, zorder=4)
-                    _draw_radial_edge(ax, center_xy, r_in, r_out, t2, color=col, linewidth=lw, linestyle=ls, zorder=4)
+                    _draw_radial_edge(ax, center_xy, r_in, r_out, t1, color=col, linewidth=lw, linestyle=ls, zorder=7)
+                    _draw_radial_edge(ax, center_xy, r_in, r_out, t2, color=col, linewidth=lw, linestyle=ls, zorder=7)
 
         elif ot == "polygon":
             pids = obj.get("points") or []
@@ -370,7 +415,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     closed = bool(obj.get("closed", True))
                     fill = bool(obj.get("fill", False))
                     alpha = float(obj.get("alpha", 0.15)) if fill else 1.0
-                    lw = float(obj.get("linewidth", 2.0))
+                    lw = _safe_linewidth(obj.get("linewidth", 2.0))
                     col = obj.get("color") or base_col
                     patch = Polygon(
                         xy,
@@ -398,7 +443,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     p1 = points[p1_id]
                     p2 = points[p2_id]
                     radius = float(obj.get("radius", 0.6))
-                    lw = float(obj.get("linewidth", 2.0))
+                    lw = _safe_linewidth(obj.get("linewidth", 2.0))
                     col = obj.get("color") or "black"
                     plot_angle_marker(ax, vertex=vertex, p1=p1, p2=p2, radius=radius, linewidth=lw, color=col)
 
@@ -417,7 +462,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         (x, y) = points[pid]
         col = obj.get("color") or "black"
         size = float(obj.get("size", 18.0))
-        ax.scatter([x], [y], s=size, color=col, zorder=5)
+        ax.scatter([x], [y], s=size, color=col, zorder=8)
 
     # 3) Labels and free text last
     for obj in objects:
@@ -451,7 +496,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     va="center",
                     color=col,
                     fontsize=int(obj.get("fontsize", 12)),
-                    zorder=6,
+                    zorder=9,
                 )
 
         elif ot == "text":
@@ -469,7 +514,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 fontsize=int(obj.get("fontsize", 12)),
                 ha="center",
                 va="center",
-                zorder=6,
+                zorder=9,
             )
 
     # 4) Auto-label fallback: if generator forgot labels, label revealed points.
@@ -503,7 +548,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
             va="bottom",
             color=col,
             fontsize=fontsize,
-            zorder=6,
+            zorder=9,
         )
 
 
@@ -531,7 +576,7 @@ def plot_polygon_geom(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     closed = bool(vf.get("closed", True))
     fill = bool(vf.get("fill", False))
     alpha = float(vf.get("alpha", 0.15)) if fill else 1.0
-    lw = float(vf.get("linewidth", 2.0))
+    lw = _safe_linewidth(vf.get("linewidth", 2.0))
 
     show_label = bool(vf.get("show_label", False))
     label = (chart.get("label", "") or "").strip() if show_label else ""
@@ -586,7 +631,7 @@ def plot_circle(ax: plt.Axes, chart: Dict[str, Any]) -> None:
 
     fill = bool(vf.get("fill", False))
     alpha = float(vf.get("alpha", 0.10)) if fill else 1.0
-    lw = float(vf.get("linewidth", 2.0))
+    lw = _safe_linewidth(vf.get("linewidth", 2.0))
 
     show_label = bool(vf.get("show_label", False))
     label = (chart.get("label", "") or "").strip() if show_label else ""
@@ -624,7 +669,7 @@ def plot_segment(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     except Exception:
         return
 
-    lw = float(vf.get("linewidth", 2.0))
+    lw = _safe_linewidth(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
     ax.plot([x1, x2], [y1, y2], linewidth=lw, color=col, zorder=4)
@@ -659,7 +704,7 @@ def plot_ray(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     x_end = x1 + dx * length
     y_end = y1 + dy * length
 
-    lw = float(vf.get("linewidth", 2.0))
+    lw = _safe_linewidth(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
     ax.plot([x1, x_end], [y1, y_end], linewidth=lw, color=col, zorder=4)
@@ -684,7 +729,7 @@ def plot_arc(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     except Exception:
         return
 
-    lw = float(vf.get("linewidth", 2.0))
+    lw = _safe_linewidth(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
     t1, t2 = normalize_arc_angles(th1, th2)
