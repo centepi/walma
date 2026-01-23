@@ -11,7 +11,7 @@ All helpers (appearance, evaluation, etc.) live in `utils.py`.
 """
 
 import matplotlib.pyplot as plt
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 
 # Local imports (kept light to avoid circular imports)
 from .charts import (
@@ -36,6 +36,180 @@ from .geometry_renderer import plot_geometry
 from .geometry_bounds import compute_geometry_bounds
 
 from .utils import setup_plot_appearance, _coerce_bin_pair
+
+
+# ============================================================================
+# AXES STYLE (GLOBAL / PER-CHART OVERRIDE)
+# ============================================================================
+
+def _default_axes_style_for_charts(non_tables: List[Dict[str, Any]]) -> str:
+    """
+    Default axes style:
+      - geometry: none (Euclidean diagrams usually shouldn't show axes)
+      - function/parametric: cross (math-style axes through origin)
+      - everything else: L (standard chart axes)
+    """
+    types = []
+    for c in non_tables:
+        if isinstance(c, dict):
+            types.append(str(c.get("type", "")).strip().lower())
+
+    if any(t == "geometry" for t in types):
+        return "none"
+    if any(t in {"function", "parametric"} for t in types):
+        return "cross"
+    return "l"
+
+
+def _extract_axes_cfg(config: Dict[str, Any], non_tables: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Axes config can live in:
+      - top-level config["axes"]  (preferred)
+      - top-level legacy keys: show_axis_numbers, x_label, y_label
+    We keep this "boring": chart-level overrides are NOT applied here yet.
+    """
+    axes_cfg: Dict[str, Any] = {}
+    raw = config.get("axes")
+    if isinstance(raw, dict):
+        axes_cfg.update(raw)
+
+    # Defaults
+    axes_cfg.setdefault("style", _default_axes_style_for_charts(non_tables))
+
+    # Labels
+    if "x_label" not in axes_cfg:
+        axes_cfg["x_label"] = str(config.get("x_label", "") or "")
+    if "y_label" not in axes_cfg:
+        axes_cfg["y_label"] = str(config.get("y_label", "") or "")
+
+    # Ticks / numbers / grid
+    # - show_ticks: show tick marks at all (True/False)
+    # - show_numbers: show tick labels (defaults to config["show_axis_numbers"] when present)
+    # - show_grid: grid on/off (default False)
+    if "show_numbers" not in axes_cfg:
+        if "show_axis_numbers" in config:
+            axes_cfg["show_numbers"] = bool(config.get("show_axis_numbers", True))
+        else:
+            # Reasonable default:
+            # - geometry: no numbers
+            # - L/cross: show numbers
+            axes_cfg["show_numbers"] = False if str(axes_cfg.get("style", "")).lower() == "none" else True
+
+    axes_cfg.setdefault("show_ticks", bool(axes_cfg.get("show_numbers", True)))
+    axes_cfg.setdefault("show_grid", False)
+
+    # Optional: force origin visible when using cross axes
+    axes_cfg.setdefault("ensure_origin_visible", True)
+
+    return axes_cfg
+
+
+def _apply_axes_style(ax: plt.Axes, axes_cfg: Dict[str, Any]) -> None:
+    """
+    Apply axis style after plotting and after we have final xlim/ylim.
+
+    styles:
+      - "none": hide axes entirely (good for Euclidean geometry)
+      - "l": bottom + left spines (standard chart axes)
+      - "cross": axes through origin (spines at x=0 and y=0)
+    """
+    try:
+        style = str(axes_cfg.get("style", "l") or "l").strip().lower()
+        if style in {"none", "off", "hidden"}:
+            ax.set_axis_off()
+            return
+
+        # Turn axis back on in case something hid it (e.g. prior reuse)
+        ax.set_axis_on()
+
+        # Basic spine visibility
+        for s in ("top", "right"):
+            try:
+                ax.spines[s].set_visible(False)
+            except Exception:
+                pass
+
+        # Ensure bottom/left visible
+        for s in ("bottom", "left"):
+            try:
+                ax.spines[s].set_visible(True)
+            except Exception:
+                pass
+
+        # Labels
+        xlab = str(axes_cfg.get("x_label", "") or "")
+        ylab = str(axes_cfg.get("y_label", "") or "")
+        ax.set_xlabel(xlab)
+        ax.set_ylabel(ylab)
+
+        # Grid
+        if bool(axes_cfg.get("show_grid", False)):
+            ax.grid(True, alpha=0.25)
+        else:
+            ax.grid(False)
+
+        # Ticks / numbers
+        show_ticks = bool(axes_cfg.get("show_ticks", True))
+        show_numbers = bool(axes_cfg.get("show_numbers", True))
+
+        if not show_ticks:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        else:
+            # Keep ticks but optionally hide tick labels
+            if not show_numbers:
+                ax.tick_params(axis="both", which="both", labelbottom=False, labelleft=False)
+
+        # Position spines for L vs cross
+        if style in {"l", "standard"}:
+            try:
+                ax.spines["bottom"].set_position(("outward", 0))
+                ax.spines["left"].set_position(("outward", 0))
+            except Exception:
+                pass
+            ax.xaxis.set_ticks_position("bottom")
+            ax.yaxis.set_ticks_position("left")
+
+        elif style in {"cross", "plus", "+"}:
+            # Ensure origin is within the view so spines at 0 make sense.
+            if bool(axes_cfg.get("ensure_origin_visible", True)):
+                x0, x1 = ax.get_xlim()
+                y0, y1 = ax.get_ylim()
+                if x0 > 0:
+                    ax.set_xlim(0, x1)
+                if x1 < 0:
+                    ax.set_xlim(x0, 0)
+                if y0 > 0:
+                    ax.set_ylim(0, y1)
+                if y1 < 0:
+                    ax.set_ylim(y0, 0)
+
+            try:
+                ax.spines["bottom"].set_position(("data", 0))
+                ax.spines["left"].set_position(("data", 0))
+            except Exception:
+                pass
+
+            ax.xaxis.set_ticks_position("bottom")
+            ax.yaxis.set_ticks_position("left")
+
+            # Hide tick labels if requested (do this after spine move)
+            if show_ticks and (not show_numbers):
+                ax.tick_params(axis="both", which="both", labelbottom=False, labelleft=False)
+
+        else:
+            # Unknown style -> treat as L
+            try:
+                ax.spines["bottom"].set_position(("outward", 0))
+                ax.spines["left"].set_position(("outward", 0))
+            except Exception:
+                pass
+            ax.xaxis.set_ticks_position("bottom")
+            ax.yaxis.set_ticks_position("left")
+
+    except Exception:
+        # Never crash the pipeline due to styling.
+        pass
 
 
 def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
@@ -70,7 +244,7 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     ]
 
     # ------------------------------------------------------------------------
-    # PER-CHART "HIDE VALUES" SUPPORT
+    # PER-CHART "HIDE VALUES" SUPPORT (legacy; still respected)
     # ------------------------------------------------------------------------
     try:
         if "show_axis_numbers" not in config:
@@ -141,8 +315,9 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     # ------------------------------------------------------------------------
     # GEOMETRY AUTO-BOUNDS
     #
-    # ✅ FIX: Mark auto-computed bounds so we DON'T treat them like teacher intent.
-    # This lets us do robust post-plot autoscale + padding + square viewport.
+    # ✅ IMPORTANT: keep computed bounds, but mark them as auto.
+    # We will NOT rely on Matplotlib relim/autoscale for geometry because
+    # patches like Arc/Wedge do not reliably contribute to dataLim.
     # ------------------------------------------------------------------------
     try:
         if not config.get("global_axes_range") and not config.get("axes_range"):
@@ -156,6 +331,10 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
                     config["axes_range"] = bounds
                     config["_auto_axes_range"] = True  # ✅ NEW
                     config.setdefault("equal_aspect", True)
+
+                    # ✅ Geometry default: hide axes unless explicitly requested
+                    if "axes" not in config:
+                        config["axes"] = {"style": "none", "show_ticks": False, "show_numbers": False, "show_grid": False}
     except Exception:
         pass
 
@@ -233,7 +412,7 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         if cfg.get("equal_aspect"):
             ax.set_aspect("equal", adjustable="box")
 
-    # ✅ FIX: treat auto axes_range as NOT explicit
+    # ✅ FIX: treat auto axes_range as NOT explicit (teacher intent)
     def _has_explicit_axes_range(cfg: Dict[str, Any]) -> bool:
         if bool(cfg.get("_auto_axes_range", False)):
             return False
@@ -264,7 +443,7 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
         except Exception:
             pass
 
-    # ✅ NEW: square viewport when equal_aspect=True (prevents tall skinny circles)
+    # ✅ NEW: square viewport when equal_aspect=True (prevents tall/skinny circles)
     def _square_viewport_if_equal_aspect(ax: plt.Axes, pad_frac: float = 0.08) -> None:
         try:
             if ax.get_aspect() != "equal":
@@ -289,6 +468,25 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
             ax.set_xlim(cx - half, cx + half)
             ax.set_ylim(cy - half, cy + half)
+        except Exception:
+            pass
+
+    def _apply_axes_range_with_padding(ax: plt.Axes, axes_range: Dict[str, Any], pad_frac: float = 0.06) -> None:
+        """
+        Apply an explicit axes_range, then pad it a bit (useful for geometry).
+        """
+        try:
+            x_min = float(axes_range.get("x_min", -10))
+            x_max = float(axes_range.get("x_max", 10))
+            y_min = float(axes_range.get("y_min", -10))
+            y_max = float(axes_range.get("y_max", 10))
+
+            dx = max(1e-6, x_max - x_min)
+            dy = max(1e-6, y_max - y_min)
+
+            pad = max(dx, dy) * float(pad_frac)
+            ax.set_xlim(x_min - pad, x_max + pad)
+            ax.set_ylim(y_min - pad, y_max + pad)
         except Exception:
             pass
 
@@ -334,10 +532,29 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 
         setup_plot_appearance(axes["main"], style_cfg)
 
-        # ✅ FIX: post-plot viewport correction for auto-bounds
-        if not _has_explicit_axes_range(config):
+        # --------------------------------------------------------------------
+        # FINAL VIEWPORT / LIMITS
+        #
+        # ✅ Geometry: do NOT trust Matplotlib autoscale for Arc/Wedge patches.
+        # Re-apply computed axes_range and then square/pad.
+        #
+        # ✅ Non-geometry (no explicit axes_range): autoscale from artists + padding.
+        # --------------------------------------------------------------------
+        if bool(config.get("_auto_axes_range", False)) and isinstance(config.get("axes_range"), dict):
+            _apply_axes_range_with_padding(axes["main"], config["axes_range"], pad_frac=0.06)
+            if config.get("equal_aspect"):
+                _square_viewport_if_equal_aspect(axes["main"], pad_frac=0.04)
+        elif not _has_explicit_axes_range(config):
             _autoscale_with_padding(axes["main"], pad_frac=0.08)
-            _square_viewport_if_equal_aspect(axes["main"], pad_frac=0.06)
+            if config.get("equal_aspect"):
+                _square_viewport_if_equal_aspect(axes["main"], pad_frac=0.06)
+
+        # --------------------------------------------------------------------
+        # AXES STYLE (none/L/cross) + labels/ticks/grid
+        # Apply last, after final limits are set.
+        # --------------------------------------------------------------------
+        axes_cfg = _extract_axes_cfg(config, non_tables)
+        _apply_axes_style(axes["main"], axes_cfg)
 
     if "table" in axes:
         for table in tables:

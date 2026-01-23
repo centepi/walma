@@ -95,6 +95,33 @@ def normalize_arc_angles(theta1: float, theta2: float) -> Tuple[float, float]:
     return t1, t2
 
 
+def normalize_wedge_angles(theta1: float, theta2: float) -> Tuple[float, float]:
+    """
+    Matplotlib's Wedge/Arc can be flaky when:
+      - the sweep is ~0 (theta1 ~= theta2), or
+      - the sweep is >= 360, or
+      - angles land on exact boundaries with floating noise.
+
+    We keep angles in a "safe" form:
+      - ensure theta2 >= theta1 (like normalize_arc_angles)
+      - clamp sweep to < 360 (keep it drawable as a single wedge)
+      - avoid exact 0 sweep by nudging by a tiny epsilon
+    """
+    t1, t2 = normalize_arc_angles(theta1, theta2)
+
+    sweep = float(t2) - float(t1)
+
+    # If someone accidentally asked for a full circle or more, clamp to just-under 360.
+    if sweep >= 360.0:
+        t2 = t1 + 359.999
+
+    # If sweep is (effectively) zero, nudge to a tiny visible arc.
+    if abs(float(t2) - float(t1)) < 1e-9:
+        t2 = t1 + 1e-3
+
+    return float(t1), float(t2)
+
+
 def angle_deg(center: Tuple[float, float], pt: Tuple[float, float]) -> float:
     """Angle (deg) of pt relative to center."""
     cx, cy = center
@@ -173,13 +200,15 @@ def resolve_sector_angles(
     th1 = safe_float(obj.get("theta1_deg"))
     th2 = safe_float(obj.get("theta2_deg"))
     if th1 is not None and th2 is not None:
-        return normalize_arc_angles(th1, th2)
+        # ✅ use wedge-safe normalization (fixes rare missing arc edge)
+        return normalize_wedge_angles(th1, th2)
 
     a_id = obj.get("from", obj.get("start"))
     b_id = obj.get("to", obj.get("end"))
     if isinstance(a_id, str) and isinstance(b_id, str) and a_id in points and b_id in points:
         th1 = angle_deg(center_xy, points[a_id])
         th2 = angle_deg(center_xy, points[b_id])
-        return normalize_arc_angles(th1, th2)
+        # ✅ use wedge-safe normalization (fixes rare missing arc edge)
+        return normalize_wedge_angles(th1, th2)
 
     return None
