@@ -427,8 +427,8 @@ Structure:
 # NOTE: We are adding a "geometry" type entry so the prompt can request polygons/circles/lines
 # (This is the piece that will stop the model from only emitting "function" charts for Euclidean geometry.)
 _VISUAL_RULES_TYPE_GEOMETRY = r"""
-### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (SEGMENTS, CIRCLES, ARCS, SECTORS)**
-Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, arcs, sectors, etc.).
+### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (SEGMENTS, CIRCLES, ARCS, SECTORS, SEGMENTS)**
+Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, arcs, sectors, segments, etc.).
 Prefer this over "function" unless you truly need a coordinate graph.
 
 Top-level structure:
@@ -449,9 +449,12 @@ Top-level structure:
 }
 
 **CRITICAL DIAGRAM QUALITY RULES (READ THIS)**:
-- Your `axes_range` MUST include ALL diagram content: arcs, sector boundaries, labels, and any text like angle measures.
+- Your `axes_range` MUST include ALL diagram content: arcs, sector boundaries, shaded fills, labels, and any text like angle measures.
   - Do NOT set axes_range tightly around only the points. Always add margin.
-  - If you draw any circle/arc/sector of radius R centered at (cx,cy), your axes_range must extend beyond [cx-R, cx+R] and [cy-R, cy+R] with extra space for labels.
+  - If you draw any circle/arc/sector/segment of radius R centered at (cx,cy), your axes_range must extend beyond [cx-R, cx+R] and [cy-R, cy+R] with extra space for labels.
+- If the question text says “shaded region/area”, the diagram MUST actually be shaded:
+  - Use fill:true + alpha for the correct object (sector / annular_sector / polygon / circular_segment).
+  - Do NOT merely write red text “shaded area = ...” without shading the region.
 - Angle/arc labels must be placed sensibly:
   - They MUST NOT overlap the main diagram lines/graphs.
   - They MUST NOT be extremely far away from the arc/angle they describe.
@@ -469,6 +472,7 @@ Top-level structure:
 - angle_marker
 - sector
 - annular_sector
+- circular_segment          // NEW: chord+arc region (segment of a circle)
 - label
 - text
 
@@ -550,6 +554,42 @@ RULES:
 - Use EITHER (theta1_deg/theta2_deg) OR (from/to).
 - For annular_sector you MUST provide r_inner and r_outer with r_outer > r_inner > 0.
 - If you mention a sector/annular sector in the question text, you MUST include the object.
+
+---
+
+## 7b) CIRCULAR SEGMENTS (arc + chord shaded region)
+Use this when the question mentions “segment bounded by chord AB and arc AB”.
+
+Example (minor segment):
+{
+  "type": "circular_segment",
+  "center": "O",
+  "radius": 6,
+  "from": "A",
+  "to": "B",
+  "major": false,
+  "fill": true,
+  "alpha": 0.18
+}
+
+Alternative angle form:
+{
+  "type": "circular_segment",
+  "center": "O",
+  "radius": 6,
+  "theta1_deg": 0,
+  "theta2_deg": 90,
+  "major": false,
+  "fill": true,
+  "alpha": 0.18
+}
+
+RULES:
+- center MUST be an existing point id.
+- radius MUST be positive.
+- Use EITHER (theta1_deg/theta2_deg) OR (from/to). Do NOT invent other fields.
+- "major": false means the smaller segment (bounded by the minor arc). true means the larger segment.
+- If the question text says “shaded segment”, you MUST use this object with fill:true.
 
 ---
 

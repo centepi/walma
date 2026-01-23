@@ -47,6 +47,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     New (bounds-aware):
     - sectors / annular_sectors inside geometry objects are treated as circle-ish
       and we bound using outer radius (safe).
+    - circular segments (arc + chord region) are treated as circle-ish too.
 
     Returns:
       {"x_min": ..., "x_max": ..., "y_min": ..., "y_max": ...} or None if nothing found.
@@ -141,7 +142,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     r = safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
                         cx, cy = pt[center_id]
-                        # arcs behave like circle-ish for “clipping risk”
                         circle_radii.append(float(r))
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
@@ -150,7 +150,6 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     center_id = obj.get("center")
                     r = safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
-                        # Treat as circle-ish; safe bounds via outer radius.
                         saw_circle = True
                         circle_radii.append(float(r))
                         cx, cy = pt[center_id]
@@ -191,6 +190,41 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                                 ys.append(cy + r_in * math.sin(rad))
                                 xs.append(cx + r_out * math.cos(rad))
                                 ys.append(cy + r_out * math.sin(rad))
+
+                elif ot == "circular_segment":
+                    # Treat as circle-ish; safe bounds via radius.
+                    center_id = obj.get("center")
+                    r = safe_float(obj.get("radius"))
+                    if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
+                        saw_circle = True
+                        circle_radii.append(float(r))
+                        cx, cy = pt[center_id]
+                        xs.extend([cx - r, cx + r])
+                        ys.extend([cy - r, cy + r])
+
+                        # If we can resolve angles, include chord endpoints too (tightens + helps labels)
+                        th1 = safe_float(obj.get("theta1_deg"))
+                        th2 = safe_float(obj.get("theta2_deg"))
+                        if th1 is not None and th2 is not None:
+                            t1, t2 = normalize_arc_angles(th1, th2)
+                        else:
+                            angs = resolve_sector_angles((cx, cy), pt, obj)
+                            if angs is None:
+                                t1 = t2 = None
+                            else:
+                                t1, t2 = angs
+                                t1, t2 = normalize_arc_angles(t1, t2)
+
+                        if t1 is not None and t2 is not None:
+                            # Use the same “minor/major” choice as renderer defaults:
+                            span = float(t2 - t1)
+                            want_major = bool(obj.get("major", False))
+                            if (span > 180.0 and not want_major) or (span <= 180.0 and want_major):
+                                t1, t2 = t2, t1 + _toggle360(t1, t2)
+                            for th in (t1, t2):
+                                rad = math.radians(float(th))
+                                xs.append(cx + float(r) * math.cos(rad))
+                                ys.append(cy + float(r) * math.sin(rad))
 
                 elif ot == "polygon":
                     pids = obj.get("points") or []
@@ -322,10 +356,10 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     # ------------------------------------------------------------------------
     # PADDING POLICY
     #
-    # The “arc cut off 1/10” issue is almost always: bounds are tight + equal_aspect
+    # The “arc cut off” issue is almost always: bounds are tight + equal_aspect
     # + patches/text extend just beyond limits. So:
     #   - Always pad by span * pad_frac
-    #   - For circle-ish diagrams (sectors/arcs), add an extra absolute margin
+    #   - For circle-ish diagrams (sectors/arcs/segments), add an extra absolute margin
     #     proportional to the largest radius.
     #   - If we saw angle markers / labels, add a bit more.
     # ------------------------------------------------------------------------
@@ -375,6 +409,16 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
         "y_min": y_min - pad,
         "y_max": y_max + pad,
     }
+
+
+def _toggle360(t1: float, t2: float) -> float:
+    """
+    Internal helper for segment angle flipping.
+    We want to return a positive amount to add so that the swapped span is correct.
+    """
+    # In practice normalize_arc_angles already ensured t2 >= t1. When we swap
+    # (t1,t2) -> (t2, t1+360), we just need +360.
+    return 360.0
 
 
 def geometry_present(config: Dict[str, Any]) -> bool:

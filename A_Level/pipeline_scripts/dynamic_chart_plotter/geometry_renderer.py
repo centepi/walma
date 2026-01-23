@@ -28,6 +28,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Arc, Polygon, Wedge
+from matplotlib.path import Path
+from matplotlib.patches import PathPatch
 
 from .utils import get_color_cycle
 
@@ -170,6 +172,30 @@ def _place_angle_text(
         pass
 
 
+def _sample_arc_points(
+    center_xy: Tuple[float, float],
+    r: float,
+    t1_deg: float,
+    t2_deg: float,
+    n: int = 72,
+) -> List[Tuple[float, float]]:
+    """
+    Sample points along a circular arc from t1->t2 (degrees), CCW, where t2 >= t1.
+    """
+    try:
+        cx, cy = center_xy
+        if n < 8:
+            n = 8
+        ts = np.linspace(float(t1_deg), float(t2_deg), int(n))
+        pts: List[Tuple[float, float]] = []
+        for th in ts:
+            rad = math.radians(float(th))
+            pts.append((cx + float(r) * math.cos(rad), cy + float(r) * math.sin(rad)))
+        return pts
+    except Exception:
+        return []
+
+
 # ============================================================================
 # GEOMETRY (ALMA) RENDERER
 # ============================================================================
@@ -182,6 +208,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
       - point, segment, ray, circle, semicircle, arc, polygon, angle_marker, label, text
       - sector: proper sector with arc + two radii (+ optional fill)
       - annular_sector: ring sector between r_inner and r_outer (+ optional fill)
+      - circular_segment: region bounded by an arc AB and chord AB (+ optional fill)
 
     Notes:
       - Unknown object types are ignored (never crash).
@@ -481,6 +508,109 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 if bool(obj.get("draw_radial_edges", True)):
                     _draw_radial_edge(ax, center_xy, r_in, r_out, t1, color=col, linewidth=lw, linestyle=ls, zorder=7)
                     _draw_radial_edge(ax, center_xy, r_in, r_out, t2, color=col, linewidth=lw, linestyle=ls, zorder=7)
+
+        elif ot == "circular_segment":
+            # Region bounded by arc AB and chord AB (a "segment" of a circle).
+            # Required:
+            # - center + radius
+            # - either theta1_deg/theta2_deg OR from/to (angles inferred via resolve_sector_angles)
+            #
+            # Optional:
+            # - fill (default True if provided as "shaded" region)
+            # - alpha (default 0.18 if fill)
+            # - major: true to shade the MAJOR segment (default False -> minor segment)
+            # - draw_chord: true/false (default True)
+            # - draw_arc: true/false (default True)
+            center_id = obj.get("center")
+            r = safe_float(obj.get("radius"))
+            if isinstance(center_id, str) and center_id in points and r is not None and r > 0:
+                center_xy = points[center_id]
+                cx, cy = center_xy
+
+                th1 = safe_float(obj.get("theta1_deg"))
+                th2 = safe_float(obj.get("theta2_deg"))
+                if th1 is not None and th2 is not None:
+                    a1, a2 = normalize_arc_angles(th1, th2)
+                else:
+                    angs = resolve_sector_angles(center_xy, points, obj)
+                    if angs is None:
+                        continue
+                    a1, a2 = angs
+                    a1, a2 = normalize_arc_angles(a1, a2)
+
+                # Default: shade MINOR segment (smaller arc). Allow major override.
+                span = float(a2 - a1)
+                want_major = bool(obj.get("major", False))
+                if (span > 180.0 and not want_major) or (span <= 180.0 and want_major):
+                    a1, a2 = a2, a1 + 360.0
+                    span = float(a2 - a1)
+
+                col = obj.get("color") or base_col
+                lw = _safe_linewidth(obj.get("linewidth", 2.0))
+                ls = line_style_to_matplotlib(obj.get("line_style"))
+
+                fill = bool(obj.get("fill", True))
+                alpha = float(obj.get("alpha", 0.18)) if fill else 1.0
+
+                # Build a closed path: arc points (a1->a2), then chord back to start.
+                n = int(obj.get("n_samples", 72) or 72)
+                arc_pts = _sample_arc_points(center_xy, float(r), float(a1), float(a2), n=n)
+                if len(arc_pts) >= 2:
+                    verts: List[Tuple[float, float]] = []
+                    codes: List[int] = []
+
+                    # Move to first arc point
+                    verts.append(arc_pts[0])
+                    codes.append(Path.MOVETO)
+
+                    # Line along the arc polyline
+                    for p in arc_pts[1:]:
+                        verts.append(p)
+                        codes.append(Path.LINETO)
+
+                    # Close via chord back to start (Path.CLOSEPOLY closes to MOVETO point)
+                    verts.append(arc_pts[0])
+                    codes.append(Path.CLOSEPOLY)
+
+                    patch = PathPatch(
+                        Path(verts, codes),
+                        facecolor=col if fill else "none",
+                        edgecolor="none",  # outlines are drawn explicitly below
+                        alpha=alpha if fill else 1.0,
+                        zorder=2,
+                    )
+                    patch.set_clip_on(False)
+                    ax.add_patch(patch)
+
+                    # Optional outlines: chord + arc
+                    draw_chord = bool(obj.get("draw_chord", True))
+                    draw_arc = bool(obj.get("draw_arc", True))
+
+                    if draw_chord:
+                        xA, yA = arc_pts[0]
+                        xB, yB = arc_pts[-1]
+                        line = ax.plot([xA, xB], [yA, yB], color=col, linewidth=lw, linestyle=ls, zorder=6)
+                        try:
+                            for ln in line:
+                                ln.set_clip_on(False)
+                        except Exception:
+                            pass
+
+                    if draw_arc:
+                        arc = Arc(
+                            (cx, cy),
+                            width=2 * r,
+                            height=2 * r,
+                            angle=0,
+                            theta1=float(a1),
+                            theta2=float(a2),
+                            color=col,
+                            linewidth=lw,
+                            linestyle=ls,
+                            zorder=7,
+                        )
+                        arc.set_clip_on(False)
+                        ax.add_patch(arc)
 
         elif ot == "polygon":
             pids = obj.get("points") or []
