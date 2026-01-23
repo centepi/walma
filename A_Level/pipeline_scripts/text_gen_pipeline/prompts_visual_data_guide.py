@@ -448,6 +448,16 @@ Top-level structure:
   ]
 }
 
+**CRITICAL DIAGRAM QUALITY RULES (READ THIS)**:
+- Your `axes_range` MUST include ALL diagram content: arcs, sector boundaries, labels, and any text like angle measures.
+  - Do NOT set axes_range tightly around only the points. Always add margin.
+  - If you draw any circle/arc/sector of radius R centered at (cx,cy), your axes_range must extend beyond [cx-R, cx+R] and [cy-R, cy+R] with extra space for labels.
+- Angle/arc labels must be placed sensibly:
+  - They MUST NOT overlap the main diagram lines/graphs.
+  - They MUST NOT be extremely far away from the arc/angle they describe.
+  - Use small, consistent offsets (typically 6–14 "offset points" for point labels).
+  - For angle measures near an arc (e.g., "$60^\\circ$"), prefer a `text` object positioned near the mid-angle on the arc (see below).
+
 **SUPPORTED GEOMETRY OBJECT TYPES** (inside `objects`):
 - point
 - segment
@@ -548,16 +558,28 @@ RULES:
 
 ---
 
-## 9) LABELS / TEXT
+## 9) LABELS / TEXT (PLACEMENT MATTERS)
 Label a named point:
 {"type":"label","target":"A","text":"A","offset":[10,10],"reveal":true}
 
-Free text at coordinates:
-{"type":"text","x":2.5,"y":4.0,"text":"$\\angle ABC$","fontsize":12}
+RULES FOR POINT LABELS (label objects):
+- Use `offset` as "offset points" relative to the point.
+- Keep offsets small and consistent: usually [6,6], [8,8], [10,10], or [12,8].
+- Do NOT use huge offsets (like 40+) unless absolutely necessary.
+- Ensure the label does not overlap a segment/arc passing through the point:
+  - Example: if the point lies on a line going up-right, offset to up-left instead.
 
-RULES:
-- label.target must match an existing point id exactly.
-- If the question text names points, include labels for them (reveal:true).
+Angle/arc measure label (e.g., "$60^\\circ$") — use a `text` object placed near the arc, NOT on top of lines:
+{"type":"text","x":4.2,"y":3.8,"text":"$60^\\circ$","fontsize":12}
+
+RULES FOR ANGLE/ARC MEASURE TEXT (text objects):
+- Place it near the arc/angle it describes (close, but not touching the curve).
+- Avoid overlap with the arc itself and with other diagram lines.
+- Do NOT place it far away from the angle (it should clearly refer to the nearby arc).
+- IMPORTANT: keep the text position inside the axes_range with margin.
+
+Free text at coordinates (general):
+{"type":"text","x":2.5,"y":4.0,"text":"$\\angle ABC$","fontsize":12}
 
 ---
 

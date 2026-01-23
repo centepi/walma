@@ -90,7 +90,13 @@ def _draw_radial_edge(
     y0 = cy + r0 * math.sin(t)
     x1 = cx + r1 * math.cos(t)
     y1 = cy + r1 * math.sin(t)
-    ax.plot([x0, x1], [y0, y1], color=color, linewidth=linewidth, linestyle=linestyle, zorder=zorder)
+    line = ax.plot([x0, x1], [y0, y1], color=color, linewidth=linewidth, linestyle=linestyle, zorder=zorder)
+    # ✅ Avoid rare “arc/edge clipped at frame” artefacts when bounds are tight.
+    try:
+        for ln in line:
+            ln.set_clip_on(False)
+    except Exception:
+        pass
 
 
 def _safe_linewidth(x: Any, default: float = 2.0) -> float:
@@ -102,6 +108,66 @@ def _safe_linewidth(x: Any, default: float = 2.0) -> float:
         return v
     except Exception:
         return float(default)
+
+
+def _internal_angle_span(theta1: float, theta2: float) -> Tuple[float, float]:
+    """
+    Given two angles (deg), return the *smaller* CCW span [t1,t2] in Matplotlib
+    convention where t2 >= t1 and (t2-t1) <= 180 when possible.
+
+    This produces “nice” angle markers and stable mid-angle label positions.
+    """
+    t1 = float(theta1)
+    t2 = float(theta2)
+    t1, t2 = normalize_arc_angles(t1, t2)
+    span = t2 - t1
+    if span > 180.0:
+        # Swap to get the complementary smaller span
+        t1, t2 = t2, t1 + 360.0
+    return t1, t2
+
+
+def _place_angle_text(
+    ax: plt.Axes,
+    *,
+    vertex: Tuple[float, float],
+    theta1: float,
+    theta2: float,
+    radius: float,
+    text: str,
+    color: str = "black",
+    fontsize: int = 12,
+    text_radius_scale: float = 1.25,
+    extra_offset_pts: Tuple[float, float] = (0.0, 0.0),
+    zorder: int = 6,
+) -> None:
+    """
+    Place angle text near the midpoint of an angle marker, with a consistent
+    offset that avoids overlapping rays.
+    """
+    try:
+        t1, t2 = _internal_angle_span(theta1, theta2)
+        mid = 0.5 * (t1 + t2)
+        vx, vy = vertex
+        rr = max(1e-6, float(radius)) * float(text_radius_scale)
+        mx = vx + rr * math.cos(math.radians(mid))
+        my = vy + rr * math.sin(math.radians(mid))
+
+        dx_pts, dy_pts = extra_offset_pts
+        ax.annotate(
+            text,
+            xy=(mx, my),
+            xytext=(dx_pts, dy_pts),
+            textcoords="offset points",
+            ha="center",
+            va="center",
+            color=color,
+            fontsize=int(fontsize),
+            zorder=zorder,
+            clip_on=False,  # ✅ don't disappear when very close to the frame
+        )
+    except Exception:
+        pass
 
 
 # ============================================================================
@@ -179,7 +245,12 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 lw = _safe_linewidth(obj.get("linewidth", 2.0))
                 ls = line_style_to_matplotlib(obj.get("line_style"))
                 col = obj.get("color") or base_col
-                ax.plot([x1, x2], [y1, y2], linewidth=lw, linestyle=ls, color=col, zorder=3)
+                line = ax.plot([x1, x2], [y1, y2], linewidth=lw, linestyle=ls, color=col, zorder=3)
+                try:
+                    for ln in line:
+                        ln.set_clip_on(False)
+                except Exception:
+                    pass
 
         elif ot == "ray":
             s_id = obj.get("from") or obj.get("start")
@@ -198,7 +269,12 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     lw = _safe_linewidth(obj.get("linewidth", 2.0))
                     ls = line_style_to_matplotlib(obj.get("line_style"))
                     col = obj.get("color") or base_col
-                    ax.plot([x1, x_end], [y1, y_end], linewidth=lw, linestyle=ls, color=col, zorder=3)
+                    line = ax.plot([x1, x_end], [y1, y_end], linewidth=lw, linestyle=ls, color=col, zorder=3)
+                    try:
+                        for ln in line:
+                            ln.set_clip_on(False)
+                    except Exception:
+                        pass
 
         elif ot == "circle":
             center_id = obj.get("center")
@@ -219,6 +295,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     linewidth=lw,
                     zorder=2,
                 )
+                patch.set_clip_on(False)  # ✅ avoid rare clipping at frame
                 ax.add_patch(patch)
 
         elif ot == "semicircle":
@@ -244,6 +321,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                             linestyle=ls,
                             zorder=4,
                         )
+                        patch.set_clip_on(False)  # ✅ avoid rare clipping at frame
                         ax.add_patch(patch)
 
         elif ot == "arc":
@@ -277,6 +355,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     linestyle=ls,
                     zorder=6,
                 )
+                patch.set_clip_on(False)  # ✅ avoid rare clipping at frame
                 ax.add_patch(patch)
 
         elif ot == "sector":
@@ -295,7 +374,6 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 fill = bool(obj.get("fill", False))
                 alpha = float(obj.get("alpha", 0.15)) if fill else 1.0
 
-                # Fill via Wedge...
                 wedge = Wedge(
                     center_xy,
                     r,
@@ -309,9 +387,10 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     alpha=alpha,
                     zorder=3,
                 )
+                wedge.set_clip_on(False)  # ✅ avoid rare clipping at frame
                 ax.add_patch(wedge)
 
-                # ✅ ...but ALWAYS draw the curved boundary explicitly (Wedge edge can disappear on some backends).
+                # ✅ Always draw the curved boundary explicitly (Wedge edge can disappear on some backends).
                 arc = Arc(
                     center_xy,
                     width=2 * r,
@@ -324,9 +403,9 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     linestyle=ls,
                     zorder=7,
                 )
+                arc.set_clip_on(False)
                 ax.add_patch(arc)
 
-                # Optional: ensure radial edges exist even if wedge edge flakes
                 if bool(obj.get("draw_radial_edges", True)):
                     _draw_radial_edge(ax, center_xy, 0.0, r, t1, color=col, linewidth=lw, linestyle=ls, zorder=7)
                     _draw_radial_edge(ax, center_xy, 0.0, r, t2, color=col, linewidth=lw, linestyle=ls, zorder=7)
@@ -366,9 +445,9 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     alpha=alpha,
                     zorder=3,
                 )
+                wedge.set_clip_on(False)
                 ax.add_patch(wedge)
 
-                # ✅ ALWAYS draw outer + inner curved boundaries explicitly.
                 outer_arc = Arc(
                     center_xy,
                     width=2 * r_out,
@@ -381,6 +460,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     linestyle=ls,
                     zorder=7,
                 )
+                outer_arc.set_clip_on(False)
                 ax.add_patch(outer_arc)
 
                 inner_arc = Arc(
@@ -395,6 +475,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     linestyle=ls,
                     zorder=7,
                 )
+                inner_arc.set_clip_on(False)
                 ax.add_patch(inner_arc)
 
                 if bool(obj.get("draw_radial_edges", True)):
@@ -427,6 +508,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                         linewidth=lw,
                         zorder=2,
                     )
+                    patch.set_clip_on(False)
                     ax.add_patch(patch)
 
         elif ot == "angle_marker":
@@ -445,7 +527,69 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     radius = float(obj.get("radius", 0.6))
                     lw = _safe_linewidth(obj.get("linewidth", 2.0))
                     col = obj.get("color") or "black"
-                    plot_angle_marker(ax, vertex=vertex, p1=p1, p2=p2, radius=radius, linewidth=lw, color=col)
+
+                    # Draw arc marker
+                    plot_angle_marker(
+                        ax,
+                        vertex=vertex,
+                        p1=p1,
+                        p2=p2,
+                        radius=radius,
+                        linewidth=lw,
+                        color=col,
+                        linestyle=line_style_to_matplotlib(obj.get("line_style")),
+                    )
+
+                    # ✅ Optional: stable angle text placement (prevents overlap / “far away” labels)
+                    # Supported fields (non-breaking; ignored if absent):
+                    # - "text": string (e.g. "120°" or "$\\theta$")
+                    # - "label": alias for text
+                    # - "value_deg": number -> formatted as "<n>°"
+                    # - "text_radius_scale": float (default 1.25)
+                    # - "text_offset_pts": [dx,dy] in points (default [0,0])
+                    text = obj.get("text", obj.get("label"))
+                    if text is None and obj.get("value_deg") is not None:
+                        try:
+                            v = float(obj.get("value_deg"))
+                            if abs(v - round(v)) < 1e-6:
+                                text = f"{int(round(v))}°"
+                            else:
+                                text = f"{v:g}°"
+                        except Exception:
+                            text = None
+
+                    if isinstance(text, str) and text.strip():
+                        try:
+                            t1 = angle_from_points(vertex, p1)
+                            t2 = angle_from_points(vertex, p2)
+                            t1, t2 = _internal_angle_span(t1, t2)
+                        except Exception:
+                            t1, t2 = 0.0, 0.0
+
+                        tr = safe_float(obj.get("text_radius_scale"))
+                        tr = float(tr) if tr is not None else 1.25
+
+                        off = obj.get("text_offset_pts")
+                        if isinstance(off, list) and len(off) >= 2:
+                            dxp = safe_float(off[0]) or 0.0
+                            dyp = safe_float(off[1]) or 0.0
+                            extra = (float(dxp), float(dyp))
+                        else:
+                            extra = (0.0, 0.0)
+
+                        _place_angle_text(
+                            ax,
+                            vertex=vertex,
+                            theta1=t1,
+                            theta2=t2,
+                            radius=radius,
+                            text=text.strip(),
+                            color=str(obj.get("text_color", col) or col),
+                            fontsize=int(obj.get("text_fontsize", obj.get("fontsize", 12))),
+                            text_radius_scale=tr,
+                            extra_offset_pts=extra,
+                            zorder=6,
+                        )
 
     # 2) Draw points (on top of lines)
     for obj in objects:
@@ -462,7 +606,11 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         (x, y) = points[pid]
         col = obj.get("color") or "black"
         size = float(obj.get("size", 18.0))
-        ax.scatter([x], [y], s=size, color=col, zorder=8)
+        sc = ax.scatter([x], [y], s=size, color=col, zorder=8)
+        try:
+            sc.set_clip_on(False)
+        except Exception:
+            pass
 
     # 3) Labels and free text last
     for obj in objects:
@@ -487,7 +635,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 dy = dy if dy is not None else 0.0
 
                 col = obj.get("color") or "black"
-                ax.annotate(
+                ann = ax.annotate(
                     text,
                     xy=(x, y),
                     xytext=(dx, dy),
@@ -497,7 +645,12 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                     color=col,
                     fontsize=int(obj.get("fontsize", 12)),
                     zorder=9,
+                    clip_on=False,
                 )
+                try:
+                    ann.set_clip_on(False)
+                except Exception:
+                    pass
 
         elif ot == "text":
             tx = safe_float(obj.get("x"))
@@ -506,7 +659,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
             if tx is None or ty is None or not text:
                 continue
             col = obj.get("color") or "black"
-            ax.text(
+            t = ax.text(
                 tx,
                 ty,
                 text,
@@ -515,7 +668,12 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
                 ha="center",
                 va="center",
                 zorder=9,
+                clip_on=False,
             )
+            try:
+                t.set_clip_on(False)
+            except Exception:
+                pass
 
     # 4) Auto-label fallback: if generator forgot labels, label revealed points.
     for obj in objects:
@@ -539,7 +697,7 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
         (x, y) = points[pid]
         col = obj.get("label_color") or "black"
         fontsize = int(obj.get("label_fontsize", 12))
-        ax.annotate(
+        ann = ax.annotate(
             pid,
             xy=(x, y),
             xytext=(6, 6),
@@ -549,7 +707,12 @@ def plot_geometry(ax: plt.Axes, chart: Dict[str, Any], function_registry: Option
             color=col,
             fontsize=fontsize,
             zorder=9,
+            clip_on=False,
         )
+        try:
+            ann.set_clip_on(False)
+        except Exception:
+            pass
 
 
 # ============================================================================
@@ -594,6 +757,7 @@ def plot_polygon_geom(ax: plt.Axes, chart: Dict[str, Any]) -> None:
         label=label or None,
         zorder=3,
     )
+    patch.set_clip_on(False)
     ax.add_patch(patch)
 
 
@@ -649,6 +813,7 @@ def plot_circle(ax: plt.Axes, chart: Dict[str, Any]) -> None:
         label=label or None,
         zorder=2,
     )
+    patch.set_clip_on(False)
     ax.add_patch(patch)
 
 
@@ -672,7 +837,12 @@ def plot_segment(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     lw = _safe_linewidth(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
-    ax.plot([x1, x2], [y1, y2], linewidth=lw, color=col, zorder=4)
+    line = ax.plot([x1, x2], [y1, y2], linewidth=lw, color=col, zorder=4)
+    try:
+        for ln in line:
+            ln.set_clip_on(False)
+    except Exception:
+        pass
 
 
 def plot_ray(ax: plt.Axes, chart: Dict[str, Any]) -> None:
@@ -707,7 +877,12 @@ def plot_ray(ax: plt.Axes, chart: Dict[str, Any]) -> None:
     lw = _safe_linewidth(vf.get("linewidth", 2.0))
     col = vf.get("color") or get_color_cycle(graph_id)
 
-    ax.plot([x1, x_end], [y1, y_end], linewidth=lw, color=col, zorder=4)
+    line = ax.plot([x1, x_end], [y1, y_end], linewidth=lw, color=col, zorder=4)
+    try:
+        for ln in line:
+            ln.set_clip_on(False)
+    except Exception:
+        pass
 
 
 def plot_arc(ax: plt.Axes, chart: Dict[str, Any]) -> None:
@@ -744,6 +919,7 @@ def plot_arc(ax: plt.Axes, chart: Dict[str, Any]) -> None:
         linewidth=lw,
         zorder=4,
     )
+    patch.set_clip_on(False)
     ax.add_patch(patch)
 
 
@@ -759,28 +935,32 @@ def plot_angle_marker(
     radius: float = 0.5,
     linewidth: float = 2.0,
     color: str = "black",
+    linestyle: str = "-",
 ) -> None:
     """
     Draw a simple angle arc at 'vertex' between rays vertex->p1 and vertex->p2.
+
+    Notes:
+      - We choose the smaller internal angle span to avoid huge arcs.
+      - clip_on=False to prevent “vanishing” when bounds are tight.
     """
     vx, vy = vertex
     a1 = math.degrees(math.atan2(p1[1] - vy, p1[0] - vx))
     a2 = math.degrees(math.atan2(p2[1] - vy, p2[0] - vx))
 
-    while a2 < a1:
-        a2 += 360.0
-    if (a2 - a1) > 270.0:
-        a1, a2 = a2, a1 + 360.0
+    t1, t2 = _internal_angle_span(a1, a2)
 
     arc = Arc(
         (vx, vy),
         width=2 * radius,
         height=2 * radius,
         angle=0,
-        theta1=a1,
-        theta2=a2,
+        theta1=t1,
+        theta2=t2,
         color=color,
         linewidth=linewidth,
+        linestyle=linestyle,
         zorder=5,
     )
+    arc.set_clip_on(False)
     ax.add_patch(arc)

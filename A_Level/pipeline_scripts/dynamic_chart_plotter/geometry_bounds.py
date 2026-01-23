@@ -63,6 +63,14 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     # If any circle-ish exists, we square the viewport at the end.
     saw_circle = False
 
+    # Track radii of circle-ish objects so padding can scale appropriately.
+    # (prevents “arc clipped” when labels/edges sit near the boundary)
+    circle_radii: List[float] = []
+
+    # Track presence of angle markers / labels so we can add extra margins.
+    saw_angle_marker = False
+    saw_text_or_label = False
+
     # --- chart-driven bounds ---
     for c in charts:
         if not isinstance(c, dict):
@@ -98,6 +106,9 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
             for obj in objects:
                 if not isinstance(obj, dict):
                     continue
+                if bool(obj.get("reveal", True)) is False:
+                    continue
+
                 ot = str(obj.get("type", "")).strip().lower()
 
                 if ot == "circle":
@@ -105,6 +116,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     r = safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
                         saw_circle = True
+                        circle_radii.append(float(r))
                         cx, cy = pt[center_id]
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
@@ -119,6 +131,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                                 pt[a_id], pt[b_id], side=obj.get("side", "left")
                             )
                             if r > 0:
+                                circle_radii.append(float(r))
                                 xs.extend([cx - r, cx + r])
                                 ys.extend([cy - r, cy + r])
 
@@ -128,6 +141,8 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     r = safe_float(obj.get("radius"))
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
                         cx, cy = pt[center_id]
+                        # arcs behave like circle-ish for “clipping risk”
+                        circle_radii.append(float(r))
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
 
@@ -137,11 +152,12 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     if isinstance(center_id, str) and center_id in pt and r is not None and r > 0:
                         # Treat as circle-ish; safe bounds via outer radius.
                         saw_circle = True
+                        circle_radii.append(float(r))
                         cx, cy = pt[center_id]
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
 
-                        # If we *can* resolve angles, include radial endpoints too (slightly tighter + label-safe)
+                        # If we can resolve angles, include radial endpoints too
                         angs = resolve_sector_angles((cx, cy), pt, obj)
                         if angs is not None:
                             t1, t2 = angs
@@ -160,11 +176,12 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         and r_out > r_in > 0
                     ):
                         saw_circle = True
+                        circle_radii.append(float(r_out))
                         cx, cy = pt[center_id]
                         xs.extend([cx - r_out, cx + r_out])
                         ys.extend([cy - r_out, cy + r_out])
 
-                        # If we *can* resolve angles, include the 4 corner endpoints
+                        # If we can resolve angles, include the 4 corner endpoints
                         angs = resolve_sector_angles((cx, cy), pt, obj)
                         if angs is not None:
                             t1, t2 = angs
@@ -194,6 +211,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                             ys.append(y)
 
                 elif ot == "text":
+                    saw_text_or_label = True
                     tx = safe_float(obj.get("x"))
                     ty = safe_float(obj.get("y"))
                     if tx is not None and ty is not None:
@@ -201,6 +219,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         ys.append(ty)
 
                 elif ot == "label":
+                    saw_text_or_label = True
                     target = obj.get("target")
                     if isinstance(target, str) and target in pt:
                         x, y = pt[target]
@@ -208,6 +227,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                         ys.append(y)
 
                 elif ot == "angle_marker":
+                    saw_angle_marker = True
                     # angle markers live near the vertex; include the vertex point
                     at_id = obj.get("at")
                     if isinstance(at_id, str) and at_id in pt:
@@ -237,6 +257,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                 r = float(vf.get("radius"))
                 if r > 0:
                     saw_circle = True
+                    circle_radii.append(float(r))
                     xs.extend([cx - r, cx + r])
                     ys.extend([cy - r, cy + r])
             except Exception:
@@ -248,6 +269,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                     r = math.hypot(px - cx, py - cy)
                     if r > 0:
                         saw_circle = True
+                        circle_radii.append(float(r))
                         xs.extend([cx - r, cx + r])
                         ys.extend([cy - r, cy + r])
                 except Exception:
@@ -269,6 +291,7 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
                 cy = float(vf.get("center", {}).get("y"))
                 r = float(vf.get("radius"))
                 if r > 0:
+                    circle_radii.append(float(r))
                     xs.extend([cx - r, cx + r])
                     ys.extend([cy - r, cy + r])
             except Exception:
@@ -296,9 +319,28 @@ def compute_geometry_bounds(config: Dict[str, Any], pad_frac: float = 0.10) -> O
     dx = max(1e-6, x_max - x_min)
     dy = max(1e-6, y_max - y_min)
 
-    # Uniform padding based on dominant span (prevents tall/skinny viewboxes)
+    # ------------------------------------------------------------------------
+    # PADDING POLICY
+    #
+    # The “arc cut off 1/10” issue is almost always: bounds are tight + equal_aspect
+    # + patches/text extend just beyond limits. So:
+    #   - Always pad by span * pad_frac
+    #   - For circle-ish diagrams (sectors/arcs), add an extra absolute margin
+    #     proportional to the largest radius.
+    #   - If we saw angle markers / labels, add a bit more.
+    # ------------------------------------------------------------------------
     span = max(dx, dy)
     pad = span * float(pad_frac)
+
+    extra = 0.0
+    if circle_radii:
+        extra += 0.12 * float(max(circle_radii))  # generous; still looks fine
+    if saw_angle_marker:
+        extra += 0.08 * span
+    if saw_text_or_label:
+        extra += 0.05 * span
+
+    pad = pad + extra
 
     # Ensure minimum visible span
     min_span = 1.0

@@ -250,7 +250,39 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
     - tight_layout/constrained_layout are figure-level policies and can
       clip titles/labels in composite (chart+table) figures.
     - Layout should be applied once in plotter.py after all subplots are drawn.
+
+    NEW (axes system):
+    - If config includes an "axes" dict, plotter.py is the source of truth for:
+        limits, ticks, spines, axis labels, grid, equal_aspect, axes_through_origin.
+      In that case, this function should be "appearance only" (title + legend).
     """
+    # If plotter.py is managing axes centrally, do NOT touch axis mechanics here.
+    axes_cfg_present = isinstance(config.get("axes"), dict)
+
+    # Title is safe to set here (doesn't affect data limits), but note it can affect layout.
+    if "title" in config:
+        try:
+            ax.set_title(config["title"], fontsize=15, fontweight="bold", pad=20)
+        except Exception:
+            pass
+
+    # Legend is also safe here.
+    try:
+        handles, labels = ax.get_legend_handles_labels()
+        pairs = [(h, l) for h, l in zip(handles, labels) if str(l).strip()]
+        if pairs:
+            h2, l2 = zip(*pairs)
+            ax.legend(h2, l2, loc=config.get("legend_location", "best"), fontsize=11)
+    except Exception:
+        pass
+
+    # If axes are centrally managed, stop here.
+    if axes_cfg_present:
+        return
+
+    # ------------------------------------------------------------------------
+    # Legacy behavior (no config["axes"]): keep existing semantics
+    # ------------------------------------------------------------------------
     hide_axis_labels = bool(config.get("hide_axis_labels", False))
     if not hide_axis_labels:
         ax.set_xlabel(config.get("x_label", "x"), fontsize=13, fontweight="bold")
@@ -258,9 +290,6 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
     else:
         ax.set_xlabel("")
         ax.set_ylabel("")
-
-    if "title" in config:
-        ax.set_title(config["title"], fontsize=15, fontweight="bold", pad=20)
 
     axes_range = config.get("global_axes_range", config.get("axes_range"))
     if isinstance(axes_range, dict):
@@ -292,12 +321,6 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
         ax.tick_params(length=4)
         if config.get("grid", True):
             ax.grid(True, alpha=0.3, which=config.get("grid_style", "major"))
-
-    handles, labels = ax.get_legend_handles_labels()
-    pairs = [(h, l) for h, l in zip(handles, labels) if str(l).strip()]
-    if pairs:
-        h2, l2 = zip(*pairs)
-        ax.legend(h2, l2, loc=config.get("legend_location", "best"), fontsize=11)
 
     if config.get("equal_aspect"):
         ax.set_aspect("equal", adjustable="box")
