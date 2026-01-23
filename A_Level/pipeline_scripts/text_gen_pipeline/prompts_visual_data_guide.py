@@ -427,11 +427,11 @@ Structure:
 # NOTE: We are adding a "geometry" type entry so the prompt can request polygons/circles/lines
 # (This is the piece that will stop the model from only emitting "function" charts for Euclidean geometry.)
 _VISUAL_RULES_TYPE_GEOMETRY = r"""
-### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (POLYGONS, SEGMENTS, CIRCLES)**
-Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, etc.).
+### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (SEGMENTS, CIRCLES, ARCS, SECTORS)**
+Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, arcs, sectors, etc.).
 Prefer this over "function" unless you truly need a coordinate graph.
 
-Structure (example):
+Top-level structure:
 {
   "charts": [
     {
@@ -443,30 +443,127 @@ Structure (example):
         "equal_aspect": true,
         "hide_values": true
       },
-
-      "objects": [
-        {"type": "point", "id": "A", "x": 1, "y": 1, "reveal": true},
-        {"type": "point", "id": "B", "x": 9, "y": 1, "reveal": true},
-        {"type": "point", "id": "C", "x": 4, "y": 6, "reveal": true},
-
-        {"type": "segment", "from": "A", "to": "B"},
-        {"type": "segment", "from": "B", "to": "C"},
-        {"type": "segment", "from": "C", "to": "A"},
-
-        {"type": "circle", "center": "A", "radius": 3.5},
-        {"type": "label", "target": "A", "text": "A", "offset": [10, 10], "reveal": true}
-      ]
+      "objects": [ ... ]
     }
   ]
 }
 
-**Key Points for Geometry:**
-- Use `"objects"` to define the diagram primitives.
-- Every point that is referenced by name anywhere (e.g., A, B, C, O, T, P, etc.) must appear as a `"point"` object with that exact `"id"`.
-- If the question text mentions named points/lines (A, B, C, O, T, P, ...), you must include visible labels for them using `"label"` objects (with `"reveal": true). Do not omit labels in that case.
-- `"label.target"` must match an existing point `"id"` exactly (case-sensitive).
-- Set `"equal_aspect": true` to avoid stretched circles.
-- Prefer `"hide_values": true` so axis numbers do not appear in Euclidean diagrams.
+**SUPPORTED GEOMETRY OBJECT TYPES** (inside `objects`):
+- point
+- segment
+- ray
+- circle
+- semicircle
+- arc
+- polygon
+- angle_marker
+- sector
+- annular_sector
+- label
+- text
+
+---
+
+## 1) POINTS (required for anything referenced)
+{"type":"point","id":"A","x":1,"y":1,"reveal":true}
+
+RULES:
+- Every point referenced anywhere by id (A,B,C,O,T,P,...) MUST appear as a point object with that exact `id`.
+- If the question text mentions named points, you MUST include visible labels for them (label objects with reveal:true).
+
+---
+
+## 2) SEGMENTS / RAYS
+{"type":"segment","from":"A","to":"B"}
+
+{"type":"ray","from":"A","to":"B","length":100}  // length optional
+
+Optional styling:
+- "linewidth": number (default 2)
+- "line_style": "solid|dashed|dotted|dashdot"
+- "color": string
+
+---
+
+## 3) CIRCLES
+{"type":"circle","center":"O","radius":3.5,"fill":false,"alpha":0.10}
+
+RULES:
+- center MUST be an existing point id.
+- radius MUST be a positive number.
+
+---
+
+## 4) SEMICIRCLES (diameter endpoints)
+{"type":"semicircle","diameter":["A","B"],"side":"left"}
+
+RULES:
+- "diameter" is [A,B] where A and B are existing point ids.
+- "side" chooses which half to draw: "left" (default) or "right".
+
+---
+
+## 5) ARCS
+Schema A (explicit angles):
+{"type":"arc","center":"O","radius":4,"theta1_deg":20,"theta2_deg":110}
+
+Schema B (endpoints by point ids; angles inferred):
+{"type":"arc","center":"O","radius":4,"from":"A","to":"B"}
+
+RULES:
+- center MUST be an existing point id.
+- radius MUST be a positive number.
+- Use EITHER (theta1_deg/theta2_deg) OR (from/to). Do NOT invent other fields.
+
+---
+
+## 6) ANGLE MARKERS
+{"type":"angle_marker","at":"B","corner_points":["A","B","C"],"radius":0.6}
+
+RULES:
+- corner_points must be [p1, vertex, p2] and vertex must equal `at`.
+- All point ids must exist.
+
+---
+
+## 7) SECTORS / ANNULAR SECTORS
+Sector:
+{"type":"sector","center":"O","radius":6,"theta1_deg":20,"theta2_deg":110,"fill":false,"alpha":0.15}
+
+Annular sector:
+{"type":"annular_sector","center":"O","r_inner":4,"r_outer":7,"theta1_deg":20,"theta2_deg":110,"fill":false,"alpha":0.15}
+
+Alternative endpoint form (angles inferred):
+{"type":"sector","center":"O","radius":6,"from":"A","to":"B"}
+
+RULES:
+- Use EITHER (theta1_deg/theta2_deg) OR (from/to).
+- For annular_sector you MUST provide r_inner and r_outer with r_outer > r_inner > 0.
+- If you mention a sector/annular sector in the question text, you MUST include the object.
+
+---
+
+## 8) POLYGONS
+{"type":"polygon","points":["A","B","C"],"closed":true,"fill":false,"alpha":0.15}
+
+---
+
+## 9) LABELS / TEXT
+Label a named point:
+{"type":"label","target":"A","text":"A","offset":[10,10],"reveal":true}
+
+Free text at coordinates:
+{"type":"text","x":2.5,"y":4.0,"text":"$\\angle ABC$","fontsize":12}
+
+RULES:
+- label.target must match an existing point id exactly.
+- If the question text names points, include labels for them (reveal:true).
+
+---
+
+**Key Defaults for Euclidean Geometry**
+- Set "equal_aspect": true to avoid stretched circles.
+- Prefer "hide_values": true so axis numbers do not appear.
 - Do NOT ask the student to draw; the diagram must be sufficient to solve the question.
 """
 

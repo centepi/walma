@@ -11,7 +11,7 @@ All helpers (appearance, evaluation, etc.) live in `utils.py`.
 """
 
 import matplotlib.pyplot as plt
-from typing import Dict, List, Any, Optional, Callable, Tuple
+from typing import Dict, List, Any, Optional, Callable
 
 # Local imports (kept light to avoid circular imports)
 from .charts import (
@@ -31,8 +31,9 @@ from .overlays import (
     plot_polygon,
 )
 
-# NEW: geometry renderer + bounds helper
-from .geometry import plot_geometry, compute_geometry_bounds
+# ✅ NEW: split geometry modules
+from .geometry_renderer import plot_geometry
+from .geometry_bounds import compute_geometry_bounds
 
 from .utils import setup_plot_appearance, _coerce_bin_pair
 
@@ -51,21 +52,21 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     ):
         config = {"charts": [config]}
 
-    charts = config.get('charts', config.get('graphs', []))
+    charts = config.get("charts", config.get("graphs", []))
     if charts is None:
         charts = []
     if not isinstance(charts, list):
         raise TypeError("'charts'/'graphs' must be a list of chart objects")
 
-    layout_mode = config.get('layout', 'single')
+    layout_mode = config.get("layout", "single")
 
     tables = [
         c for c in charts
-        if isinstance(c, dict) and str(c.get('type', '')).strip().lower() == 'table'
+        if isinstance(c, dict) and str(c.get("type", "")).strip().lower() == "table"
     ]
     non_tables = [
         c for c in charts
-        if isinstance(c, dict) and str(c.get('type', '')).strip().lower() != 'table'
+        if isinstance(c, dict) and str(c.get("type", "")).strip().lower() != "table"
     ]
 
     # ------------------------------------------------------------------------
@@ -216,11 +217,11 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
     except Exception:
         pass
 
-    if layout_mode == 'composite' or tables:
+    if layout_mode == "composite" or tables:
         fig, axes = create_composite_layout(config, tables, non_tables)
     else:
         fig, ax = plt.subplots(figsize=(12, 8), constrained_layout=True)
-        axes = {'main': ax}
+        axes = {"main": ax}
 
     function_registry: Dict[str, Optional[Callable]] = {}
 
@@ -310,20 +311,20 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
                     pts.extend([p for p in lp3 if isinstance(p, dict)])
         return pts
 
-    if 'main' in axes:
-        _apply_preplot_viewport(axes['main'], config)
+    if "main" in axes:
+        _apply_preplot_viewport(axes["main"], config)
 
         for chart in non_tables:
-            plot_chart(axes['main'], chart, function_registry)
+            plot_chart(axes["main"], chart, function_registry)
 
         for point in _iter_all_labeled_points(config, non_tables):
-            plot_labeled_point(axes['main'], point)
+            plot_labeled_point(axes["main"], point)
 
-        shaded_regions = config.get('shaded_regions')
+        shaded_regions = config.get("shaded_regions")
         if isinstance(shaded_regions, list):
             for region in shaded_regions:
                 if isinstance(region, dict):
-                    plot_shaded_region(axes['main'], region, function_registry)
+                    plot_shaded_region(axes["main"], region, function_registry)
 
         # ✅ FIX: apply appearance WITHOUT re-forcing auto bounds
         style_cfg = dict(config)
@@ -331,19 +332,19 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
             style_cfg.pop("axes_range", None)
             style_cfg.pop("global_axes_range", None)
 
-        setup_plot_appearance(axes['main'], style_cfg)
+        setup_plot_appearance(axes["main"], style_cfg)
 
         # ✅ FIX: post-plot viewport correction for auto-bounds
         if not _has_explicit_axes_range(config):
-            _autoscale_with_padding(axes['main'], pad_frac=0.08)
-            _square_viewport_if_equal_aspect(axes['main'], pad_frac=0.06)
+            _autoscale_with_padding(axes["main"], pad_frac=0.08)
+            _square_viewport_if_equal_aspect(axes["main"], pad_frac=0.06)
 
-    if 'table' in axes:
+    if "table" in axes:
         for table in tables:
-            plot_table(axes['table'], table)
+            plot_table(axes["table"], table)
 
-    if 'title' in config and layout_mode == 'composite':
-        fig.suptitle(config['title'], fontsize=16, fontweight='bold', y=0.99)
+    if "title" in config and layout_mode == "composite":
+        fig.suptitle(config["title"], fontsize=16, fontweight="bold", y=0.99)
 
     return fig
 
@@ -351,13 +352,13 @@ def dynamic_chart_plotter(config: Dict[str, Any]) -> plt.Figure:
 def create_composite_layout(
     config: Dict[str, Any],
     tables: List[Dict[str, Any]],
-    charts: List[Dict[str, Any]]
+    charts: List[Dict[str, Any]],
 ) -> tuple:
     axes: Dict[str, plt.Axes] = {}
 
     if not tables:
         fig, ax = plt.subplots(figsize=(12, 8), constrained_layout=True)
-        axes['main'] = ax
+        axes["main"] = ax
         return fig, axes
 
     if not charts:
@@ -375,44 +376,47 @@ def create_composite_layout(
         fig_h = max(3.2, min(10.0, fig_h))
 
         fig, ax = plt.subplots(figsize=(12, fig_h), constrained_layout=True)
-        axes['table'] = ax
+        axes["table"] = ax
         return fig, axes
 
-    position = tables[0].get('visual_features', {}).get('position', 'below_chart')
+    position = tables[0].get("visual_features", {}).get("position", "below_chart")
 
-    if position == 'above_chart':
+    if position == "above_chart":
         fig, (ax_table, ax_chart) = plt.subplots(
-            2, 1,
+            2,
+            1,
             figsize=(12, 10),
-            gridspec_kw={'height_ratios': [1, 3]},
-            constrained_layout=True
+            gridspec_kw={"height_ratios": [1, 3]},
+            constrained_layout=True,
         )
-        axes['table'] = ax_table
-        axes['main'] = ax_chart
+        axes["table"] = ax_table
+        axes["main"] = ax_chart
 
-    elif position == 'below_chart':
+    elif position == "below_chart":
         fig, (ax_chart, ax_table) = plt.subplots(
-            2, 1,
+            2,
+            1,
             figsize=(12, 10),
-            gridspec_kw={'height_ratios': [3, 1]},
-            constrained_layout=True
+            gridspec_kw={"height_ratios": [3, 1]},
+            constrained_layout=True,
         )
-        axes['main'] = ax_chart
-        axes['table'] = ax_table
+        axes["main"] = ax_chart
+        axes["table"] = ax_table
 
-    elif position == 'beside_chart':
+    elif position == "beside_chart":
         fig, (ax_chart, ax_table) = plt.subplots(
-            1, 2,
+            1,
+            2,
             figsize=(16, 8),
-            gridspec_kw={'width_ratios': [2, 1]},
-            constrained_layout=True
+            gridspec_kw={"width_ratios": [2, 1]},
+            constrained_layout=True,
         )
-        axes['main'] = ax_chart
-        axes['table'] = ax_table
+        axes["main"] = ax_chart
+        axes["table"] = ax_table
 
     else:
         fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True)
-        axes['table'] = ax
+        axes["table"] = ax
 
     return fig, axes
 
@@ -420,29 +424,29 @@ def create_composite_layout(
 def plot_chart(
     ax: plt.Axes,
     chart: Dict[str, Any],
-    function_registry: Dict[str, Optional[Callable]]
+    function_registry: Dict[str, Optional[Callable]],
 ) -> None:
-    chart_type = str(chart.get('type', 'function')).strip().lower()
+    chart_type = str(chart.get("type", "function")).strip().lower()
 
-    if chart_type == 'function':
+    if chart_type == "function":
         plot_explicit_function(ax, chart, function_registry)
-    elif chart_type == 'parametric':
+    elif chart_type == "parametric":
         plot_parametric_curve(ax, chart, function_registry)
-    elif chart_type == 'scatter':
+    elif chart_type == "scatter":
         plot_scatter(ax, chart, function_registry)
-    elif chart_type == 'bar':
+    elif chart_type == "bar":
         plot_bar_chart(ax, chart, function_registry)
-    elif chart_type == 'histogram':
+    elif chart_type == "histogram":
         plot_histogram(ax, chart, function_registry)
-    elif chart_type == 'box_plot':
+    elif chart_type == "box_plot":
         plot_box_plot(ax, chart, function_registry)
-    elif chart_type == 'cumulative':
+    elif chart_type == "cumulative":
         plot_cumulative_frequency(ax, chart, function_registry)
-    elif chart_type == 'polygon':
+    elif chart_type == "polygon":
         plot_polygon(ax, chart, function_registry)
-    elif chart_type == 'geometry':
+    elif chart_type == "geometry":
         plot_geometry(ax, chart, function_registry)
-    elif chart_type == 'table':
+    elif chart_type == "table":
         return
     else:
         raise ValueError(f"Unsupported chart type: {chart_type}")

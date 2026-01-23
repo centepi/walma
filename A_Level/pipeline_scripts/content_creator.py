@@ -605,12 +605,14 @@ def create_question(
 
             # ✅ SURGICAL FIX:
             # - svg.fonttype="none" => real <text> nodes
-            # - pad_inches increased => prevent stroke clipping (circles/lines at edge)
-            # - disable constrained_layout at save time => prevents weird extra whitespace with tight bbox
+            # - geometry needs slightly bigger pad to prevent stroke clipping at bbox edges
+            is_geom = False
             try:
-                fig.set_constrained_layout(False)
+                is_geom = _visual_data_has_geometry(visual_data)
             except Exception:
-                pass
+                is_geom = False
+
+            pad_inches = 0.14 if is_geom else 0.08
 
             with io.BytesIO() as buffer:
                 with mpl.rc_context({"svg.fonttype": "none"}):
@@ -618,7 +620,7 @@ def create_question(
                         buffer,
                         format="svg",
                         bbox_inches="tight",
-                        pad_inches=0.14,
+                        pad_inches=pad_inches,
                     )
                 svg_data = buffer.getvalue().decode("utf-8")
 

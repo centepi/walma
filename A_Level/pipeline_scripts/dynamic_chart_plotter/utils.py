@@ -16,6 +16,7 @@ Keep it “boring + stable”.
 
 import json
 import warnings
+import hashlib
 from typing import Dict, List, Any, Optional, Callable, Tuple
 
 import numpy as np
@@ -31,7 +32,8 @@ warnings.filterwarnings("ignore")
 def get_color_cycle(graph_id: str) -> str:
     """
     Get a color from matplotlib's color cycle based on graph ID.
-    Deterministic per process run (Python's hash randomization can vary between runs).
+
+    ✅ Stable across process runs (does NOT use Python's randomized hash()).
     """
     colors = [
         "tab:blue",
@@ -43,7 +45,11 @@ def get_color_cycle(graph_id: str) -> str:
         "tab:pink",
         "tab:gray",
     ]
-    return colors[hash(graph_id) % len(colors)]
+
+    s = str(graph_id or "g").encode("utf-8")
+    digest = hashlib.md5(s).hexdigest()
+    idx = int(digest[:8], 16) % len(colors)
+    return colors[idx]
 
 
 # ============================================================================
@@ -300,6 +306,7 @@ def setup_plot_appearance(ax: plt.Axes, config: Dict[str, Any]) -> None:
         ax.axhline(0, color="k", alpha=0.3, linewidth=0.8)
         ax.axvline(0, color="k", alpha=0.3, linewidth=0.8)
 
+
 # ============================================================================
 # VALIDATION
 # ============================================================================
@@ -325,6 +332,18 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
             return True
         except Exception:
             return False
+
+    def _looks_like_label_id(pid: str) -> bool:
+        s = str(pid or "").strip()
+        if not s:
+            return False
+        if s.startswith("_"):
+            return False
+        if len(s) <= 3:
+            return True
+        if len(s) <= 4 and any(ch.isdigit() for ch in s) and any(ch.isalpha() for ch in s):
+            return True
+        return False
 
     def _get_points_index(objs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         idx: Dict[str, Dict[str, Any]] = {}
@@ -403,7 +422,7 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                         )
 
         # --------------------------------------------------------------------
-        # NEW: GEOMETRY (ALMA) VALIDATION
+        # GEOMETRY (ALMA) VALIDATION
         # --------------------------------------------------------------------
         elif chart_type == "geometry":
             objs = chart.get("objects")
@@ -421,7 +440,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
 
             # Track labels
             label_count = 0
-            referenced_points: List[str] = []
 
             for j, o in enumerate(objs):
                 if not isinstance(o, dict):
@@ -440,7 +458,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not isinstance(tgt, str) or not tgt.strip():
                         issues.append(f"Geometry chart '{chart_id}' label object {j} missing target")
                     else:
-                        referenced_points.append(tgt)
                         if tgt not in pts:
                             issues.append(f"Geometry chart '{chart_id}' label targets unknown point '{tgt}'")
                     if not txt:
@@ -452,7 +469,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not isinstance(a, str) or not isinstance(b, str):
                         issues.append(f"Geometry chart '{chart_id}' {ot} object {j} missing from/to")
                     else:
-                        referenced_points.extend([a, b])
                         if a not in pts:
                             issues.append(f"Geometry chart '{chart_id}' {ot} references unknown point '{a}'")
                         if b not in pts:
@@ -464,7 +480,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not isinstance(c, str) or not c.strip():
                         issues.append(f"Geometry chart '{chart_id}' circle object {j} missing center")
                     else:
-                        referenced_points.append(c)
                         if c not in pts:
                             issues.append(f"Geometry chart '{chart_id}' circle references unknown center '{c}'")
                     if not _is_num(r) or float(r) <= 0:
@@ -478,7 +493,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not isinstance(c, str) or not c.strip():
                         issues.append(f"Geometry chart '{chart_id}' arc object {j} missing center")
                     else:
-                        referenced_points.append(c)
                         if c not in pts:
                             issues.append(f"Geometry chart '{chart_id}' arc references unknown center '{c}'")
                     if not _is_num(r) or float(r) <= 0:
@@ -486,33 +500,73 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not _is_num(th1) or not _is_num(th2):
                         issues.append(f"Geometry chart '{chart_id}' arc object {j} missing/invalid theta1/theta2")
 
-                # ✅ NEW: semicircle support validation (renderer lives in geometry.py)
                 elif ot == "semicircle":
-                    # Accept either:
-                    #  A) center + radius + orientation
-                    #  B) diameter endpoints (from/to) + side
-                    center = o.get("center")
-                    radius = o.get("radius")
-                    a = o.get("from") or o.get("a")
-                    b = o.get("to") or o.get("b")
-
-                    if isinstance(center, str) and center.strip():
-                        referenced_points.append(center)
-                        if center not in pts:
-                            issues.append(f"Geometry chart '{chart_id}' semicircle references unknown center '{center}'")
-                        if not _is_num(radius) or float(radius) <= 0:
-                            issues.append(f"Geometry chart '{chart_id}' semicircle object {j} has invalid radius")
-                    elif isinstance(a, str) and isinstance(b, str):
-                        referenced_points.extend([a, b])
+                    # Renderer schema:
+                    # - diameter: ["A","B"]  (+ optional side)
+                    dia = o.get("diameter")
+                    if isinstance(dia, list) and len(dia) >= 2 and all(isinstance(x, str) for x in dia[:2]):
+                        a, b = dia[0], dia[1]
                         if a not in pts:
                             issues.append(f"Geometry chart '{chart_id}' semicircle references unknown point '{a}'")
                         if b not in pts:
                             issues.append(f"Geometry chart '{chart_id}' semicircle references unknown point '{b}'")
                     else:
+                        issues.append(f"Geometry chart '{chart_id}' semicircle object {j} missing/invalid diameter [A,B]")
+
+                elif ot == "sector":
+                    c = o.get("center")
+                    r = o.get("radius")
+                    if not isinstance(c, str) or not c.strip():
+                        issues.append(f"Geometry chart '{chart_id}' sector object {j} missing center")
+                    else:
+                        if c not in pts:
+                            issues.append(f"Geometry chart '{chart_id}' sector references unknown center '{c}'")
+                    if not _is_num(r) or float(r) <= 0:
+                        issues.append(f"Geometry chart '{chart_id}' sector object {j} has invalid radius")
+
+                    th1 = o.get("theta1_deg")
+                    th2 = o.get("theta2_deg")
+                    a = o.get("from") or o.get("start")
+                    b = o.get("to") or o.get("end")
+                    if not (_is_num(th1) and _is_num(th2)) and not (isinstance(a, str) and isinstance(b, str)):
                         issues.append(
-                            f"Geometry chart '{chart_id}' semicircle object {j} must provide "
-                            f"either center+radius or from/to diameter endpoints"
+                            f"Geometry chart '{chart_id}' sector object {j} must provide theta1_deg/theta2_deg or from/to"
                         )
+                    if isinstance(a, str) and a not in pts:
+                        issues.append(f"Geometry chart '{chart_id}' sector references unknown point '{a}'")
+                    if isinstance(b, str) and b not in pts:
+                        issues.append(f"Geometry chart '{chart_id}' sector references unknown point '{b}'")
+
+                elif ot == "annular_sector":
+                    c = o.get("center")
+                    r_in = o.get("r_inner", o.get("radius_inner"))
+                    r_out = o.get("r_outer", o.get("radius_outer"))
+                    if not isinstance(c, str) or not c.strip():
+                        issues.append(f"Geometry chart '{chart_id}' annular_sector object {j} missing center")
+                    else:
+                        if c not in pts:
+                            issues.append(f"Geometry chart '{chart_id}' annular_sector references unknown center '{c}'")
+
+                    if not _is_num(r_in) or not _is_num(r_out):
+                        issues.append(f"Geometry chart '{chart_id}' annular_sector object {j} missing/invalid r_inner/r_outer")
+                    else:
+                        rin = float(r_in)
+                        rout = float(r_out)
+                        if rin <= 0 or rout <= 0 or rout <= rin:
+                            issues.append(f"Geometry chart '{chart_id}' annular_sector object {j} must satisfy 0 < r_inner < r_outer")
+
+                    th1 = o.get("theta1_deg")
+                    th2 = o.get("theta2_deg")
+                    a = o.get("from") or o.get("start")
+                    b = o.get("to") or o.get("end")
+                    if not (_is_num(th1) and _is_num(th2)) and not (isinstance(a, str) and isinstance(b, str)):
+                        issues.append(
+                            f"Geometry chart '{chart_id}' annular_sector object {j} must provide theta1_deg/theta2_deg or from/to"
+                        )
+                    if isinstance(a, str) and a not in pts:
+                        issues.append(f"Geometry chart '{chart_id}' annular_sector references unknown point '{a}'")
+                    if isinstance(b, str) and b not in pts:
+                        issues.append(f"Geometry chart '{chart_id}' annular_sector references unknown point '{b}'")
 
                 elif ot == "polygon":
                     pids = o.get("points")
@@ -523,7 +577,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                             if not isinstance(pid, str) or not pid.strip():
                                 issues.append(f"Geometry chart '{chart_id}' polygon object {j} has non-string point id")
                                 continue
-                            referenced_points.append(pid)
                             if pid not in pts:
                                 issues.append(f"Geometry chart '{chart_id}' polygon references unknown point '{pid}'")
 
@@ -533,7 +586,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                     if not isinstance(at_id, str) or not at_id.strip():
                         issues.append(f"Geometry chart '{chart_id}' angle_marker object {j} missing at")
                     else:
-                        referenced_points.append(at_id)
                         if at_id not in pts:
                             issues.append(f"Geometry chart '{chart_id}' angle_marker references unknown point '{at_id}'")
 
@@ -546,7 +598,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                                     f"Geometry chart '{chart_id}' angle_marker object {j} has non-string corner point id"
                                 )
                                 continue
-                            referenced_points.append(pid)
                             if pid not in pts:
                                 issues.append(f"Geometry chart '{chart_id}' angle_marker references unknown point '{pid}'")
 
@@ -555,7 +606,6 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                         issues.append(f"Geometry chart '{chart_id}' angle_marker object {j} has invalid radius")
 
                 elif ot == "text":
-                    # free text can be in axes coords; just require x/y numeric when provided
                     if o.get("x") is None or o.get("y") is None:
                         issues.append(f"Geometry chart '{chart_id}' text object {j} missing x/y")
                     else:
@@ -565,17 +615,17 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
                         issues.append(f"Geometry chart '{chart_id}' text object {j} missing text")
 
                 elif ot == "point":
-                    # already validated in pts pass
                     pass
 
                 else:
-                    # Unknown geometry object type (won't render)
                     issues.append(f"Geometry chart '{chart_id}' unsupported object type '{ot}'")
 
-            # ✅ Pedagogy / usability guard:
-            # If you provided points and referenced them (or have named points), require at least one label.
-            # This prevents the “no labels” screenshot case from silently passing.
+            # ✅ Don’t force explicit labels if renderer can auto-label.
+            # Require labels only if NO point ids look label-able.
             if has_any_point and label_count == 0:
-                issues.append(f"Geometry chart '{chart_id}' has points but no label objects (labels required)")
+                if not any(_looks_like_label_id(pid) for pid in pts.keys()):
+                    issues.append(
+                        f"Geometry chart '{chart_id}' has points but no labels and no label-like point ids (A, B, O, A1, ...)"
+                    )
 
     return issues
