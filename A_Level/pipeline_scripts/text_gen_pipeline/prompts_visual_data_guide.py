@@ -17,13 +17,13 @@ from textwrap import dedent
 from typing import Iterable, Optional, Set
 
 # NOTE:
-# - These are kept as RAW strings (r""") so backslashes like \\theta stay exactly as written.
+# - These are kept as RAW strings (r""") so backslashes stay exactly as written.
 # - We still pass them through dedent() when injecting them into prompts.
 #
-# IMPORTANT GOAL (per your request):
+# IMPORTANT GOAL:
 # - The model should NOT have to read every chart type every time.
 # - We keep a short CORE snippet + per-type snippets.
-# - Callers (e.g., drill_prompts.py) choose ONE type and inject only that.
+# - Callers choose ONE type and inject only that.
 #
 # Backwards compatibility:
 # - VISUAL_RULES_SNIPPET remains as the "full" block (CORE + ALL types).
@@ -99,15 +99,14 @@ Structure:
                     "y_min": 0,
                     "y_max": 10
                 },
-
-                "hide_values": false,                // optional; if true, axis numbers are hidden
-                "show_label": false                  // optional; if true, legend label may appear
+                "hide_values": false,
+                "show_label": false
             }
         }
     ],
     "labeled_points": [
         {"label": "A", "x": 1.0, "y": 4.0, "reveal": false}
-    ], // Optional
+    ],
     "shaded_regions": [
         {
             "upper_bound_id": "g1",
@@ -115,8 +114,12 @@ Structure:
             "x_start": 1.0,
             "x_end": 4.0
         }
-    ] // Optional
+    ]
 }
+
+Notes:
+- hide_values (optional): if true, axis numbers are hidden
+- show_label (optional): if true, legend label may appear
 """
 
 _VISUAL_RULES_TYPE_HISTOGRAM = r"""
@@ -145,7 +148,6 @@ Structure:
                     "y_min": 0,
                     "y_max": 20
                 },
-
                 "hide_values": false
             }
         }
@@ -181,7 +183,6 @@ Structure:
                     "y_min": 0,
                     "y_max": 60
                 },
-
                 "hide_values": false
             }
         }
@@ -217,14 +218,13 @@ Structure:
                 "trend_line": {
                     "enabled": true,
                     "equation": "y = 1200*x + 5000"
-                }, // Optional
+                },
                 "axes_range": {
                     "x_min": 20,
                     "x_max": 60,
                     "y_min": 20000,
                     "y_max": 90000
                 },
-
                 "hide_values": false
             }
         }
@@ -259,14 +259,13 @@ Structure:
                 "outliers": [
                     {"group": "Group A", "value": 110},
                     {"group": "Group B", "value": 105}
-                ], // Optional
+                ],
                 "axes_range": {
                     "x_min": -0.5,
                     "x_max": 1.5,
                     "y_min": 30,
                     "y_max": 120
                 },
-
                 "hide_values": false
             }
         }
@@ -300,7 +299,6 @@ Structure:
                     "y_min": 0,
                     "y_max": 45
                 },
-
                 "hide_values": false
             }
         }
@@ -340,7 +338,6 @@ Structure:
                     "y_min": -3,
                     "y_max": 3
                 },
-
                 "hide_values": false,
                 "show_label": false
             }
@@ -349,7 +346,7 @@ Structure:
 }
 
 **Key Points for Parametric Curves:**
-- Use `t` as the parameter variable (do NOT use `x`/`u`/`\\theta` as the parameter name).
+- Use `t` as the parameter variable (do NOT use `x`/`u`/`\\\\theta` as the parameter name).
 - `parametric_function.x` and `parametric_function.y` must be expressions in terms of `t`.
 - Expressions must be Python-compatible / evaluable (e.g., `cos(t)`, `sin(t)`, `t**2`).
 """
@@ -420,12 +417,14 @@ Structure:
             }
         }
     ],
-    "layout": "composite"  // Triggers multi-panel layout
+    "layout": "composite"
 }
+
+Notes:
+- "layout": "composite" triggers a multi-panel layout.
 """
 
-# NOTE: We are adding a "geometry" type entry so the prompt can request polygons/circles/lines
-# (This is the piece that will stop the model from only emitting "function" charts for Euclidean geometry.)
+# NOTE: geometry type entry for Euclidean diagrams.
 _VISUAL_RULES_TYPE_GEOMETRY = r"""
 ### **TYPE: GEOMETRY / EUCLIDEAN DIAGRAMS (SEGMENTS, CIRCLES, ARCS, SECTORS, SEGMENTS)**
 Use this when the diagram is a geometric construction (triangles, circles, chords, tangents, angle-chasing, arcs, sectors, segments, etc.).
@@ -454,12 +453,12 @@ Top-level structure:
   - If you draw any circle/arc/sector/segment of radius R centered at (cx,cy), your axes_range must extend beyond [cx-R, cx+R] and [cy-R, cy+R] with extra space for labels.
 - If the question text says “shaded region/area”, the diagram MUST actually be shaded:
   - Use fill:true + alpha for the correct object (sector / annular_sector / polygon / circular_segment).
-  - Do NOT merely write red text “shaded area = ...” without shading the region.
+  - Do NOT merely write text “shaded area = ...” without shading the region.
 - Angle/arc labels must be placed sensibly:
   - They MUST NOT overlap the main diagram lines/graphs.
   - They MUST NOT be extremely far away from the arc/angle they describe.
   - Use small, consistent offsets (typically 6–14 "offset points" for point labels).
-  - For angle measures near an arc (e.g., "$60^\\circ$"), prefer a `text` object positioned near the mid-angle on the arc (see below).
+  - For angle measures near an arc (e.g., "$60^\\\\circ$"), prefer a `text` object positioned near the mid-angle on the arc (see below).
 
 **SUPPORTED GEOMETRY OBJECT TYPES** (inside `objects`):
 - point
@@ -472,7 +471,7 @@ Top-level structure:
 - angle_marker
 - sector
 - annular_sector
-- circular_segment          // NEW: chord+arc region (segment of a circle)
+- circular_segment
 - label
 - text
 
@@ -490,9 +489,9 @@ RULES:
 ## 2) SEGMENTS / RAYS
 {"type":"segment","from":"A","to":"B"}
 
-{"type":"ray","from":"A","to":"B","length":100}  // length optional
+{"type":"ray","from":"A","to":"B","length":100}
 
-Optional styling:
+Optional styling fields:
 - "linewidth": number (default 2)
 - "line_style": "solid|dashed|dotted|dashdot"
 - "color": string
@@ -606,20 +605,19 @@ RULES FOR POINT LABELS (label objects):
 - Use `offset` as "offset points" relative to the point.
 - Keep offsets small and consistent: usually [6,6], [8,8], [10,10], or [12,8].
 - Do NOT use huge offsets (like 40+) unless absolutely necessary.
-- Ensure the label does not overlap a segment/arc passing through the point:
-  - Example: if the point lies on a line going up-right, offset to up-left instead.
+- Ensure the label does not overlap a segment/arc passing through the point.
 
-Angle/arc measure label (e.g., "$60^\\circ$") — use a `text` object placed near the arc, NOT on top of lines:
-{"type":"text","x":4.2,"y":3.8,"text":"$60^\\circ$","fontsize":12}
+Angle/arc measure label (e.g., "$60^\\\\circ$") — use a `text` object placed near the arc, NOT on top of lines:
+{"type":"text","x":4.2,"y":3.8,"text":"$60^\\\\circ$","fontsize":12}
 
 RULES FOR ANGLE/ARC MEASURE TEXT (text objects):
 - Place it near the arc/angle it describes (close, but not touching the curve).
 - Avoid overlap with the arc itself and with other diagram lines.
-- Do NOT place it far away from the angle (it should clearly refer to the nearby arc).
-- IMPORTANT: keep the text position inside the axes_range with margin.
+- Do NOT place it far away from the angle.
+- Keep the text position inside the axes_range with margin.
 
 Free text at coordinates (general):
-{"type":"text","x":2.5,"y":4.0,"text":"$\\angle ABC$","fontsize":12}
+{"type":"text","x":2.5,"y":4.0,"text":"$\\\\angle ABC$","fontsize":12}
 
 ---
 

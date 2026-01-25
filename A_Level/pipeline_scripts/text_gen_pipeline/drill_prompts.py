@@ -72,44 +72,46 @@ def build_text_drill_prompt(
 
     --- SYSTEM CONTEXT (READ CAREFULLY) ---
     - You are generating a **single JSON object** that will be consumed by an automated mobile learning app (iPad) called ALMA.
-    - Your JSON is parsed programmatically and the text fields (`question_stem`, `question_text`, `solution_text`, `final_answer`, and any text in `visual_data`) are rendered using **MathJax** inside a WebView.
+    - Your JSON is parsed programmatically and the text fields (question_stem, question_text, solution_text, final_answer, and any text in visual_data) are rendered using **MathJax** inside a WebView.
     - The app does **not** see LaTeX documents, TeX preambles, or Markdown. It only sees the JSON fields described below.
-    - MathJax supports **inline and display math inside `$...$` or `$$...$$`** with standard LaTeX math commands, but it does **not** support full TeX layout or diagram environments.
-    - Therefore, you **must not** use any LaTeX environments that require a full TeX engine, such as `\\begin{{equation}}`, `\\begin{{align}}`, `\\begin{{displaymath}}`, `\\begin{{tikzcd}}`, `\\begin{{tikzpicture}}`, `\\begin{{CD}}`, `\\xymatrix`, `\\begin{{array}}`, `\\begin{{matrix}}`, or any diagram-producing environment. All diagrams must be represented **only** through the `visual_data` JSON system.
+    - MathJax supports **inline and display math inside $...$ or $$...$$** with standard LaTeX math commands, but it does **not** support full TeX layout or diagram environments.
+    - Therefore, you **must not** use any LaTeX environments that require a full TeX engine, such as \\begin{{equation}}, \\begin{{align}}, \\begin{{displaymath}}, \\begin{{tikzcd}}, \\begin{{tikzpicture}}, \\begin{{CD}}, \\xymatrix, \\begin{{array}}, \\begin{{matrix}}, or any diagram-producing environment. All diagrams must be represented **only** through the visual_data JSON system.
 
     YOUR TASK:
-    Create a **{difficulty}** level question on the topic: **"{topic}"**.
+    Create a **{difficulty}** level question on the topic: "{topic}".
 
     {correction_block}
 
     --- USER SPECIFICATIONS ---
-    - **Course/Level**: {course} (Ensure notation and scope match this level exactly).
-    - **Difficulty**: {difficulty} (Scale: Introductory -> Easy -> Medium -> Hard -> Challenge).
-    - **Specific Details**: "{additional_details}"
+    - Course/Level: {course} (Ensure notation and scope match this level exactly).
+    - Difficulty: {difficulty} (Scale: Introductory -> Easy -> Medium -> Hard -> Challenge).
+    - Specific Details: "{additional_details}"
 
     --- CONTENT GUIDELINES ---
-    1. **Self-Contained**: The question must be solvable with the information provided.
-    2. **Single Question Shape**: Provide a clear "question_stem" and exactly ONE part in "parts".
-    3. **Visuals**: If the topic usually requires a diagram, generate the JSON `visual_data` object. If it's pure algebra, omit it.
-    4. **MCQ Handling**: If the user asks for Multiple Choice, include "choices": [{{"label":"A", "text":"..."}}...] and "correct_choice": "A" inside the part.
-    5. **No Drawing Requests**: Do not ask the student to "sketch/draw/plot."
-    6. **Clean Answer**: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
-    7. **No Phantom Diagrams**: If you mention a diagram/figure, you **must** supply `visual_data`. If you do not supply `visual_data`, do **not** refer to a diagram/figure/picture; provide explicit textual givens instead.
-    8. **Piecewise / cases**: If you use a piecewise definition (e.g. `\\begin{{cases}} ... \\end{{cases}}`), keep each row short and clean:
-       - Exactly ONE `&` per row (left side is the value, right side is the condition).
-       - Do NOT put long explanations, “i.e.” clauses, or extra sentences inside `cases`. Keep the condition simple.
-       - Place any long explanation or extra wording in normal text AFTER the displayed formula, not inside the `cases` environment.
-       - Avoid nested parentheses and long `\\text{{...}}` blocks inside `cases`.
-    9. **No LaTeX list environments**: Do NOT use `\\begin{{itemize}}`, `\\begin{{enumerate}}`, `\\begin{{description}}`, or any similar LaTeX list environment in any field. Do NOT use `\\item`. If you need to list facts or given values, write them as plain sentences separated by newlines, or as simple text bullets like `- first fact`, `- second fact`, using normal text (not inside math mode).
-    10. **No LaTeX text-formatting commands in prose**: do **not** use `\\textbf{{...}}`, `\\emph{{...}}`, `\\textit{{...}}`, or similar styling commands in the question text or explanations. If you want emphasis, rewrite the sentence in plain words without any special formatting.
+    1. Self-Contained: The question must be solvable with the information provided.
+    2. Single Question Shape: Provide a clear "question_stem" and exactly ONE part in "parts".
+    3. Visuals: If the topic usually requires a diagram, generate the JSON visual_data object. If it's pure algebra, omit it.
+    4. MCQ Handling: If the user asks for Multiple Choice, include "choices": [{{"label":"A","text":"..."}}, ...] and "correct_choice": "A" inside the part.
+    5. No Drawing Requests: Do not ask the student to "sketch/draw/plot."
+    6. Clean Answer: Choose values that lead to a neat final result (integers, simple fractions/surds) when applicable.
+    7. No Phantom Diagrams: If you mention a diagram/figure, you MUST supply visual_data. If you do not supply visual_data, do not refer to a diagram/figure/picture; provide explicit textual givens instead.
+    8. Piecewise / cases: If you use a piecewise definition (e.g. \\begin{{cases}} ... \\end{{cases}}), keep each row short and clean:
+       - Exactly ONE & per row (left side is the value, right side is the condition).
+       - Do NOT put long explanations or extra sentences inside cases. Keep the condition simple.
+       - Place any long explanation in normal text AFTER the displayed formula, not inside the cases environment.
+       - Avoid nested parentheses and long \\text{{...}} blocks inside cases.
+    9. No LaTeX list environments: Do NOT use \\begin{{itemize}}, \\begin{{enumerate}}, \\begin{{description}}, or \\item.
+       If you need to list givens, write plain sentences separated by real newlines (use \\n inside JSON strings) or simple text bullets like "- first fact".
+    10. No LaTeX text-formatting commands in prose: do not use \\textbf{{...}}, \\emph{{...}}, \\textit{{...}}.
 
     --- VISUAL_DATA GUIDE (SELECTED) ---
     {visual_rules}
 
     --- OUTPUT FORMAT ---
-    Do not use the backtick character ` anywhere in any field.
-    Do not wrap $...$ or $$...$$ in backticks. No Markdown inline-code formatting.
-    Return a single JSON object.
+    - Return a single JSON object only. No markdown code fences. No commentary.
+    - Do not use the backtick character ` anywhere in any field.
+    - Do not wrap $...$ or $$...$$ in backticks.
+
     {{
         "question_stem": "...",
         "parts": [
@@ -120,33 +122,38 @@ def build_text_drill_prompt(
                 "final_answer": "..."
             }}
         ],
-        "calculator_required": boolean,
-        "visual_data": {{...}} // Optional
+        "calculator_required": true,
+        "visual_data": {{...}}
     }}
 
     --- PURPOSE OF SOLUTION AND FINAL ANSWER ---
-    - `solution_text` is **not** a model answer for a student to read. It is an internal explanation for an **AI tutor** that will mark and discuss student work.
-    - The goal of `solution_text` is to concisely make clear:
-      - main mathematical steps,
-      - definitions, constructions, or theorems used,
-      - expected conclusions throughout stages of the solution.
-    - It does **not** need to be written as a fully polished proof. Assume the reader is a mathematically competent AI.
-    - Avoid re-stating the problem or copying the question text. Focus on the reasoning needed to solve the question.
-    - `final_answer` is a compact summary of the final mathematical conclusions.
-    - `final_answer` should only contain essential end results, not another full solution.
+    - solution_text is not a model answer for a student to read. It is an internal explanation for an AI tutor.
+    - Focus on the mathematical reasoning needed to solve the question (key steps, definitions, theorems).
+    - final_answer is a compact summary of the end result only.
+
+    --- JSON ESCAPING RULES (CRITICAL) ---
+    You are writing JSON. Inside any JSON string:
+    - Every backslash in a LaTeX command MUST be escaped in the JSON source.
+    - This means: to produce \\frac in the final text seen by MathJax, you must write \\\\frac in the JSON source.
+    - If you write a single backslash in JSON (for example "\\frac" or "\\text"), JSON will treat sequences like \\f or \\t as escapes and the backslash will disappear, breaking MathJax.
+
+    Examples (JSON source -> text after JSON parsing):
+    - "question_text": "Find $\\\\frac{{1}}{{2}}$."  ->  Find $\\frac{{1}}{{2}}$.
+    - "question_text": "Let $\\\\omega > 0$."       ->  Let $\\omega > 0$.
+    - "question_text": "Mass $1\\\\text{{kg}}$."     ->  Mass $1\\text{{kg}}$.
+
+    Newlines inside strings:
+    - Use "\\n" in the JSON source to create a real line break after parsing.
+    - Do NOT output the visible characters \\n as text.
 
     **MATH FORMATTING RULES (STRICT)**:
-    - Use **LaTeX commands** for ALL mathematics: `\\frac{{...}}{{...}}`, `\\sqrt{{...}}`, `\\cdot`, `\\times`, `\\ln`, `\\sin`, `\\cos`, etc.
-    - Use `$...$` for inline math and `$$...$$` for display math.
-    - Do **NOT** use any custom math markers like `$begin:math:text$`.
-    - Do **NOT** use LaTeX math environments such as `\\begin{{equation}} ... \\end{{equation}}`, `\\begin{{align}} ... \\end{{align}}`, or `\\begin{{displaymath}} ... \\end{{displaymath}}`. Use `$$...$$` instead.
-    - Never use diagram-producing LaTeX environments such as `\\begin{{tikzcd}} ... \\end{{tikzcd}}`, `\\begin{{tikzpicture}} ... \\end{{tikzpicture}}`, `\\begin{{CD}} ... \\end{{CD}}`, `\\xymatrix{{...}}`, `\\begin{{array}} ... \\end{{array}}`, `\\begin{{matrix}} ... \\end{{matrix}}`. Any diagram must be expressed **only** through the `visual_data` JSON system.
-    - **Backslashes**: in the final math, every LaTeX command must start with a single backslash (e.g. `\\frac`, `\\sqrt`). Do **NOT** produce commands that effectively start with two backslashes in the final string (like `\\\\frac`).
-    - Do **not** use the LaTeX linebreak command `\\\\` inside math. If you need a new sentence, write a new sentence in plain text.
-    - All LaTeX macros MUST start with a backslash and MUST be inside math mode.
-    - **NEVER** output plain-text math like `sqrt(3x+1)`; always use LaTeX forms like `\\sqrt{{3x+1}}`.
-    - Every macro that takes arguments **must** use braces.
-    - Do not use Markdown styling like `**bold**` inside any field, and do **not** use LaTeX text-formatting commands such as `\\textbf{{...}}` in prose.
+    - Use LaTeX commands for ALL mathematics: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times, \\\\ln, \\\\sin, \\\\cos, etc. (Remember: those are JSON-source forms.)
+    - Use $...$ for inline math and $$...$$ for display math.
+    - Do NOT use custom math markers like $begin:math:text$.
+    - Do NOT use LaTeX math environments like \\begin{{equation}}...\\end{{equation}} or \\begin{{align}}...\\end{{align}}. Use $$...$$ instead.
+    - Never use diagram-producing LaTeX environments (tikz, xymatrix, array/matrix environments). Any diagram must be expressed only through visual_data.
+    - Do not use the LaTeX linebreak command \\\\ inside math.
+    - All LaTeX macros must be inside math mode ($...$ or $$...$$) and must use braces when they take arguments.
+    - NEVER output plain-text math like sqrt(3x+1); always use LaTeX forms like \\\\sqrt{{3x+1}}.
     """
-    
     return dedent(prompt).strip()
