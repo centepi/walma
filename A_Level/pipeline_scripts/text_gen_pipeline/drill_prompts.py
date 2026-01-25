@@ -29,13 +29,9 @@ def build_text_drill_prompt(
     #
     # Heuristic rules:
     # - If the user asks for shapes/geometry/Euclidean diagrams -> geometry.
-    # - Otherwise default to "full guide" (rare) ONLY if caller explicitly
-    #   asks for it (not implemented here), else include nothing extra.
+    # - Otherwise default to a single common type guide (function) to keep
+    #   the prompt short and consistent.
     # - If the model decides no visual_data is needed, it should omit it.
-    #
-    # If you want to force a specific type from the caller, you can add an
-    # optional parameter later (e.g., visual_guide_types=["histogram"]).
-    # For now, we infer from the topic/details to keep API unchanged.
     # ---------------------------------------------------------------------
     combined = f"{topic or ''} {additional_details or ''}".lower()
     wants_geometry = any(
@@ -101,7 +97,7 @@ def build_text_drill_prompt(
        - Place any long explanation in normal text AFTER the displayed formula, not inside the cases environment.
        - Avoid nested parentheses and long \\text{{...}} blocks inside cases.
     9. No LaTeX list environments: Do NOT use \\begin{{itemize}}, \\begin{{enumerate}}, \\begin{{description}}, or \\item.
-       If you need to list givens, write plain sentences separated by real newlines (use \\n inside JSON strings) or simple text bullets like "- first fact".
+       If you need to list givens, write plain sentences separated by real newlines (use \\n inside JSON strings). Do NOT use Markdown bullet list syntax.
     10. No LaTeX text-formatting commands in prose: do not use \\textbf{{...}}, \\emph{{...}}, \\textit{{...}}.
 
     --- VISUAL_DATA GUIDE (SELECTED) ---
@@ -132,28 +128,43 @@ def build_text_drill_prompt(
     - final_answer is a compact summary of the end result only.
 
     --- JSON ESCAPING RULES (CRITICAL) ---
-    You are writing JSON. Inside any JSON string:
-    - Every backslash in a LaTeX command MUST be escaped in the JSON source.
-    - This means: to produce \\frac in the final text seen by MathJax, you must write \\\\frac in the JSON source.
-    - If you write a single backslash in JSON (for example "\\frac" or "\\text"), JSON will treat sequences like \\f or \\t as escapes and the backslash will disappear, breaking MathJax.
+    You are writing JSON. Inside any JSON string, you must follow BOTH of these:
+
+    A) Newlines (JSON escape, NOT LaTeX):
+    - To create a line break in a JSON string, write \\n in the JSON source.
+    - To create a blank line, write \\n\\n in the JSON source.
+    - DO NOT double-escape newlines. Never write \\\\n in the JSON source, or the student will see the visible characters "\\n".
+
+    Correct vs incorrect newline examples (JSON source):
+    - ✅ "question_text": "Line 1\\nLine 2"
+    - ❌ "question_text": "Line 1\\\\nLine 2"   (WRONG: shows literal \\n)
+
+    B) LaTeX commands (must be escaped for JSON):
+    - Any LaTeX command backslash must be escaped in the JSON source.
+    - That means: to produce \\frac in the final text seen by MathJax, the JSON source must contain \\\\frac.
+    - Do NOT “double everything”. ONLY LaTeX command backslashes are doubled; JSON newlines stay as \\n.
+
+    Why single backslashes break:
+    - If you write a single backslash in JSON before certain letters (e.g., "\\t", "\\n", "\\f"),
+      JSON treats them as escapes, the backslash disappears, and MathJax sees broken LaTeX.
 
     Examples (JSON source -> text after JSON parsing):
-    - "question_text": "Find $\\\\frac{{1}}{{2}}$."  ->  Find $\\frac{{1}}{{2}}$.
-    - "question_text": "Let $\\\\omega > 0$."       ->  Let $\\omega > 0$.
-    - "question_text": "Mass $1\\\\text{{kg}}$."     ->  Mass $1\\text{{kg}}$.
-
-    Newlines inside strings:
-    - Use "\\n" in the JSON source to create a real line break after parsing.
-    - Do NOT output the visible characters \\n as text.
+    - "question_text": "Find $\\\\\\\\frac{{1}}{{2}}$."  ->  Find $\\\\frac{{1}}{{2}}$.
+    - "question_text": "Let $\\\\\\\\omega > 0$."       ->  Let $\\\\omega > 0$.
+    - "question_text": "Mass $1\\\\\\\\text{{kg}}$."     ->  Mass $1\\\\text{{kg}}$.
 
     **MATH FORMATTING RULES (STRICT)**:
-    - Use LaTeX commands for ALL mathematics: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times, \\\\ln, \\\\sin, \\\\cos, etc. (Remember: those are JSON-source forms.)
-    - Use $...$ for inline math and $$...$$ for display math.
+    - ALL mathematics must be inside $...$ or $$...$$.
+    - Use standard LaTeX commands for mathematics: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times, \\\\ln, \\\\sin, \\\\cos, etc.
+      (Remember: those are the JSON-source forms; backslashes are doubled.)
+    - Never output plain-text math like sqrt(3x+1); always use LaTeX like \\\\sqrt{{3x+1}} (inside $...$ or $$...$$).
     - Do NOT use custom math markers like $begin:math:text$.
     - Do NOT use LaTeX math environments like \\begin{{equation}}...\\end{{equation}} or \\begin{{align}}...\\end{{align}}. Use $$...$$ instead.
     - Never use diagram-producing LaTeX environments (tikz, xymatrix, array/matrix environments). Any diagram must be expressed only through visual_data.
-    - Do not use the LaTeX linebreak command \\\\ inside math.
+    - Do not use the LaTeX linebreak command \\\\ inside math. Use separate sentences or JSON \\n line breaks in the surrounding text.
     - All LaTeX macros must be inside math mode ($...$ or $$...$$) and must use braces when they take arguments.
-    - NEVER output plain-text math like sqrt(3x+1); always use LaTeX forms like \\\\sqrt{{3x+1}}.
+
+    --- FINAL OUTPUT REMINDER ---
+    Output ONLY the JSON object. No extra keys, no commentary, no markdown.
     """
     return dedent(prompt).strip()
