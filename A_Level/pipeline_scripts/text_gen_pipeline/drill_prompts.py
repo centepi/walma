@@ -57,6 +57,7 @@ def build_text_drill_prompt(
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
     # ✅ RAW f-string so the model sees literal backslashes in the rules below.
+    # ⚠️ IMPORTANT: because this is an f-string, any literal JSON braces in examples must be escaped as {{ and }}.
     prompt = rf"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
@@ -85,7 +86,7 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 2. Single Question Shape: Provide a clear "question_stem" and exactly ONE part in "parts".
 3. Visuals: If the topic usually requires a diagram, generate the JSON visual_data object. If it's pure algebra, omit it.
 4. MCQ Handling: If the user asks for Multiple Choice, include:
-   - "choices": [{"label":"A","text":"..."}, ...]
+   - "choices": [{{"label":"A","text":"..."}}, ...]
    - "correct_choice": "A"
    inside the part.
 5. No Drawing Requests: Do not ask the student to "sketch/draw/plot."
