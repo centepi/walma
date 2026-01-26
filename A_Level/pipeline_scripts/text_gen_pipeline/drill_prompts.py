@@ -50,15 +50,13 @@ def build_text_drill_prompt(
         ]
     )
 
-    # ✅ IMPORTANT: only ONE selection block (no duplicates)
     if wants_geometry:
         visual_rules = get_visual_rules_snippet(only_types=["geometry"])
     else:
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
     # ✅ RAW f-string so the model sees literal backslashes in the rules below.
-    # ⚠️ IMPORTANT: because this is an f-string, any literal { or } shown to the model
-    # must be escaped as {{ or }} in THIS Python source.
+    # ⚠️ Because this is an f-string, any literal { or } shown to the model must be written as {{ or }} here.
     prompt = rf"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
@@ -135,9 +133,9 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 --- JSON ESCAPING RULES (CRITICAL) ---
 You are writing JSON. The app will parse your JSON, then render the resulting strings with MathJax.
 
-A) Newlines:
+A) Newlines (IMPORTANT):
 - To create a real line break inside a JSON string, use the normal JSON escape: \n
-- IMPORTANT: write it as \n (single backslash + n) in the JSON source.
+- Write it as \n (single backslash + n) in the JSON source.
 - Do NOT write \\n in the JSON source. That produces the visible characters "\n" in the app.
 
 Correct:
@@ -145,19 +143,18 @@ Correct:
 Wrong:
   "question_stem": "Line 1.\\nLine 2."   (this shows \n literally)
 
-B) LaTeX backslashes:
-- Any LaTeX command like \frac, \sqrt, \theta, \gamma, \text must be escaped for JSON.
-- That means: in the JSON source you must write double backslashes: \\frac, \\sqrt, \\theta, \\gamma, \\text, \\circ, etc.
-- After JSON parsing, the student must see a single backslash: \frac, \sqrt, \theta, \gamma, \text, \circ.
+B) LaTeX commands (THIS HAS BEEN BREAKING YOUR OUTPUT):
+- Write LaTeX exactly as it should appear to the student, with a SINGLE backslash:
+  \frac, \sqrt, \theta, \gamma, \text, \circ, \leq, \pi, etc.
+- Do NOT “JSON-escape” LaTeX yourself by doubling backslashes.
+  (The backend parser/validator will repair JSON backslashes safely.)
 
-Correct (JSON source -> what MathJax receives after JSON parsing):
-  "question_text": "Find $\\frac{{1}}{{2}}$."     -> Find $\frac{{1}}{{2}}$.
-  "question_text": "Let $\\theta = 120^\\circ$." -> Let $\theta = 120^\circ$.
-  "question_text": "Units: $\\text{{MeV}}$."     -> Units: $\text{{MeV}}$.
-
-DO NOT over-escape LaTeX:
-- Do NOT write \\\\frac or \\\\text in the JSON source.
-  That leaves two backslashes after parsing and breaks MathJax (you get 'textMeV' / raw commands).
+Correct (what the student should ultimately see / what MathJax expects):
+  "$\frac{{1}}{{2}}$"
+  "$\theta = 120^\circ$"
+  "$\text{{MeV}}$"
+Wrong (over-escaped, breaks MathJax):
+  "$\\theta$" or "$\\text{{MeV}}$"
 
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
