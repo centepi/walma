@@ -4,6 +4,14 @@ from . import utils
 
 logger = utils.setup_logger(__name__)
 
+# -------------------------------------------------------------------
+# [[BS]] backslash-token scheme (preferred)
+# If the model follows the drill prompt correctly, it should output [[BS]]
+# instead of raw "\" for LaTeX, so this validator will mostly just parse JSON.
+# The escaping logic below remains as a safety net for legacy / non-compliant outputs.
+# -------------------------------------------------------------------
+_BS_TOKEN = "[[BS]]"
+
 # Regex + helper to repair invalid JSON backslash escapes coming from LaTeX.
 # JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
 
@@ -45,18 +53,25 @@ def _escape_invalid_json_backslashes(s: str) -> str:
     We deliberately:
       - leave already-escaped sequences like '\\\\mathbb' unchanged (negative lookbehind).
       - do NOT touch '\n' because you legitimately use \n for line breaks in JSON strings.
+
+    Note:
+      - If the model uses the [[BS]] scheme, there may be no raw backslashes to repair.
     """
     if not s:
         return s
 
+    # Fast path: nothing to repair
+    if "\\" not in s:
+        return s
+
     # (A) Fix \u that is NOT a real unicode escape (\uXXXX)
-    s = _BAD_UNICODE_ESCAPE_RE.sub(r'\\\\u', s)
+    s = _BAD_UNICODE_ESCAPE_RE.sub(r"\\\\u", s)
 
     # (B) Fix LaTeX commands starting with \b \f \r \t  (but not \n)
-    s = _LATEX_VALID_ESCAPE_PREFIX_RE.sub(r'\\\\\1', s)
+    s = _LATEX_VALID_ESCAPE_PREFIX_RE.sub(r"\\\\\1", s)
 
     # (C) Fix all other invalid escapes (\gamma, \pi, \leq, etc.)
-    s = _INVALID_JSON_ESCAPE_RE.sub(r'\\\\\1', s)
+    s = _INVALID_JSON_ESCAPE_RE.sub(r"\\\\\1", s)
 
     return s
 
@@ -85,11 +100,11 @@ def _parse_and_repair(raw_text: str):
 
     try:
         # Step 1: Find the JSON block, even if it's wrapped in markdown.
-        json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', raw_text)
+        json_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", raw_text)
         if json_match:
             json_str = json_match.group(1)
         else:
-            json_match_plain = re.search(r'\{[\s\S]*\}', raw_text)
+            json_match_plain = re.search(r"\{[\s\S]*\}", raw_text)
             if not json_match_plain:
                 logger.warning("Validator: no JSON object found in AI response.")
                 logger.debug("Validator: full raw (first 2000 chars): %s", raw_text[:2000])
@@ -97,20 +112,21 @@ def _parse_and_repair(raw_text: str):
             json_str = json_match_plain.group(0)
 
         # Step 2: Clean up common formatting issues.
-        control_char_re = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
-        json_str = control_char_re.sub('', json_str)
+        control_char_re = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+        json_str = control_char_re.sub("", json_str)
         json_str = (
             json_str
-            .replace('\u00a0', ' ')
-            .replace('“', '"').replace('”', '"')
+            .replace("\u00a0", " ")
+            .replace("“", '"').replace("”", '"')
             .replace("‘", "'").replace("’", "'")
         )
 
-        # Step 2b: Repair invalid JSON backslash escapes coming from LaTeX commands.
+        # Step 2b: Repair invalid JSON backslash escapes coming from legacy LaTeX commands.
+        # If model uses [[BS]] scheme, this is typically a no-op.
         json_str = _escape_invalid_json_backslashes(json_str)
 
         # Step 3: Remove trailing commas before closing braces/brackets.
-        json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+        json_str = re.sub(r",\s*([}\]])", r"\1", json_str)
 
         # Step 4: Attempt to parse.
         parsed_data = json.loads(json_str)

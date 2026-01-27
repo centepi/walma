@@ -1,3 +1,4 @@
+#content_creator.py
 import os
 import re
 import json
@@ -25,6 +26,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl  # ✅ NEW: for local SVG font settings
 
 logger = utils.setup_logger(__name__)
+
+# -------------------------------------------------------------------
+# [[BS]] backslash-token scheme
+# The model MUST output [[BS]] instead of "\" in LaTeX to avoid JSON escapes.
+# After JSON parsing, we convert [[BS]] -> "\" in all relevant string fields.
+# -------------------------------------------------------------------
+_BS_TOKEN = "[[BS]]"
 
 
 def initialize_gemini_client():
@@ -278,6 +286,42 @@ def _normalize_generated_object(obj: dict) -> dict:
 
 
 # -------------------------
+# [[BS]] replacement (post-JSON-parse)
+# -------------------------
+
+def _replace_bs_token_in_str(s: str) -> str:
+    if not isinstance(s, str) or not s:
+        return s
+    if _BS_TOKEN not in s:
+        return s
+    return s.replace(_BS_TOKEN, "\\")
+
+
+def _replace_bs_tokens_recursive(x: Any) -> Any:
+    """
+    Replace [[BS]] -> "\" throughout nested dict/list structures (strings only).
+    Safe to run on the whole content object, including visual_data labels.
+    """
+    try:
+        if isinstance(x, str):
+            return _replace_bs_token_in_str(x)
+        if isinstance(x, list):
+            return [_replace_bs_tokens_recursive(v) for v in x]
+        if isinstance(x, dict):
+            return {k: _replace_bs_tokens_recursive(v) for k, v in x.items()}
+        return x
+    except Exception:
+        # If anything weird happens, fail open (do not block generation).
+        return x
+
+
+def _apply_bs_token_replacement(content_object: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(content_object, dict):
+        return content_object
+    return _replace_bs_tokens_recursive(content_object)
+
+
+# -------------------------
 # Post-parse LaTeX repair:
 #  (1) inside-math: fixes \\text->\text and missing \text/\frac/\theta etc.
 #  (2) outside-math: wraps obvious physics tokens (gamma_1, theta=30^\circ, beta c, pi^0 -> ...)
@@ -298,14 +342,13 @@ _FIX_DOUBLE_SLASH_MACROS = [
     "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log", "to",
 ]
 
-# ✅ NEW: specific “unit corruption” tokens that keep showing up when \text is eaten by JSON escapes.
+# ✅ “unit corruption” tokens that show up when \text is eaten by JSON escapes (or other corruption).
 # We fix these inside math by converting "textMeV" -> "\,\mathrm{MeV}" etc.
 _CORRUPT_UNIT_MAP: Dict[str, str] = {
     "textmev": r"\,\mathrm{MeV}",
     "textgev": r"\,\mathrm{GeV}",
     "textkev": r"\,\mathrm{keV}",
-    "texteV": r"\,\mathrm{eV}",  # note: kept for completeness, key is lowercased below
-    "texteV".lower(): r"\,\mathrm{eV}",
+    "textev": r"\,\mathrm{eV}",
     "textj": r"\,\mathrm{J}",
     "textkg": r"\,\mathrm{kg}",
     "textg": r"\,\mathrm{g}",
@@ -385,18 +428,6 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
 
     return out
 
-    # 3) Fix missing backslash for common greek/symbol macros in symbol contexts
-    out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
-    out = re.sub(r"(?<!\\)\bgamma(?=\s*[_^\d])", r"\\gamma", out)
-    out = re.sub(r"(?<!\\)\bbeta(?=\s*[_^\d])", r"\\beta", out)
-    out = re.sub(r"(?<!\\)\bmu(?=\s*[_^\d])", r"\\mu", out)
-    out = re.sub(r"(?<!\\)\bpi(?=\s*[_^\d])", r"\\pi", out)
-
-    # 4) Fix missing backslash for circ when used like degrees
-    out = re.sub(r"(?<!\\)\bcirc\b", r"\\circ", out)
-
-    return out
-
 
 def _repair_common_latex_in_math(s: str) -> str:
     """Apply conservative LaTeX repairs ONLY inside math segments. Non-math text is untouched."""
@@ -459,6 +490,7 @@ _OUTSIDE_FIX_PATTERNS: List[tuple] = [
         r"$\\tau_0$",
     ),
 ]
+
 
 def _repair_obvious_math_tokens_outside_math(s: str) -> str:
     """
@@ -805,6 +837,10 @@ def create_question(
 
     content_object = _normalize_generated_object(content_object)
 
+    # ✅ CRITICAL: Convert [[BS]] -> "\" everywhere AFTER JSON parsing.
+    # This completely avoids the \t / \f corruption problem in JSON source.
+    content_object = _apply_bs_token_replacement(content_object)
+
     # Minimal safe sanitizer (does NOT rewrite LaTeX)
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
@@ -949,17 +985,17 @@ Return the same content again as a single perfectly valid JSON object.
 CRITICAL JSON/LaTeX RULES:
 1) Output ONLY JSON (no markdown fences, no commentary).
 2) ALL math tokens (variables, greek letters, subscripts, angles, decay arrows) MUST be inside $...$ or $$...$$.
-   Example: "two photons, $\\\\gamma_1$ and $\\\\gamma_2$."
-3) In JSON SOURCE, you MUST escape LaTeX backslashes as DOUBLE backslash.
-   Example JSON source must look like: $\\\\frac{{4}}{{5}}$ and $\\\\sqrt{{19}}$.
-4) Do NOT over-escape: do NOT output four backslashes in JSON source (\\\\\\\\frac).
-5) Angles must be written like $30^\\\\circ$ (not '30\\circ' in plain text).
-6) Use $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$ for decays.
-7) IMPORTANT: Do NOT use \\\\text{{...}} for units (this commonly becomes 'textMeV' due to JSON escapes).
-   Put units outside math as plain text:
+3) ABSOLUTE RULE: do NOT output a raw backslash "\\" for LaTeX anywhere.
+   Use the token [[BS]] for every LaTeX backslash. Keep it EXACTLY as [[BS]] (uppercase).
+   Examples (copy exactly):
+   - "two photons, $[[BS]]gamma_1$ and $[[BS]]gamma_2$."
+   - "$[[BS]]gamma = 1/[[BS]]sqrt{{1 - [[BS]]beta^2}}$"
+   - "$30^{{[[BS]]circ}}$"
+   - "decay $[[BS]]pi^0 [[BS]]to [[BS]]gamma_1 + [[BS]]gamma_2$"
+4) Do NOT use [[BS]]text{{...}} for units unless absolutely necessary.
+   Preferred: put units outside math as plain text:
    - GOOD: "Rest mass $M_0 = 135$ MeV/$c^2$"
    - GOOD: "Energy $E = 500$ MeV"
-   - BAD:  "$M_0 = 135\\\\,\\\\text{{MeV}}/c^2$"
 
 Now output the corrected JSON object only.
 """

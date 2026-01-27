@@ -8,7 +8,8 @@ Goals for this simplified version:
   • Normalize newlines and non-breaking spaces.
   • Normalize different dash characters to a simple '-'.
   • Strip Markdown bold/underline markers **...** / __...__ OUTSIDE math segments.
-- Preserve math segments exactly as the model produced them.
+- Preserve math segments as the model produced them, EXCEPT for ultra-targeted
+  repairs of JSON-escape corruption (tabs/backspaces/formfeeds) and the [[BS]] token scheme.
 
 Math segments are detected as:
   - $$ ... $$
@@ -21,6 +22,13 @@ Math segments are detected as:
 from __future__ import annotations
 import re
 from typing import Dict, Any, List
+
+# -------------------------------------------------------------------
+# [[BS]] backslash-token scheme
+# The model outputs [[BS]] instead of "\" in LaTeX to avoid JSON escapes.
+# After JSON parsing, we convert [[BS]] -> "\" in relevant string fields.
+# -------------------------------------------------------------------
+_BS_TOKEN = "[[BS]]"
 
 # --- Regex building blocks ---
 
@@ -61,7 +69,10 @@ def _rewrite_latex_lists(non_math: str) -> str:
 
     This runs ONLY on non-math segments, so any $...$ inside items is preserved.
     """
-    if not non_math or "\\begin{itemize}" not in non_math and "\\begin{enumerate}" not in non_math and "\\begin{description}" not in non_math:
+    if (
+        not non_math
+        or ("\\begin{itemize}" not in non_math and "\\begin{enumerate}" not in non_math and "\\begin{description}" not in non_math)
+    ):
         return non_math
 
     def repl(match: re.Match) -> str:
@@ -103,26 +114,70 @@ def _normalize_text_basics(s: str) -> str:
     )
 
 
+def _replace_bs_token(s: str) -> str:
+    """Replace [[BS]] -> backslash everywhere (safe in both math and non-math)."""
+    if not isinstance(s, str) or not s:
+        return s
+    if _BS_TOKEN not in s:
+        return s
+    return s.replace(_BS_TOKEN, "\\")
+
+
+def _repair_json_escape_corruption_in_math(seg: str) -> str:
+    """
+    Repair the *post-JSON-parse* damage caused by valid JSON escapes inside LaTeX.
+
+    If the model accidentally emitted single-backslash LaTeX in JSON source:
+      "\text"  -> TAB + "ext"
+      "\theta" -> TAB + "heta"
+      "\tau"   -> TAB + "au"
+      "\frac"  -> FORMFEED + "rac"
+      "\beta"  -> BACKSPACE + "eta"
+
+    By the time we see the string in Python, those are literal control chars:
+      \\t (TAB = '\t'), \\f (FORMFEED = '\x0c'), \\b (BACKSPACE = '\x08').
+
+    We ONLY repair these inside math segments.
+    """
+    if not isinstance(seg, str) or not seg:
+        return seg
+
+    # TAB-based macros
+    seg = seg.replace("\text", r"\text")    # \t + "ext"
+    seg = seg.replace("\theta", r"\theta")  # \t + "heta"
+    seg = seg.replace("\tau", r"\tau")      # \t + "au"
+
+    # FORMFEED-based macro
+    seg = seg.replace("\frac", r"\frac")    # \f + "rac"
+
+    # BACKSPACE-based macro
+    seg = seg.replace("\beta", r"\beta")    # \b + "eta"
+
+    return seg
+
+
 # --- Core sanitizer ---
 
 def sanitize_text(s: str) -> str:
     """
-    Clean a single text field WITHOUT touching LaTeX inside math delimiters.
+    Clean a single text field WITHOUT changing math delimiters.
 
     What it does:
       - basic unicode/newline cleanup on the full string.
+      - replaces [[BS]] -> "\" on the full string (safe everywhere).
       - splits into math vs non-math segments.
       - on NON-math segments only:
           * strip **bold** and __underline__ markdown.
           * rewrite LaTeX list environments (itemize/enumerate/description) into simple bullets.
+      - on MATH segments only:
+          * ultra-targeted repair for JSON escape corruption control chars (\t, \f, \b).
       - rejoins everything.
-
-    Math segments are passed through unchanged.
     """
     if not isinstance(s, str) or not s.strip():
         return s
 
     s = _normalize_text_basics(s)
+    s = _replace_bs_token(s)
 
     parts: List[str] = []
     last = 0
@@ -136,8 +191,11 @@ def sanitize_text(s: str) -> str:
             non = _rewrite_latex_lists(non)
             parts.append(non)
 
-        # Raw math segment (left untouched)
-        parts.append(m.group(0))
+        # Math segment: keep delimiters, only repair JSON-escape corruption chars
+        math_seg = m.group(0)
+        math_seg = _repair_json_escape_corruption_in_math(math_seg)
+        parts.append(math_seg)
+
         last = m.end()
 
     # Trailing non-math

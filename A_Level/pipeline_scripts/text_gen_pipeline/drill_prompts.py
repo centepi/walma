@@ -16,10 +16,10 @@ def build_text_drill_prompt(
     Prompt for generating questions from scratch based on user topic/course/difficulty.
 
     IMPORTANT PIPELINE FACT:
-    - Your validator can repair INVALID JSON escapes like \langle by turning them into \\langle.
-    - But it CANNOT repair \text or \frac written with a single backslash in JSON source,
-      because JSON treats \t and \f as VALID escapes (TAB / formfeed) and parsing succeeds.
-    - Therefore the model MUST output LaTeX backslashes as DOUBLE backslashes in JSON source.
+    - JSON escaping is the root cause of repeated LaTeX corruption in this pipeline.
+    - Therefore: the model must NEVER output a raw backslash "\\" in any LaTeX.
+    - Instead, the model MUST use the token [[BS]] everywhere a LaTeX backslash would appear.
+      After JSON parsing, the backend will replace [[BS]] -> "\\" safely.
     """
 
     correction_block = (
@@ -67,7 +67,7 @@ You are an expert Mathematics Content Creator for the **{course}** curriculum.
 - The app does **not** see LaTeX documents, TeX preambles, or Markdown. It only sees the JSON fields described below.
 - MathJax supports inline/display math inside $...$ or $$...$$ with standard LaTeX math commands.
 - Therefore, you must NOT use full-TeX environments like:
-  \\begin{{equation}}, \\begin{{align}}, \\begin{{tikzpicture}}, \\begin{{matrix}}, etc.
+  [[BS]]begin{{equation}}, [[BS]]begin{{align}}, [[BS]]begin{{tikzpicture}}, [[BS]]begin{{matrix}}, etc.
   All diagrams must be represented ONLY through the visual_data JSON system.
 
 YOUR TASK:
@@ -93,14 +93,14 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 7. No Phantom Diagrams: If you mention a diagram/figure/graph, you MUST supply visual_data.
 
 8. Piecewise / cases:
-- If you use a piecewise definition, use ONLY \\begin{{cases}} ... \\end{{cases}}.
+- If you use a piecewise definition, use ONLY [[BS]]begin{{cases}} ... [[BS]]end{{cases}}.
 
 9. No LaTeX list environments:
-- Do NOT use \\begin{{itemize}}, \\begin{{enumerate}}, \\begin{{description}}, or \\item.
+- Do NOT use [[BS]]begin{{itemize}}, [[BS]]begin{{enumerate}}, [[BS]]begin{{description}}, or [[BS]]item.
 - If you need a list, use plain sentences separated by newlines.
 
 10. No LaTeX text-formatting commands in prose:
-- Do not use \\textbf{{...}}, \\emph{{...}}, \\textit{{...}}.
+- Do not use [[BS]]textbf{{...}}, [[BS]]emph{{...}}, [[BS]]textit{{...}}.
 
 --- VISUAL_DATA GUIDE (SELECTED) ---
 {visual_rules}
@@ -140,61 +140,50 @@ Correct:
 Wrong:
   "question_stem": "Line 1.\\\\nLine 2."  (shows \\n literally)
 
-B) LaTeX backslashes inside JSON strings (MAIN RULE):
-- In JSON SOURCE, every LaTeX command backslash MUST be escaped as DOUBLE backslash.
-  That means: write \\\\frac, \\\\sqrt, \\\\theta, \\\\gamma, \\\\beta, \\\\mu, \\\\pi, \\\\to, \\\\circ, etc. in JSON source.
+B) ABSOLUTE RULE: NEVER OUTPUT A RAW BACKSLASH FOR LATEX
+- You MUST NOT output "\\" anywhere for LaTeX.
+- Instead, use the token [[BS]] for EVERY LaTeX command backslash.
 
-WHY:
-- JSON treats \\t and \\f as valid escapes (TAB / formfeed).
-- If you write "\\text{{MeV}}" or "\\frac{{dx}}{{dt}}" with a single backslash in JSON source,
-  JSON will silently corrupt the string and MathJax will break.
+Examples (copy exactly):
+- $[[BS]]gamma_1$, $[[BS]]theta$, $[[BS]]beta$, $[[BS]]mu$, $[[BS]]pi$
+- $[[BS]]sqrt{{1 - [[BS]]beta^2}}$
+- $[[BS]]frac{{dx}}{{dt}}$
+- $30^{{[[BS]]circ}}$
+- $[[BS]]pi^0 [[BS]]to [[BS]]gamma_1 + [[BS]]gamma_2$
+- $E_{{[[BS]]gamma}}$ for photon energy symbol
+
+IMPORTANT:
+- Do NOT output "\\\\" either. Do NOT output "\\text". Do NOT output "\\frac". Use [[BS]]text / [[BS]]frac.
+- The backend will convert [[BS]] -> "\\" after parsing. You must keep [[BS]] exactly as written (uppercase).
 
 C) ABSOLUTE RULE: ALL MATH TOKENS MUST BE INSIDE $...$ OR $$...$$
 This includes:
 - greek letters (gamma, theta, beta, mu, pi)
 - subscripts/superscripts (gamma_1, tau_0, pi^0)
-- angles (30^\\circ)
+- angles (30^{{[[BS]]circ}})
+
 WRONG:
   "two photons, gamma_1 and gamma_2."
-  "theta = 30^\\\\circ"
+  "theta = 30^circ"
 RIGHT:
-  "two photons, $\\\\gamma_1$ and $\\\\gamma_2$."
-  "angle $\\\\theta = 30^\\\\circ$."
-  "decay $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$."
+  "two photons, $[[BS]]gamma_1$ and $[[BS]]gamma_2$."
+  "angle $[[BS]]theta = 30^{{[[BS]]circ}}$."
+  "decay $[[BS]]pi^0 [[BS]]to [[BS]]gamma_1 + [[BS]]gamma_2$."
 
-D) UNITS RULE (THIS FIXES THE REPEATED 'textMeV' BUG):
-This app is extremely sensitive to \\text{{...}} because a single-backslash "\\text" becomes a TAB escape in JSON and corrupts the output.
+D) Units rule:
+- You may write units as plain text outside math (preferred), e.g. "135 MeV/c^2".
+- Do NOT use [[BS]]text{{...}} for units unless necessary.
 
-Therefore:
-- PREFERRED: Put units OUTSIDE math as plain text, and keep only the symbol part in math.
-  Examples (copy exactly):
-    "question_stem": "A neutral pion has rest mass $M_0 = 135$ MeV/$c^2$."
-    "question_text": "A photon has energy $E_\\gamma = 500$ MeV."
-    "question_text": "The lifetime is $\\tau_0 = 2.20$ \\u03bcs."  (microseconds as plain text ok)
-- ALSO OK: Put the whole unit ratio outside math:
-    "question_stem": "Rest mass: $M_0 = 135$ MeV/c^2."
-- DO NOT use \\text{{MeV}} at all in generated content.
-  (If you use \\text{{...}} you will often accidentally produce 'textMeV' again.)
-
-Also:
-- NEVER insert a comma between a number and a unit.
-  BAD: "$M_0 = 135, ...$"
-  GOOD: "$M_0 = 135$ MeV/$c^2$"
-
-E) Angles:
-- Always write angles inside math and use degrees like this:
-  "question_text": "Angle $\\theta = 30^\\circ$."
-  (In JSON source: $\\\\theta = 30^\\\\circ$)
-
-Do NOT over-escape:
-- Do NOT write \\\\\\\\frac or \\\\\\\\sqrt in JSON source.
+E) No commas between a number and a unit:
+BAD: "$M_0 = 135, ...$"
+GOOD: "$M_0 = 135$ MeV/$c^2$"
 
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
-- Use standard LaTeX commands inside math: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times,
-  \\\\ln, \\\\sin, \\\\cos, \\\\theta, \\\\gamma, \\\\beta, \\\\mu, \\\\pi, \\\\to, \\\\circ, etc.
-- Do NOT use \\begin{{equation}}...\\end{{equation}} or \\begin{{align}}...\\end{{align}}; use $$...$$ instead.
-- Do not use the LaTeX linebreak command \\\\ inside math.
+- Use standard LaTeX commands (with [[BS]]): [[BS]]frac{{...}}{{...}}, [[BS]]sqrt{{...}}, [[BS]]cdot, [[BS]]times,
+  [[BS]]ln, [[BS]]sin, [[BS]]cos, [[BS]]theta, [[BS]]gamma, [[BS]]beta, [[BS]]mu, [[BS]]pi, [[BS]]to, [[BS]]circ, etc.
+- Do NOT use [[BS]]begin{{equation}}...[[BS]]end{{equation}} or [[BS]]begin{{align}}...[[BS]]end{{align}}; use $$...$$ instead.
+- Do not use the LaTeX linebreak command [[BS]][[BS]] inside math.
 
 Return ONLY the JSON object.
 """
