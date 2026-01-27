@@ -9,7 +9,9 @@ Goals for this simplified version:
   • Normalize different dash characters to a simple '-'.
   • Strip Markdown bold/underline markers **...** / __...__ OUTSIDE math segments.
 - Preserve math segments as the model produced them, EXCEPT for ultra-targeted
-  repairs of JSON-escape corruption (tabs/backspaces/formfeeds) and the [[BS]] token scheme.
+  repairs of JSON-escape corruption (tabs/backspaces/formfeeds), the [[BS]] token scheme,
+  and the TeX newline corruption case where the model emits double-backslash macros
+  inside math (e.g. \\in, \\mathbb, \\cdot) which TeX treats as a linebreak.
 
 Math segments are detected as:
   - $$ ... $$
@@ -156,6 +158,31 @@ def _repair_json_escape_corruption_in_math(seg: str) -> str:
     return seg
 
 
+def _repair_tex_newline_double_slash_macros_in_math(seg: str) -> str:
+    """
+    Repair TeX newline corruption inside math segments.
+
+    If the model outputs double-backslash before a macro inside math, e.g.
+        \\in, \\mathbb, \\cdot, \\times
+    then TeX/MathJax interprets \\ as a linebreak, and the macro name gets
+    printed as plain text (e.g. 'inmathbbZ', '2cdot3').
+
+    Fix:
+      - Collapse '\\\\<letters>' -> '\\<letters>'
+      - Also collapse doubled spacing commands '\\\\,' '\\\\;' '\\\\:' '\\\\!' -> '\\,' '\\;' '\\:' '\\!'
+    """
+    if not isinstance(seg, str) or not seg:
+        return seg
+
+    # Collapse TeX newline form before macro names
+    seg = re.sub(r"\\\\([A-Za-z]+)", r"\\\1", seg)
+
+    # Collapse doubled spacing commands
+    seg = re.sub(r"\\\\([,;:!])", r"\\\1", seg)
+
+    return seg
+
+
 # --- Core sanitizer ---
 
 def sanitize_text(s: str) -> str:
@@ -171,6 +198,7 @@ def sanitize_text(s: str) -> str:
           * rewrite LaTeX list environments (itemize/enumerate/description) into simple bullets.
       - on MATH segments only:
           * ultra-targeted repair for JSON escape corruption control chars (\t, \f, \b).
+          * ultra-targeted repair for TeX newline corruption where model emits \\macro inside math.
       - rejoins everything.
     """
     if not isinstance(s, str) or not s.strip():
@@ -191,9 +219,10 @@ def sanitize_text(s: str) -> str:
             non = _rewrite_latex_lists(non)
             parts.append(non)
 
-        # Math segment: keep delimiters, only repair JSON-escape corruption chars
+        # Math segment: keep delimiters, only ultra-targeted repairs
         math_seg = m.group(0)
         math_seg = _repair_json_escape_corruption_in_math(math_seg)
+        math_seg = _repair_tex_newline_double_slash_macros_in_math(math_seg)
         parts.append(math_seg)
 
         last = m.end()
