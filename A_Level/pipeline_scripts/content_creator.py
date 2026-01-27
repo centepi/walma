@@ -278,7 +278,9 @@ def _normalize_generated_object(obj: dict) -> dict:
 
 
 # -------------------------
-# Post-parse LaTeX repair (fixes "textMeV", "frac45c", missing backslashes)
+# Post-parse LaTeX repair:
+#  (1) inside-math: fixes \\text->\text and missing \text/\frac/\theta etc.
+#  (2) outside-math: wraps obvious physics tokens (gamma_1, theta=30^\circ, beta c, pi^0 -> ...)
 # -------------------------
 
 # Detect math segments exactly like postprocess_math: $$...$$, \[...\], \(...\), $...$, `...`
@@ -291,13 +293,10 @@ _MATH_SEG_RE = re.compile(
     re.DOTALL,
 )
 
-# Common macros that break when over-escaped (\\text) or missing slash (text{)
-# We ONLY apply inside math segments.
 _FIX_DOUBLE_SLASH_MACROS = [
-    "text", "frac", "sqrt", "theta", "phi", "pi", "gamma", "rho", "beta",
-    "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log",
+    "text", "frac", "sqrt", "theta", "phi", "pi", "gamma", "mu", "rho", "beta",
+    "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log", "to",
 ]
-
 
 def _repair_latex_inside_math_segment(seg: str) -> str:
     """
@@ -308,7 +307,8 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
         text{...} -> \text{...}
         frac{...}{...} -> \frac{...}{...}
         theta_1 -> \theta_1   (only when followed by _ or ^)
-        gamma_1 -> \gamma_1   (only when followed by _ or ^)
+        gamma_1 -> \gamma_1   (only when followed by _ or ^ or digit)
+        mu -> \mu (only when used as a symbol context)
     """
     if not seg:
         return seg
@@ -316,31 +316,28 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
     out = seg
 
     # 1) Fix TeX-level double backslash before known macros: \\text -> \text
-    # IMPORTANT: do NOT use \b here because it fails for macros followed by "_" or "^" (e.g., \\gamma_1).
-    # TeX macro names are letters; they end when the next char is NOT a letter.
     for m in _FIX_DOUBLE_SLASH_MACROS:
-        out = re.sub(rf"\\\\{m}(?=[^A-Za-z]|$)", rf"\\{m}", out)
+        out = re.sub(rf"\\\\{m}\b", rf"\\{m}", out)
 
     # 2) Fix missing backslash for \text{...} and \frac{...}{...}
-    # Only when it looks like a command (followed by '{')
     out = re.sub(r"(?<!\\)\btext\s*\{", r"\\text{", out)
     out = re.sub(r"(?<!\\)\bfrac\s*\{", r"\\frac{", out)
 
-    # 3) Fix missing backslash for theta/gamma when used like a symbol (theta_1, theta^2, gamma_1, gamma^2)
+    # 3) Fix missing backslash for common greek/symbol macros in symbol contexts
     out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
-    out = re.sub(r"(?<!\\)\bgamma(?=\s*[_^])", r"\\gamma", out)
+    out = re.sub(r"(?<!\\)\bgamma(?=\s*[_^\d])", r"\\gamma", out)
+    out = re.sub(r"(?<!\\)\bbeta(?=\s*[_^\d])", r"\\beta", out)
+    out = re.sub(r"(?<!\\)\bmu(?=\s*[_^\d])", r"\\mu", out)
+    out = re.sub(r"(?<!\\)\bpi(?=\s*[_^\d])", r"\\pi", out)
 
-    # 4) Fix missing backslash for circ when used like degrees (^\circ or \circ)
+    # 4) Fix missing backslash for circ when used like degrees
     out = re.sub(r"(?<!\\)\bcirc\b", r"\\circ", out)
 
     return out
 
 
 def _repair_common_latex_in_math(s: str) -> str:
-    """
-    Apply conservative LaTeX repairs ONLY inside math segments.
-    Non-math text is untouched.
-    """
+    """Apply conservative LaTeX repairs ONLY inside math segments. Non-math text is untouched."""
     if not isinstance(s, str) or not s:
         return s
 
@@ -356,14 +353,88 @@ def _repair_common_latex_in_math(s: str) -> str:
     return "".join(parts)
 
 
+# --- Outside-math “obvious physics tokens” wrapper (VERY conservative) ---
+
+# Keep these narrow to avoid messing with normal prose.
+_OUTSIDE_FIX_PATTERNS: List[tuple] = [
+    # pi^0 -> gamma_1 + gamma_2 (often appears squashed)
+    (
+        re.compile(r"\bpi\s*\^\s*0\s*to\s*gamma\s*_?\s*1\s*\+\s*gamma\s*_?\s*2\b", re.IGNORECASE),
+        r"$\\pi^0 \\to \\gamma_1 + \\gamma_2$",
+    ),
+    # gamma_1 / gamma1
+    (
+        re.compile(r"\bgamma\s*_?\s*(\d+)\b", re.IGNORECASE),
+        r"$\\gamma_{\1}$",
+    ),
+    # theta (as a named variable) when used like "theta = ..."
+    (
+        re.compile(r"\btheta\b(?=\s*[=,:])", re.IGNORECASE),
+        r"$\\theta$",
+    ),
+    # beta c (often appears as "betac")
+    (
+        re.compile(r"\bbeta\s*c\b", re.IGNORECASE),
+        r"$\\beta c$",
+    ),
+    (
+        re.compile(r"\bbetac\b", re.IGNORECASE),
+        r"$\\beta c$",
+    ),
+    # degrees: 30^\circ / 30\circ / 30 ^\circ outside math
+    (
+        re.compile(r"(\d+(?:\.\d+)?)\s*\^\s*\\?circ\b"),
+        r"$\1^\\circ$",
+    ),
+    # v_mu or v_\mu outside math (common in SR word problems)
+    (
+        re.compile(r"\bv\s*_\s*\\?mu\b", re.IGNORECASE),
+        r"$v_{\\mu}$",
+    ),
+    # tau_0 outside math
+    (
+        re.compile(r"\btau\s*_?\s*0\b", re.IGNORECASE),
+        r"$\\tau_0$",
+    ),
+]
+
+def _repair_obvious_math_tokens_outside_math(s: str) -> str:
+    """
+    Outside-math fallback:
+    - ONLY operates on non-math segments.
+    - Wraps very specific, physics-y tokens into $...$ so MathJax can render them.
+    - Does NOT attempt to “understand” the sentence; it just fixes the common corruptions you saw.
+    """
+    if not isinstance(s, str) or not s:
+        return s
+
+    parts: List[str] = []
+    last = 0
+
+    for m in _MATH_SEG_RE.finditer(s):
+        # non-math chunk before math
+        if m.start() > last:
+            non = s[last:m.start()]
+            for pat, repl in _OUTSIDE_FIX_PATTERNS:
+                non = pat.sub(repl, non)
+            parts.append(non)
+
+        # math chunk untouched here
+        parts.append(m.group(0))
+        last = m.end()
+
+    # trailing non-math
+    if last < len(s):
+        non = s[last:]
+        for pat, repl in _OUTSIDE_FIX_PATTERNS:
+            non = pat.sub(repl, non)
+        parts.append(non)
+
+    return "".join(parts)
+
+
 def _repair_common_latex_in_math_fields(obj: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Run _repair_common_latex_in_math on the fields that are rendered by MathJax.
-    This directly targets the exact corruption seen in screenshots:
-      - 300textMeV (from \\text or lost \text)
-      - frac45c (from \\frac or lost \frac)
-      - gamma_1, theta_1 and ^\circ missing backslashes or mis-escaped
-    """
+    """Run inside-math repairs on the fields that are rendered by MathJax."""
     if not isinstance(obj, dict):
         return obj
 
@@ -377,6 +448,26 @@ def _repair_common_latex_in_math_fields(obj: Dict[str, Any]) -> Dict[str, Any]:
             for k in ("question_text", "solution_text", "final_answer"):
                 if isinstance(p0.get(k), str):
                     p0[k] = _repair_common_latex_in_math(p0[k])
+            obj["parts"][0] = p0
+
+    return obj
+
+
+def _repair_obvious_math_tokens_outside_math_fields(obj: Dict[str, Any]) -> Dict[str, Any]:
+    """Run outside-math wrapping repairs on the fields rendered by MathJax."""
+    if not isinstance(obj, dict):
+        return obj
+
+    if isinstance(obj.get("question_stem"), str):
+        obj["question_stem"] = _repair_obvious_math_tokens_outside_math(obj["question_stem"])
+
+    parts = obj.get("parts") or []
+    if isinstance(parts, list) and parts:
+        p0 = parts[0] or {}
+        if isinstance(p0, dict):
+            for k in ("question_text", "solution_text", "final_answer"):
+                if isinstance(p0.get(k), str):
+                    p0[k] = _repair_obvious_math_tokens_outside_math(p0[k])
             obj["parts"][0] = p0
 
     return obj
@@ -655,9 +746,12 @@ def create_question(
     # Minimal safe sanitizer (does NOT rewrite LaTeX)
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
-    # ✅ NEW: Repair common post-parse LaTeX corruption inside math only.
-    # This directly targets: 300textMeV, frac45c, gamma_1/theta_1 / ^\circ issues.
+    # ✅ Step 1: Fix corrupted LaTeX inside $...$ (\\text, \\frac, missing \theta, etc.)
     content_object = _repair_common_latex_in_math_fields(content_object)
+
+    # ✅ Step 2: Fix obvious physics tokens that leaked OUTSIDE $...$
+    # (gamma_1, theta = ..., degrees, betac, pi^0 to gamma_1 + gamma_2)
+    content_object = _repair_obvious_math_tokens_outside_math_fields(content_object)
 
     content_object = _synthesize_answer_spec_if_missing(content_object)
 
@@ -793,11 +887,13 @@ Return the same content again as a single perfectly valid JSON object.
 
 CRITICAL JSON/LaTeX RULES:
 1) Output ONLY JSON (no markdown fences, no commentary).
-2) Every LaTeX command must be inside $...$ or $$...$$.
+2) ALL math tokens (variables, greek letters, units, angles) MUST be inside $...$ or $$...$$.
+   Example: "two photons, $\\\\gamma_1$ and $\\\\gamma_2$."
 3) In JSON SOURCE, you MUST escape LaTeX backslashes as DOUBLE backslash.
    Example JSON source must look like: $\\\\frac{{4}}{{5}}$ and $\\\\text{{MeV}}$.
 4) Do NOT over-escape: do NOT output four backslashes in JSON source (\\\\\\\\frac).
-5) Ensure units use \\text{{...}} and angles use ^\\circ inside math fences.
+5) Angles must be written like $30^\\\\circ$ (not '30\\circ' in plain text).
+6) Use $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$ for decays.
 
 Now output the corrected JSON object only.
 """

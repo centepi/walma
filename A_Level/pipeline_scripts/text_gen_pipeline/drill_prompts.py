@@ -58,11 +58,6 @@ def build_text_drill_prompt(
     else:
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
-    # IMPORTANT:
-    # Do NOT use a raw string here (rf"...").
-    # Raw strings would show 4 backslashes (\\\\) to the model when we write "\\\\",
-    # encouraging the model to over-escape and output LaTeX commands that render as \\frac, \\sqrt, etc.
-    # We want the model to output JSON source with DOUBLE backslashes (\\) for LaTeX commands.
     prompt = f"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
@@ -145,39 +140,54 @@ Correct:
 Wrong:
   "question_stem": "Line 1.\\\\nLine 2."  (shows \\n literally)
 
-B) LaTeX backslashes inside JSON strings (THIS IS THE MAIN RULE):
+B) LaTeX backslashes inside JSON strings (MAIN RULE):
 - In JSON SOURCE, every LaTeX command backslash MUST be escaped as DOUBLE backslash.
-  That means: write \\\\text, \\\\frac, \\\\sqrt, \\\\theta, \\\\circ, etc. in JSON source.
+  That means: write \\\\text, \\\\frac, \\\\sqrt, \\\\theta, \\\\gamma, \\\\beta, \\\\mu, \\\\pi, \\\\to, \\\\circ, etc. in JSON source.
 
 WHY:
 - JSON treats \\t and \\f as valid escapes (TAB / formfeed).
 - So if you write "\\text{{MeV}}" or "\\frac{{dx}}{{dt}}" with a single backslash in JSON source,
   JSON will silently corrupt the string and MathJax will break.
 
-C) Units + \\text{{...}} (THIS PREVENTS THE "300textMeV" BUG):
+C) ABSOLUTE RULE: ALL MATH TOKENS MUST BE INSIDE $...$ OR $$...$$
+This includes:
+- greek letters (gamma, theta, beta, mu, pi)
+- subscripts/superscripts (gamma_1, tau_0, pi^0)
+- angles (30^\\circ)
+- units written with \\text{{...}}
+WRONG (will render as plain text and break):
+  "two photons, gamma_1 and gamma_2."
+  "theta = 30^\\\\circ"
+RIGHT:
+  "two photons, $\\\\gamma_1$ and $\\\\gamma_2$."
+  "angle $\\\\theta = 30^\\\\circ$."
+  "decay $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$."
+
+D) Units + \\text{{...}} (prevents the 'textMeV' bug):
 - NEVER put leading/trailing spaces inside \\text{{...}}.
   - BAD:  $300\\,\\\\text{{ MeV }}$
-  - BAD:  $300 \\\\text{{ MeV}}$   (space inside braces)
+  - BAD:  $300\\,\\\\text{{ MeV}}$
   - GOOD: $300\\,\\\\text{{MeV}}$
-- ALWAYS use a thin space before a unit: use \\\\, (i.e. \\\\,) between the number and the unit.
-  - GOOD JSON source: "M_0 = 300\\,\\\\text{{MeV}}/c^2"
-  - GOOD JSON source: "E = 500\\,\\\\text{{MeV}}"
-- Write common physics units in this style:
-  - $c^2$ is plain math, no \\text needed.
-  - Use: $300\\,\\\\text{{MeV}}/c^2$ (NOT $300 \\\\text{{ MeV}}/c^2$)
+- Use LaTeX thin-space command \\, between a number and a unit.
+  In JSON SOURCE that looks like: "\\\\," (because backslash must be doubled)
+  Example JSON source:
+    "M_0 = 300\\\\,\\\\text{{MeV}}/c^2"
+    "E = 500\\\\,\\\\text{{MeV}}"
 
 Correct JSON source examples (YOU MUST OUTPUT THESE FORMS EXACTLY):
-  "question_text": "Units: $300\\,\\\\text{{MeV}}$."
+  "question_text": "Units: $300\\\\,\\\\text{{MeV}}$."
   "question_text": "Compute $\\\\frac{{dx}}{{dt}}$."
   "question_text": "Angle $\\\\theta = 90^\\\\circ$."
+  "question_text": "Decay $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$."
+  "question_text": "Speed $v_{{\\\\mu}} = 0.990c$."
 
-Do NOT triple-escape:
+Do NOT over-escape:
 - Do NOT write \\\\\\\\text or \\\\\\\\frac in JSON source.
 
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
 - Use standard LaTeX commands inside math: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times,
-  \\\\ln, \\\\sin, \\\\cos, \\\\theta, \\\\gamma, \\\\circ, \\\\text{{...}}, etc.
+  \\\\ln, \\\\sin, \\\\cos, \\\\theta, \\\\gamma, \\\\beta, \\\\mu, \\\\pi, \\\\to, \\\\circ, \\\\text{{...}}, etc.
 - Do NOT use \\begin{{equation}}...\\end{{equation}} or \\begin{{align}}...\\end{{align}}; use $$...$$ instead.
 - Do not use the LaTeX linebreak command \\\\ inside math.
 
