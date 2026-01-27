@@ -666,21 +666,59 @@ def create_question(
 
 
 def request_ai_correction(chat_session, error_message, original_text, context_text=None):
-    """Asks the AI to correct its last response based on a validation error."""
+    """
+    Ask the model to resend the SAME JSON content, but in strictly valid JSON.
+
+    CRITICAL: This pipeline renders math via MathJax after JSON parsing.
+    That means:
+      - In JSON SOURCE, every LaTeX command backslash MUST be written as DOUBLE backslash.
+        Example JSON source: "$\\\\text{MeV}$"  -> after json.loads => "$\\text{MeV}$" (MathJax OK)
+      - Do NOT over-escape LaTeX in JSON source. If you write "$\\\\\\\\text{MeV}$",
+        then after json.loads it becomes "$\\\\text{MeV}$" and MathJax will show "textMeV".
+
+    Also:
+      - Keep $...$ / $$...$$ delimiters exactly as normal dollar signs (do NOT escape $).
+      - Newlines inside strings must be written as "\\n" (one backslash + n) in JSON source.
+      - Output ONLY the JSON object (no markdown fences, no commentary).
+    """
     short_err = utils.truncate(str(error_message), limit=140)
     logger.debug("Requesting AI self-correction. Reason: %s", short_err)
 
+    # Optional extra context (rarely used, but keep for API compat)
+    extra = ""
+    if isinstance(context_text, str) and context_text.strip():
+        extra = f"\n\n--- CONTEXT (DO NOT REPEAT) ---\n{context_text.strip()}\n"
+
     prompt = f"""
-    Your last response could not be parsed and failed with the following error: '{error_message}'.
+Your last response could not be parsed and failed with this error:
+{error_message}
 
-    Here is the full, problematic response you sent:
-    --- FAULTY RESPONSE ---
-    {original_text}
-    --- END FAULTY RESPONSE ---
+You must output the SAME intended content again, but as ONE perfectly valid JSON object.
 
-    Please provide the same content again, but ensure it is a single, perfectly valid JSON object with all backslashes and special characters correctly escaped for JSON.
-    Do not include any explanation or apologies, only the corrected JSON object.
-    """
+NON-NEGOTIABLE JSON RULES:
+1) Output ONLY the JSON object. No markdown code fences. No backticks. No commentary.
+2) All strings must be valid JSON (use double quotes for keys/strings).
+3) Fix trailing commas and any illegal control characters.
+
+MATH + LaTeX RULES (CRITICAL):
+A) The app will json-parse your output, then MathJax renders the resulting strings.
+B) Therefore, in JSON SOURCE you MUST write LaTeX backslashes as DOUBLE backslashes.
+   - Correct JSON source: "$\\\\frac{{a}}{{b}}$", "$\\\\sqrt{{x}}$", "$\\\\text{{MeV}}$"
+   - WRONG (under-escaped): "$\\frac{{a}}{{b}}$"   (JSON may corrupt \\f \\t etc.)
+   - WRONG (over-escaped): "$\\\\\\\\text{{MeV}}$" (MathJax shows "textMeV")
+C) Keep ALL LaTeX inside $...$ or $$...$$ (no \\begin{{equation}} / \\begin{{align}} etc.)
+D) Do NOT use the TeX linebreak command "\\\\" inside math.
+
+NEWLINES:
+- If you need a line break inside a JSON string, use "\\n" (one backslash + n).
+
+Here is your previous (faulty) response. Re-emit the corrected JSON:
+--- FAULTY RESPONSE ---
+{original_text}
+--- END FAULTY RESPONSE ---
+{extra}
+""".strip()
+
     try:
         response = chat_session.send_message(prompt)
         logger.debug("Self-correction response received (first 200 chars): %s", (response.text or "")[:200])
