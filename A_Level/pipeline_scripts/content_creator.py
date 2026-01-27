@@ -298,6 +298,7 @@ _FIX_DOUBLE_SLASH_MACROS = [
     "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log",
 ]
 
+
 def _repair_latex_inside_math_segment(seg: str) -> str:
     """
     Repair only inside a math segment:
@@ -307,24 +308,27 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
         text{...} -> \text{...}
         frac{...}{...} -> \frac{...}{...}
         theta_1 -> \theta_1   (only when followed by _ or ^)
+        gamma_1 -> \gamma_1   (only when followed by _ or ^)
     """
-    if not seg or "\\" not in seg and "text{" not in seg and "frac{" not in seg and "theta_" not in seg:
+    if not seg:
         return seg
 
     out = seg
 
     # 1) Fix TeX-level double backslash before known macros: \\text -> \text
-    # We target patterns like: \\text, \\frac, \\circ etc.
+    # IMPORTANT: do NOT use \b here because it fails for macros followed by "_" or "^" (e.g., \\gamma_1).
+    # TeX macro names are letters; they end when the next char is NOT a letter.
     for m in _FIX_DOUBLE_SLASH_MACROS:
-        out = re.sub(rf"\\\\{m}\b", rf"\\{m}", out)
+        out = re.sub(rf"\\\\{m}(?=[^A-Za-z]|$)", rf"\\{m}", out)
 
     # 2) Fix missing backslash for \text{...} and \frac{...}{...}
     # Only when it looks like a command (followed by '{')
     out = re.sub(r"(?<!\\)\btext\s*\{", r"\\text{", out)
     out = re.sub(r"(?<!\\)\bfrac\s*\{", r"\\frac{", out)
 
-    # 3) Fix missing backslash for theta when used like a symbol (theta_1, theta^2)
+    # 3) Fix missing backslash for theta/gamma when used like a symbol (theta_1, theta^2, gamma_1, gamma^2)
     out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
+    out = re.sub(r"(?<!\\)\bgamma(?=\s*[_^])", r"\\gamma", out)
 
     # 4) Fix missing backslash for circ when used like degrees (^\circ or \circ)
     out = re.sub(r"(?<!\\)\bcirc\b", r"\\circ", out)
@@ -358,7 +362,7 @@ def _repair_common_latex_in_math_fields(obj: Dict[str, Any]) -> Dict[str, Any]:
     This directly targets the exact corruption seen in screenshots:
       - 300textMeV (from \\text or lost \text)
       - frac45c (from \\frac or lost \frac)
-      - theta_1 and ^\circ missing backslashes or mis-escaped
+      - gamma_1, theta_1 and ^\circ missing backslashes or mis-escaped
     """
     if not isinstance(obj, dict):
         return obj
@@ -652,7 +656,7 @@ def create_question(
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
     # ✅ NEW: Repair common post-parse LaTeX corruption inside math only.
-    # This directly targets: 300textMeV, frac45c, theta_1 / ^\circ issues.
+    # This directly targets: 300textMeV, frac45c, gamma_1/theta_1 / ^\circ issues.
     content_object = _repair_common_latex_in_math_fields(content_object)
 
     content_object = _synthesize_answer_spec_if_missing(content_object)
