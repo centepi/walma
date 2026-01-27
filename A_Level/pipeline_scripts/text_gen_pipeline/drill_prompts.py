@@ -154,8 +154,20 @@ WHY:
 - So if you write "\\text{{MeV}}" or "\\frac{{dx}}{{dt}}" with a single backslash in JSON source,
   JSON will silently corrupt the string and MathJax will break.
 
-Correct JSON source examples (YOU MUST OUTPUT THESE FORMS):
-  "question_text": "Units: $\\\\text{{MeV}}$."
+C) Units + \\text{{...}} (THIS PREVENTS THE "300textMeV" BUG):
+- NEVER put leading/trailing spaces inside \\text{{...}}.
+  - BAD:  $300\\,\\\\text{{ MeV }}$
+  - BAD:  $300 \\\\text{{ MeV}}$   (space inside braces)
+  - GOOD: $300\\,\\\\text{{MeV}}$
+- ALWAYS use a thin space before a unit: use \\\\, (i.e. \\\\,) between the number and the unit.
+  - GOOD JSON source: "M_0 = 300\\,\\\\text{{MeV}}/c^2"
+  - GOOD JSON source: "E = 500\\,\\\\text{{MeV}}"
+- Write common physics units in this style:
+  - $c^2$ is plain math, no \\text needed.
+  - Use: $300\\,\\\\text{{MeV}}/c^2$ (NOT $300 \\\\text{{ MeV}}/c^2$)
+
+Correct JSON source examples (YOU MUST OUTPUT THESE FORMS EXACTLY):
+  "question_text": "Units: $300\\,\\\\text{{MeV}}$."
   "question_text": "Compute $\\\\frac{{dx}}{{dt}}$."
   "question_text": "Angle $\\\\theta = 90^\\\\circ$."
 
