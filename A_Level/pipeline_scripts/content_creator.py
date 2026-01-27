@@ -315,6 +315,14 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
 
     out = seg
 
+    # ✅ NEW: collapse TeX newline form inside math:
+    # TeX treats "\\" as a newline. If the model outputs "\\sqrt{19}",
+    # MathJax can render literal "sqrt19". Fix by collapsing "\\<letters>" -> "\<letters>".
+    out = re.sub(r"\\\\([A-Za-z]+)", r"\\\1", out)
+
+    # ✅ NEW: collapse doubled TeX spacing commands: "\\," "\\;" "\\:" "\\!" -> "\," "\;" "\:" "\!"
+    out = re.sub(r"\\\\([,;:!])", r"\\\1", out)
+
     # 1) Fix TeX-level double backslash before known macros: \\text -> \text
     for m in _FIX_DOUBLE_SLASH_MACROS:
         out = re.sub(rf"\\\\{m}\b", rf"\\{m}", out)
@@ -746,11 +754,10 @@ def create_question(
     # Minimal safe sanitizer (does NOT rewrite LaTeX)
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
-    # ✅ Step 1: Fix corrupted LaTeX inside $...$ (\\text, \\frac, missing \theta, etc.)
+    # ✅ Step 1: Fix corrupted LaTeX inside $...$ (\\text, \\frac, \\sqrt, missing \theta, etc.)
     content_object = _repair_common_latex_in_math_fields(content_object)
 
     # ✅ Step 2: Fix obvious physics tokens that leaked OUTSIDE $...$
-    # (gamma_1, theta = ..., degrees, betac, pi^0 to gamma_1 + gamma_2)
     content_object = _repair_obvious_math_tokens_outside_math_fields(content_object)
 
     content_object = _synthesize_answer_spec_if_missing(content_object)
