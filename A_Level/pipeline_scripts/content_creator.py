@@ -1,4 +1,4 @@
-#content_creator.py
+# content_creator.py
 import os
 import re
 import json
@@ -388,12 +388,13 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
     out = re.sub(r"(\d)\s*,\s*(?=[A-Za-z])", r"\1 ", out)
 
     # ✅ Collapse TeX newline form inside math:
-    # TeX treats "\\\\" as a newline. If the model outputs "\\\\sqrt{19}",
-    # MathJax can render literal "sqrt19". Collapse "\\\\<letters>" -> "\\<letters>".
-    out = re.sub(r"\\\\([A-Za-z]+)", r"\\\1", out)
+    # TeX treats "\\" as a newline. If the model outputs "\\in" or "\\mathbb{C}" (or even "\\\\in"),
+    # MathJax can render literal "in" / "mathbbC". Collapse any run of >=2 backslashes before letters
+    # down to a single macro backslash: "\\in" -> "\in", "\\\\mathbb" -> "\mathbb"
+    out = re.sub(r"\\{2,}([A-Za-z]+)", r"\\\1", out)
 
     # ✅ Collapse doubled TeX spacing commands: "\\," "\\;" "\\:" "\\!" -> "\," "\;" "\:" "\!"
-    out = re.sub(r"\\\\([,;:!])", r"\\\1", out)
+    out = re.sub(r"\\{2,}([,;:!])", r"\\\1", out)
 
     # ✅ Fix: corrupted unit tokens like "textMeV", "textmus" inside math
     def _fix_corrupt_unit(m: re.Match) -> str:
@@ -409,8 +410,9 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
     )
 
     # 1) Fix TeX-level double backslash before known macros: \\text -> \text
+    # (kept as an extra guard; the generic collapse above already handles this)
     for m in _FIX_DOUBLE_SLASH_MACROS:
-        out = re.sub(rf"\\\\{m}\b", rf"\\{m}", out)
+        out = re.sub(rf"\\{{2,}}{m}\b", rf"\\{m}", out)
 
     # 2) Fix missing backslash for \text{...} and \frac{...}{...}
     out = re.sub(r"(?<!\\)\btext\s*\{", r"\\text{", out)
@@ -844,7 +846,7 @@ def create_question(
     # Minimal safe sanitizer (does NOT rewrite LaTeX)
     content_object = postprocess_math.sanitize_generated_object(content_object)
 
-    # ✅ Step 1: Fix corrupted LaTeX inside $...$ (\\text, \\frac, \\sqrt, missing \theta, etc.)
+    # ✅ Step 1: Fix corrupted LaTeX inside $...$ (\\text, \\frac, \\sqrt, \\in, \\mathbb, \\times, missing \theta, etc.)
     content_object = _repair_common_latex_in_math_fields(content_object)
 
     # ✅ Step 2: Fix obvious physics tokens that leaked OUTSIDE $...$

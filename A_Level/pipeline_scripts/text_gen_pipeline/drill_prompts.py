@@ -20,6 +20,11 @@ def build_text_drill_prompt(
     - Therefore: the model must NEVER output a raw backslash "\\" in any LaTeX.
     - Instead, the model MUST use the token [[BS]] everywhere a LaTeX backslash would appear.
       After JSON parsing, the backend will replace [[BS]] -> "\\" safely.
+
+    EXTRA CRITICAL:
+    - NEVER output the LaTeX newline command inside math.
+      That means: NEVER output [[BS]][[BS]]in, [[BS]][[BS]]times, [[BS]][[BS]]mathbb, etc.
+      [[BS]][[BS]] inside $...$ or $$...$$ will be interpreted as a TeX linebreak and will break macros.
     """
 
     correction_block = (
@@ -153,6 +158,11 @@ Examples (copy exactly):
 - $E_{{[[BS]]gamma}}$ for photon energy symbol
 
 IMPORTANT:
+- Do NOT output "[[BS]][[BS]]" inside $...$ or $$...$$.
+  That sequence is a TeX linebreak and will corrupt macros (it causes 'vinmathbbC^n', 'ntimesn', etc.).
+  Always use a SINGLE [[BS]] before every LaTeX command:
+  - RIGHT: $v [[BS]]in [[BS]]mathbb{{C}}^n$
+  - WRONG: $v [[BS]][[BS]]in [[BS]][[BS]]mathbb{{C}}^n$
 - Do NOT output "\\\\" either. Do NOT output "\\text". Do NOT output "\\frac". Use [[BS]]text / [[BS]]frac.
 - The backend will convert [[BS]] -> "\\" after parsing. You must keep [[BS]] exactly as written (uppercase).
 
@@ -161,14 +171,18 @@ This includes:
 - greek letters (gamma, theta, beta, mu, pi)
 - subscripts/superscripts (gamma_1, tau_0, pi^0)
 - angles (30^{{[[BS]]circ}})
+- set notation and linear algebra macros (\\in, \\mathbb, \\times, \\cdot, etc.) using [[BS]].
 
 WRONG:
   "two photons, gamma_1 and gamma_2."
   "theta = 30^circ"
+  "$v [[BS]][[BS]]in [[BS]][[BS]]mathbb{{C}}^n$"
+  "$n [[BS]][[BS]]times n$"
 RIGHT:
   "two photons, $[[BS]]gamma_1$ and $[[BS]]gamma_2$."
   "angle $[[BS]]theta = 30^{{[[BS]]circ}}$."
-  "decay $[[BS]]pi^0 [[BS]]to [[BS]]gamma_1 + [[BS]]gamma_2$."
+  "$v [[BS]]in [[BS]]mathbb{{C}}^n$"
+  "$n [[BS]]times n$"
 
 D) Units rule:
 - You may write units as plain text outside math (preferred), e.g. "135 MeV/c^2".
@@ -181,7 +195,7 @@ GOOD: "$M_0 = 135$ MeV/$c^2$"
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
 - Use standard LaTeX commands (with [[BS]]): [[BS]]frac{{...}}{{...}}, [[BS]]sqrt{{...}}, [[BS]]cdot, [[BS]]times,
-  [[BS]]ln, [[BS]]sin, [[BS]]cos, [[BS]]theta, [[BS]]gamma, [[BS]]beta, [[BS]]mu, [[BS]]pi, [[BS]]to, [[BS]]circ, etc.
+  [[BS]]ln, [[BS]]sin, [[BS]]cos, [[BS]]theta, [[BS]]gamma, [[BS]]beta, [[BS]]mu, [[BS]]pi, [[BS]]to, [[BS]]circ, [[BS]]in, [[BS]]mathbb, etc.
 - Do NOT use [[BS]]begin{{equation}}...[[BS]]end{{equation}} or [[BS]]begin{{align}}...[[BS]]end{{align}}; use $$...$$ instead.
 - Do not use the LaTeX linebreak command [[BS]][[BS]] inside math.
 
