@@ -298,6 +298,28 @@ _FIX_DOUBLE_SLASH_MACROS = [
     "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log", "to",
 ]
 
+# ✅ NEW: specific “unit corruption” tokens that keep showing up when \text is eaten by JSON escapes.
+# We fix these inside math by converting "textMeV" -> "\,\mathrm{MeV}" etc.
+_CORRUPT_UNIT_MAP: Dict[str, str] = {
+    "textmev": r"\,\mathrm{MeV}",
+    "textgev": r"\,\mathrm{GeV}",
+    "textkev": r"\,\mathrm{keV}",
+    "texteV": r"\,\mathrm{eV}",  # note: kept for completeness, key is lowercased below
+    "texteV".lower(): r"\,\mathrm{eV}",
+    "textj": r"\,\mathrm{J}",
+    "textkg": r"\,\mathrm{kg}",
+    "textg": r"\,\mathrm{g}",
+    "textn": r"\,\mathrm{N}",
+    "textpa": r"\,\mathrm{Pa}",
+    "textw": r"\,\mathrm{W}",
+    "texts": r"\,\mathrm{s}",
+    "textms": r"\,\mathrm{ms}",
+    "textns": r"\,\mathrm{ns}",
+    "textus": r"\,\mu\mathrm{s}",
+    "textmus": r"\,\mu\mathrm{s}",
+}
+
+
 def _repair_latex_inside_math_segment(seg: str) -> str:
     """
     Repair only inside a math segment:
@@ -309,19 +331,39 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
         theta_1 -> \theta_1   (only when followed by _ or ^)
         gamma_1 -> \gamma_1   (only when followed by _ or ^ or digit)
         mu -> \mu (only when used as a symbol context)
+
+    Also repairs recurring corruption:
+    - "sqrt19" from "\\\\sqrt{19}" newline misuse
+    - "textMeV" / "textmus" when "\\text{...}" got eaten by JSON escapes
     """
     if not seg:
         return seg
 
     out = seg
 
-    # ✅ NEW: collapse TeX newline form inside math:
-    # TeX treats "\\" as a newline. If the model outputs "\\sqrt{19}",
-    # MathJax can render literal "sqrt19". Fix by collapsing "\\<letters>" -> "\<letters>".
+    # ✅ Fix: remove comma between a number and a token inside math (e.g. "135, textMeV/c^2")
+    out = re.sub(r"(\d)\s*,\s*(?=[A-Za-z])", r"\1 ", out)
+
+    # ✅ Collapse TeX newline form inside math:
+    # TeX treats "\\\\" as a newline. If the model outputs "\\\\sqrt{19}",
+    # MathJax can render literal "sqrt19". Collapse "\\\\<letters>" -> "\\<letters>".
     out = re.sub(r"\\\\([A-Za-z]+)", r"\\\1", out)
 
-    # ✅ NEW: collapse doubled TeX spacing commands: "\\," "\\;" "\\:" "\\!" -> "\," "\;" "\:" "\!"
+    # ✅ Collapse doubled TeX spacing commands: "\\," "\\;" "\\:" "\\!" -> "\," "\;" "\:" "\!"
     out = re.sub(r"\\\\([,;:!])", r"\\\1", out)
+
+    # ✅ Fix: corrupted unit tokens like "textMeV", "textmus" inside math
+    def _fix_corrupt_unit(m: re.Match) -> str:
+        tok = (m.group(0) or "").lower()
+        rep = _CORRUPT_UNIT_MAP.get(tok)
+        return rep if rep is not None else m.group(0)
+
+    out = re.sub(
+        r"\btext(?:mev|gev|kev|ev|j|kg|g|n|pa|w|ms|ns|us|mus|s)\b",
+        _fix_corrupt_unit,
+        out,
+        flags=re.IGNORECASE,
+    )
 
     # 1) Fix TeX-level double backslash before known macros: \\text -> \text
     for m in _FIX_DOUBLE_SLASH_MACROS:
@@ -330,6 +372,18 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
     # 2) Fix missing backslash for \text{...} and \frac{...}{...}
     out = re.sub(r"(?<!\\)\btext\s*\{", r"\\text{", out)
     out = re.sub(r"(?<!\\)\bfrac\s*\{", r"\\frac{", out)
+
+    # 3) Fix missing backslash for common greek/symbol macros in symbol contexts
+    out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
+    out = re.sub(r"(?<!\\)\bgamma(?=\s*[_^\d])", r"\\gamma", out)
+    out = re.sub(r"(?<!\\)\bbeta(?=\s*[_^\d])", r"\\beta", out)
+    out = re.sub(r"(?<!\\)\bmu(?=\s*[_^\d])", r"\\mu", out)
+    out = re.sub(r"(?<!\\)\bpi(?=\s*[_^\d])", r"\\pi", out)
+
+    # 4) Fix missing backslash for circ when used like degrees
+    out = re.sub(r"(?<!\\)\bcirc\b", r"\\circ", out)
+
+    return out
 
     # 3) Fix missing backslash for common greek/symbol macros in symbol contexts
     out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
@@ -894,13 +948,18 @@ Return the same content again as a single perfectly valid JSON object.
 
 CRITICAL JSON/LaTeX RULES:
 1) Output ONLY JSON (no markdown fences, no commentary).
-2) ALL math tokens (variables, greek letters, units, angles) MUST be inside $...$ or $$...$$.
+2) ALL math tokens (variables, greek letters, subscripts, angles, decay arrows) MUST be inside $...$ or $$...$$.
    Example: "two photons, $\\\\gamma_1$ and $\\\\gamma_2$."
 3) In JSON SOURCE, you MUST escape LaTeX backslashes as DOUBLE backslash.
-   Example JSON source must look like: $\\\\frac{{4}}{{5}}$ and $\\\\text{{MeV}}$.
+   Example JSON source must look like: $\\\\frac{{4}}{{5}}$ and $\\\\sqrt{{19}}$.
 4) Do NOT over-escape: do NOT output four backslashes in JSON source (\\\\\\\\frac).
 5) Angles must be written like $30^\\\\circ$ (not '30\\circ' in plain text).
 6) Use $\\\\pi^0 \\\\to \\\\gamma_1 + \\\\gamma_2$ for decays.
+7) IMPORTANT: Do NOT use \\\\text{{...}} for units (this commonly becomes 'textMeV' due to JSON escapes).
+   Put units outside math as plain text:
+   - GOOD: "Rest mass $M_0 = 135$ MeV/$c^2$"
+   - GOOD: "Energy $E = 500$ MeV"
+   - BAD:  "$M_0 = 135\\\\,\\\\text{{MeV}}/c^2$"
 
 Now output the corrected JSON object only.
 """
