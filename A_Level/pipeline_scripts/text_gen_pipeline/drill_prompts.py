@@ -19,6 +19,10 @@ def build_text_drill_prompt(
     CRITICAL:
     This prompt teaches the model how to write JSON that will later be parsed and then rendered by MathJax.
     We use a RAW f-string (rf-string) so backslashes in the rules are shown literally to the model.
+
+    IMPORTANT:
+    Because this is still an f-string, any literal { or } that we want the model to see must be written
+    as {{ or }} in this Python source, otherwise Python will treat it as an f-string placeholder and crash.
     """
     correction_block = (
         f"\n**PREVIOUS ERROR & CORRECTION**:\n{correction_prompt_section.strip()}\n"
@@ -150,11 +154,11 @@ B) LaTeX commands (THIS HAS BEEN BREAKING YOUR OUTPUT):
   (The backend parser/validator will repair JSON backslashes safely.)
 
 Correct (what the student should ultimately see / what MathJax expects):
-  "$\frac{{1}}{{2}}$"
+  "$\frac{{{{1}}}}{{{{2}}}}$"
   "$\theta = 120^\circ$"
-  "$\text{{MeV}}$"
+  "$\text{{{{MeV}}}}$"
 Wrong (over-escaped, breaks MathJax):
-  "$\\theta$" or "$\\text{{MeV}}$"
+  "$\\theta$" or "$\\text{{{{MeV}}}}$"
 
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
