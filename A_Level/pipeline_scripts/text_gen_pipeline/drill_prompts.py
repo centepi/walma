@@ -10,22 +10,22 @@ def build_text_drill_prompt(
     difficulty: str,
     # question_type removed as requested
     additional_details: str = "",
-    correction_prompt_section: str = ""
+    correction_prompt_section: str = "",
 ) -> str:
     """
     Prompt for generating questions from scratch based on user topic/course/difficulty.
-    Includes the visual_data specification (SELECTED snippet) and STRICT math rules.
 
-    CRITICAL:
-    This prompt teaches the model how to write JSON that will later be parsed and then rendered by MathJax.
-
-    IMPORTANT:
-    Because this is an f-string, any literal { or } that we want the model to see must be written
-    as {{ or }} in this Python source. Otherwise Python will treat it as an f-string placeholder and crash.
+    IMPORTANT PIPELINE FACT:
+    - Your validator can repair INVALID JSON escapes like \langle by turning them into \\langle.
+    - But it CANNOT repair \text or \frac written with a single backslash in JSON source,
+      because JSON treats \t and \f as VALID escapes (TAB / formfeed) and parsing succeeds.
+    - Therefore the model MUST output LaTeX backslashes as DOUBLE backslashes in JSON source.
     """
+
     correction_block = (
         f"\n**PREVIOUS ERROR & CORRECTION**:\n{correction_prompt_section.strip()}\n"
-        if correction_prompt_section else ""
+        if correction_prompt_section
+        else ""
     )
 
     # ---------------------------------------------------------------------
@@ -58,8 +58,9 @@ def build_text_drill_prompt(
     else:
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
-    # ✅ RAW f-string so the model sees literal backslashes.
-    # ⚠️ f-string rule: every literal { or } must be written as {{ or }} in *this* file.
+    # Use RAW f-string so backslashes are shown literally to the model.
+    # Because this is an f-string, any literal { or } that should appear in the prompt
+    # must be written as {{ or }} in this file.
     prompt = rf"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
@@ -67,11 +68,10 @@ You are an expert Mathematics Content Creator for the **{course}** curriculum.
 - You are generating a **single JSON object** that will be consumed by an automated mobile learning app (iPad) called ALMA.
 - Your JSON is parsed programmatically and the text fields (question_stem, question_text, solution_text, final_answer, and any text in visual_data) are rendered using **MathJax** inside a WebView.
 - The app does **not** see LaTeX documents, TeX preambles, or Markdown. It only sees the JSON fields described below.
-- MathJax supports **inline and display math inside $...$ or $$...$$** with standard LaTeX math commands.
-- Therefore, you **must not** use any LaTeX environments that require a full TeX engine, such as:
-  \\begin{{equation}}, \\begin{{align}}, \\begin{{displaymath}}, \\begin{{tikzcd}}, \\begin{{tikzpicture}},
-  \\begin{{CD}}, \\xymatrix, \\begin{{array}}, \\begin{{matrix}}, or any diagram-producing environment.
-  All diagrams must be represented **only** through the visual_data JSON system.
+- MathJax supports inline/display math inside $...$ or $$...$$ with standard LaTeX math commands.
+- Therefore, you must NOT use full-TeX environments like:
+  \\begin{{equation}}, \\begin{{align}}, \\begin{{tikzpicture}}, \\begin{{matrix}}, etc.
+  All diagrams must be represented ONLY through the visual_data JSON system.
 
 YOUR TASK:
 Create a **{difficulty}** level question on the topic: "{topic}".
@@ -86,23 +86,21 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 --- CONTENT GUIDELINES ---
 1. Self-Contained: The question must be solvable with the information provided.
 2. Single Question Shape: Provide a clear "question_stem" and exactly ONE part in "parts".
-3. Visuals: If the topic usually requires a diagram, generate the JSON visual_data object. If it's pure algebra, omit it.
+3. Visuals: If the topic usually requires a diagram/graph, include visual_data. If not needed, omit it.
 4. MCQ Handling: If the user asks for Multiple Choice, include:
    - "choices": [{{"label":"A","text":"..."}}, ...]
    - "correct_choice": "A"
    inside the part.
 5. No Drawing Requests: Do not ask the student to "sketch/draw/plot."
-6. Clean Answer: Choose values that lead to neat final results (integers, simple fractions/surds) when applicable.
-7. No Phantom Diagrams: If you mention a diagram/figure, you MUST supply visual_data. If you do not supply visual_data, do not refer to a diagram/figure/picture.
+6. Clean Answer: Choose values that lead to neat final results.
+7. No Phantom Diagrams: If you mention a diagram/figure/graph, you MUST supply visual_data.
 
 8. Piecewise / cases:
 - If you use a piecewise definition, use ONLY \\begin{{cases}} ... \\end{{cases}}.
-- Keep each row short and clean.
-- Avoid long explanations inside cases; put explanations in normal text after the displayed formula.
 
 9. No LaTeX list environments:
 - Do NOT use \\begin{{itemize}}, \\begin{{enumerate}}, \\begin{{description}}, or \\item.
-- If you need a list, write plain sentences separated by real newlines (see JSON newline rules below).
+- If you need a list, use plain sentences separated by newlines.
 
 10. No LaTeX text-formatting commands in prose:
 - Do not use \\textbf{{...}}, \\emph{{...}}, \\textit{{...}}.
@@ -111,10 +109,10 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 {visual_rules}
 
 --- OUTPUT FORMAT ---
-- Return a single JSON object only. No markdown code fences. No commentary.
-- Do not use the backtick character ` anywhere in any field.
-- Do not wrap $...$ or $$...$$ in backticks.
+Return a single JSON object only.
+No markdown code fences. No commentary. No backticks.
 
+Example shape:
 {{
   "question_stem": "...",
   "parts": [
@@ -125,48 +123,49 @@ Create a **{difficulty}** level question on the topic: "{topic}".
       "final_answer": "..."
     }}
   ],
-  "calculator_required": true
+  "calculator_required": false,
+  "visual_data": {{...}}
 }}
 
-- Include "visual_data": {{...}} only if you referenced any visual/graph/figure.
+Only include "visual_data" if you referenced any visual/graph/figure.
 
 --- PURPOSE OF SOLUTION AND FINAL ANSWER ---
-- solution_text is internal reasoning for an AI tutor/checker (not a student-facing worked solution).
+- solution_text is internal reasoning for an AI tutor/checker (NOT a student-facing worked solution).
 - final_answer is a compact summary of the end result only.
 
---- JSON ESCAPING RULES (CRITICAL) ---
-You are writing JSON source. The app will parse your JSON, then render the resulting strings with MathJax.
+--- JSON TECHNICAL RULES (CRITICAL) ---
+You are writing JSON SOURCE. The app will json-parse it, then MathJax renders the resulting strings.
 
 A) Newlines:
-- To create a real line break inside a JSON string, use the normal JSON escape: \\n
-Correct JSON:
+- To create a real line break inside a JSON string, use \\n (single backslash + n) in the JSON source.
+Correct:
   "question_stem": "Line 1.\\nLine 2."
-Wrong JSON:
-  "question_stem": "Line 1.\\\\nLine 2."   (shows \\n literally)
+Wrong:
+  "question_stem": "Line 1.\\\\nLine 2."  (shows \\n literally)
 
-B) LaTeX commands INSIDE JSON STRINGS:
-- Inside JSON strings, every LaTeX command backslash MUST be written as DOUBLE backslash in JSON source:
-  \\frac, \\sqrt, \\theta, \\gamma, \\text, \\circ, \\leq, \\pi, etc.
+B) LaTeX backslashes inside JSON strings (THIS IS THE MAIN RULE):
+- In JSON SOURCE, every LaTeX command backslash MUST be escaped as DOUBLE backslash.
+  That means: write \\\\text, \\\\frac, \\\\sqrt, \\\\theta, \\\\circ, etc. in JSON source.
 
-- If you use a SINGLE backslash, JSON will eat sequences like \\t and \\f:
-  "\text{{MeV}}" becomes TAB + "ext{{MeV}}"
-  "\frac{{dx}}{{dt}}" becomes FORMFEED + "rac{{dx}}{{dt}}"
-  This causes broken rendering like "textMeV" or "fracdxdt".
+WHY:
+- JSON treats \\t and \\f as valid escapes (TAB / formfeed).
+- So if you write "\text{{MeV}}" or "\frac{{dx}}{{dt}}" with a single backslash in JSON source,
+  JSON will silently corrupt the string and MathJax will break.
 
-Correct JSON source examples (what you must output):
-  "question_text": "Units: $\\\\text{{MeV}}$."        -> Units: $\\text{{MeV}}$.
-  "question_text": "Compute $\\\\frac{{dx}}{{dt}}$."  -> Compute $\\frac{{dx}}{{dt}}$.
-  "question_text": "Angle $\\\\theta = 90^\\\\circ$." -> Angle $\\theta = 90^\\circ$.
+Correct JSON source examples (YOU MUST OUTPUT THESE FORMS):
+  "question_text": "Units: $\\\\text{{MeV}}$."
+  "question_text": "Compute $\\\\frac{{dx}}{{dt}}$."
+  "question_text": "Angle $\\\\theta = 90^\\\\circ$."
 
 Do NOT triple-escape:
-- Do NOT write \\\\\\text or \\\\\\frac in JSON source.
+- Do NOT write \\\\\\\\text or \\\\\\\\frac in JSON source.
 
 --- MATH FORMATTING RULES (STRICT) ---
 - All math MUST be inside $...$ or $$...$$.
-- Use standard LaTeX commands inside math: \\frac{{...}}{{...}}, \\sqrt{{...}}, \\cdot, \\times, \\ln, \\sin, \\cos, \\theta, \\gamma, \\circ, \\text{{...}}, etc.
+- Use standard LaTeX commands inside math: \\\\frac{{...}}{{...}}, \\\\sqrt{{...}}, \\\\cdot, \\\\times,
+  \\\\ln, \\\\sin, \\\\cos, \\\\theta, \\\\gamma, \\\\circ, \\\\text{{...}}, etc.
 - Do NOT use \\begin{{equation}}...\\end{{equation}} or \\begin{{align}}...\\end{{align}}; use $$...$$ instead.
 - Do not use the LaTeX linebreak command \\\\ inside math.
-- Never output plain-text math like sqrt(3x+1); always use LaTeX like \\sqrt{{3x+1}} (inside $...$ or $$...$$).
 
 Return ONLY the JSON object.
 """
