@@ -278,14 +278,115 @@ def _normalize_generated_object(obj: dict) -> dict:
 
 
 # -------------------------
+# Post-parse LaTeX repair (fixes "textMeV", "frac45c", missing backslashes)
+# -------------------------
+
+# Detect math segments exactly like postprocess_math: $$...$$, \[...\], \(...\), $...$, `...`
+_MATH_SEG_RE = re.compile(
+    r"(\$\$[\s\S]*?\$\$"
+    r"|\\\[[\s\S]*?\\\]"
+    r"|\\\([\s\S]*?\\\)"
+    r"|\$[^$]*\$"
+    r"|`[^`]*`)",
+    re.DOTALL,
+)
+
+# Common macros that break when over-escaped (\\text) or missing slash (text{)
+# We ONLY apply inside math segments.
+_FIX_DOUBLE_SLASH_MACROS = [
+    "text", "frac", "sqrt", "theta", "phi", "pi", "gamma", "rho", "beta",
+    "times", "cdot", "circ", "sin", "cos", "tan", "ln", "log",
+]
+
+def _repair_latex_inside_math_segment(seg: str) -> str:
+    """
+    Repair only inside a math segment:
+    - Convert TeX-level double backslashes before common macros: \\text -> \text
+      (because \\ is a TeX newline, which produces literal 'text' output).
+    - Convert missing-backslash macro spellings in likely-macro contexts:
+        text{...} -> \text{...}
+        frac{...}{...} -> \frac{...}{...}
+        theta_1 -> \theta_1   (only when followed by _ or ^)
+    """
+    if not seg or "\\" not in seg and "text{" not in seg and "frac{" not in seg and "theta_" not in seg:
+        return seg
+
+    out = seg
+
+    # 1) Fix TeX-level double backslash before known macros: \\text -> \text
+    # We target patterns like: \\text, \\frac, \\circ etc.
+    for m in _FIX_DOUBLE_SLASH_MACROS:
+        out = re.sub(rf"\\\\{m}\b", rf"\\{m}", out)
+
+    # 2) Fix missing backslash for \text{...} and \frac{...}{...}
+    # Only when it looks like a command (followed by '{')
+    out = re.sub(r"(?<!\\)\btext\s*\{", r"\\text{", out)
+    out = re.sub(r"(?<!\\)\bfrac\s*\{", r"\\frac{", out)
+
+    # 3) Fix missing backslash for theta when used like a symbol (theta_1, theta^2)
+    out = re.sub(r"(?<!\\)\btheta(?=\s*[_^])", r"\\theta", out)
+
+    # 4) Fix missing backslash for circ when used like degrees (^\circ or \circ)
+    out = re.sub(r"(?<!\\)\bcirc\b", r"\\circ", out)
+
+    return out
+
+
+def _repair_common_latex_in_math(s: str) -> str:
+    """
+    Apply conservative LaTeX repairs ONLY inside math segments.
+    Non-math text is untouched.
+    """
+    if not isinstance(s, str) or not s:
+        return s
+
+    parts: List[str] = []
+    last = 0
+    for m in _MATH_SEG_RE.finditer(s):
+        if m.start() > last:
+            parts.append(s[last:m.start()])
+        parts.append(_repair_latex_inside_math_segment(m.group(0)))
+        last = m.end()
+    if last < len(s):
+        parts.append(s[last:])
+    return "".join(parts)
+
+
+def _repair_common_latex_in_math_fields(obj: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Run _repair_common_latex_in_math on the fields that are rendered by MathJax.
+    This directly targets the exact corruption seen in screenshots:
+      - 300textMeV (from \\text or lost \text)
+      - frac45c (from \\frac or lost \frac)
+      - theta_1 and ^\circ missing backslashes or mis-escaped
+    """
+    if not isinstance(obj, dict):
+        return obj
+
+    if isinstance(obj.get("question_stem"), str):
+        obj["question_stem"] = _repair_common_latex_in_math(obj["question_stem"])
+
+    parts = obj.get("parts") or []
+    if isinstance(parts, list) and parts:
+        p0 = parts[0] or {}
+        if isinstance(p0, dict):
+            for k in ("question_text", "solution_text", "final_answer"):
+                if isinstance(p0.get(k), str):
+                    p0[k] = _repair_common_latex_in_math(p0[k])
+            obj["parts"][0] = p0
+
+    return obj
+
+
+# -------------------------
 # Lightweight answer_spec synthesis (optional)
 # -------------------------
 _DERIVATIVE_CUES = re.compile(
-    r"(differentiate|dy/dx|f'\(x\)|derivative\s+of|find\s+f'\(x\))",
+    r"(differentiate|dy/dx|f'$begin:math:text$x$end:math:text$|derivative\s+of|find\s+f'$begin:math:text$x$end:math:text$)",
     re.IGNORECASE,
 )
 _FUNC_EQ_PAT = re.compile(
-    r"(?:^|[\s,:;])(?:y\s*=\s*|[a-zA-Z]\s*\(\s*x\s*\)\s*=\s*)(?P<expr>[^;.\n\r]+)",
+    r"(?:^|[\s,:;])(?:y\s*=\s*|[a-zA-Z]\s*$begin:math:text$\\s\*x\\s\*$end:math:text$\s*=\s*)(?P<expr>[^;.\n\r]+)",
     re.IGNORECASE,
 )
 
@@ -546,7 +647,14 @@ def create_question(
         return None
 
     content_object = _normalize_generated_object(content_object)
+
+    # Minimal safe sanitizer (does NOT rewrite LaTeX)
     content_object = postprocess_math.sanitize_generated_object(content_object)
+
+    # ✅ NEW: Repair common post-parse LaTeX corruption inside math only.
+    # This directly targets: 300textMeV, frac45c, theta_1 / ^\circ issues.
+    content_object = _repair_common_latex_in_math_fields(content_object)
+
     content_object = _synthesize_answer_spec_if_missing(content_object)
 
     # 4) Process any visual data
@@ -554,7 +662,7 @@ def create_question(
     if visual_data:
         logger.debug("Visual data present for seed '%s'. Processing…", target_part_id)
 
-        # ✅ NEW: geometry-specific defaults so SVG bounds aren't insane.
+        # ✅ geometry-specific defaults so SVG bounds aren't insane.
         try:
             if isinstance(visual_data, dict):
                 _apply_geometry_svg_defaults(visual_data)
@@ -603,7 +711,6 @@ def create_question(
         try:
             fig = dynamic_chart_plotter(visual_data)
 
-            # ✅ SURGICAL FIX:
             # - svg.fonttype="none" => real <text> nodes
             # - geometry needs slightly bigger pad to prevent stroke clipping at bbox edges
             is_geom = False
@@ -666,59 +773,30 @@ def create_question(
 
 
 def request_ai_correction(chat_session, error_message, original_text, context_text=None):
-    """
-    Ask the model to resend the SAME JSON content, but in strictly valid JSON.
-
-    CRITICAL: This pipeline renders math via MathJax after JSON parsing.
-    That means:
-      - In JSON SOURCE, every LaTeX command backslash MUST be written as DOUBLE backslash.
-        Example JSON source: "$\\\\text{MeV}$"  -> after json.loads => "$\\text{MeV}$" (MathJax OK)
-      - Do NOT over-escape LaTeX in JSON source. If you write "$\\\\\\\\text{MeV}$",
-        then after json.loads it becomes "$\\\\text{MeV}$" and MathJax will show "textMeV".
-
-    Also:
-      - Keep $...$ / $$...$$ delimiters exactly as normal dollar signs (do NOT escape $).
-      - Newlines inside strings must be written as "\\n" (one backslash + n) in JSON source.
-      - Output ONLY the JSON object (no markdown fences, no commentary).
-    """
+    """Asks the AI to correct its last response based on a validation error."""
     short_err = utils.truncate(str(error_message), limit=140)
     logger.debug("Requesting AI self-correction. Reason: %s", short_err)
 
-    # Optional extra context (rarely used, but keep for API compat)
-    extra = ""
-    if isinstance(context_text, str) and context_text.strip():
-        extra = f"\n\n--- CONTEXT (DO NOT REPEAT) ---\n{context_text.strip()}\n"
-
     prompt = f"""
-Your last response could not be parsed and failed with this error:
-{error_message}
+Your last response could not be parsed and failed with the following error: '{error_message}'.
 
-You must output the SAME intended content again, but as ONE perfectly valid JSON object.
-
-NON-NEGOTIABLE JSON RULES:
-1) Output ONLY the JSON object. No markdown code fences. No backticks. No commentary.
-2) All strings must be valid JSON (use double quotes for keys/strings).
-3) Fix trailing commas and any illegal control characters.
-
-MATH + LaTeX RULES (CRITICAL):
-A) The app will json-parse your output, then MathJax renders the resulting strings.
-B) Therefore, in JSON SOURCE you MUST write LaTeX backslashes as DOUBLE backslashes.
-   - Correct JSON source: "$\\\\frac{{a}}{{b}}$", "$\\\\sqrt{{x}}$", "$\\\\text{{MeV}}$"
-   - WRONG (under-escaped): "$\\frac{{a}}{{b}}$"   (JSON may corrupt \\f \\t etc.)
-   - WRONG (over-escaped): "$\\\\\\\\text{{MeV}}$" (MathJax shows "textMeV")
-C) Keep ALL LaTeX inside $...$ or $$...$$ (no \\begin{{equation}} / \\begin{{align}} etc.)
-D) Do NOT use the TeX linebreak command "\\\\" inside math.
-
-NEWLINES:
-- If you need a line break inside a JSON string, use "\\n" (one backslash + n).
-
-Here is your previous (faulty) response. Re-emit the corrected JSON:
+Here is the full, problematic response you sent:
 --- FAULTY RESPONSE ---
 {original_text}
 --- END FAULTY RESPONSE ---
-{extra}
-""".strip()
 
+Return the same content again as a single perfectly valid JSON object.
+
+CRITICAL JSON/LaTeX RULES:
+1) Output ONLY JSON (no markdown fences, no commentary).
+2) Every LaTeX command must be inside $...$ or $$...$$.
+3) In JSON SOURCE, you MUST escape LaTeX backslashes as DOUBLE backslash.
+   Example JSON source must look like: $\\\\frac{{4}}{{5}}$ and $\\\\text{{MeV}}$.
+4) Do NOT over-escape: do NOT output four backslashes in JSON source (\\\\\\\\frac).
+5) Ensure units use \\text{{...}} and angles use ^\\circ inside math fences.
+
+Now output the corrected JSON object only.
+"""
     try:
         response = chat_session.send_message(prompt)
         logger.debug("Self-correction response received (first 200 chars): %s", (response.text or "")[:200])
