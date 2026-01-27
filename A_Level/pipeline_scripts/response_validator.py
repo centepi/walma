@@ -6,39 +6,59 @@ logger = utils.setup_logger(__name__)
 
 # Regex + helper to repair invalid JSON backslash escapes coming from LaTeX.
 # JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
-# We:
-#   - find a single backslash not preceded by another backslash,
-#   - whose next character is NOT one of the valid escape codes above,
-#   - and turn "\x" into "\\x" so json.loads accepts it and the parsed
-#     string contains the intended single backslash LaTeX command.
+
+# 1) FIX: LaTeX commands that START with valid JSON escapes:
+#    \t (tab)  -> \text, \theta, \times, \tan, ...
+#    \f (formfeed) -> \frac, \forall, ...
+#    \b (backspace) -> \beta, \begin, ...
+#    \r (carriage return) -> \rho, \right, \rangle, ...
+#
+# We ONLY apply when the escape is followed by a letter, so we don't touch
+# normal JSON escapes like "\t " used intentionally (rare), and we DO NOT
+# touch "\n" because you legitimately use \n for line breaks.
+_LATEX_VALID_ESCAPE_PREFIX_RE = re.compile(r'(?<!\\)\\([bfrt])(?=[A-Za-z])')
+
+# 2) FIX: \u is "valid" only if it is followed by 4 hex digits.
+# LaTeX has lots of commands starting with \u (e.g. \underline).
+# If the model outputs "\underline" in JSON source, json.loads will fail
+# with "Invalid \uXXXX escape". So we convert "\uX..." -> "\\uX..." unless
+# it's a real unicode escape.
+_BAD_UNICODE_ESCAPE_RE = re.compile(r'(?<!\\)\\u(?![0-9a-fA-F]{4})')
+
+# 3) Your original invalid-escape repair (kept)
 _INVALID_JSON_ESCAPE_RE = re.compile(r'(?<!\\)\\([^"\\/bfnrtu])')
 
 
 def _escape_invalid_json_backslashes(s: str) -> str:
     r"""
-    Repair invalid JSON backslash escapes such as '\\mathbb', '\\langle', '\\zeta'
+    Repair invalid JSON backslash escapes such as '\mathbb', '\langle', '\zeta'
     written with a single backslash in the JSON source (e.g. '\mathbb{N}' inside
     a JSON string).
 
-    Example:
-        input JSON snippet:  "question_stem": "D_4 = \langle r, s \mid r^4 = 1 \rangle"
-        (which is INVALID JSON because '\l', '\m' etc. are not allowed escapes)
-
-        after this repair, it becomes:
-            "question_stem": "D_4 = \\langle r, s \\mid r^4 = 1 \\rangle"
-
-        json.loads(...) then sees the string value:
-            "D_4 = \langle r, s \mid r^4 = 1 \rangle"
-        which MathJax can render correctly.
+    ALSO repairs LaTeX commands that start with JSON-valid escapes:
+      - \text, \theta, \times, \tan, ...
+      - \frac, \forall, ...
+      - \beta, \begin, ...
+      - \rho, \right, \rangle, ...
+    because JSON would otherwise interpret \t, \f, \b, \r as control escapes.
 
     We deliberately:
-      - leave valid JSON escapes (\\, \", \/, \b, \f, \n, \r, \t, \uXXXX) untouched;
-      - avoid modifying already-escaped sequences like '\\\\mathbb' by requiring
-        that the backslash is *not* preceded by another backslash.
+      - leave already-escaped sequences like '\\\\mathbb' unchanged (negative lookbehind).
+      - do NOT touch '\n' because you legitimately use \n for line breaks in JSON strings.
     """
     if not s:
         return s
-    return _INVALID_JSON_ESCAPE_RE.sub(r'\\\\\1', s)
+
+    # (A) Fix \u that is NOT a real unicode escape (\uXXXX)
+    s = _BAD_UNICODE_ESCAPE_RE.sub(r'\\\\u', s)
+
+    # (B) Fix LaTeX commands starting with \b \f \r \t  (but not \n)
+    s = _LATEX_VALID_ESCAPE_PREFIX_RE.sub(r'\\\\\1', s)
+
+    # (C) Fix all other invalid escapes (\gamma, \pi, \leq, etc.)
+    s = _INVALID_JSON_ESCAPE_RE.sub(r'\\\\\1', s)
+
+    return s
 
 
 def _parse_and_repair(raw_text: str):
@@ -49,11 +69,11 @@ def _parse_and_repair(raw_text: str):
     Deliberately minimal:
     - Find the JSON block (optionally inside ```json ... ```).
     - Strip control characters and smart quotes.
-    - Repair invalid backslash escapes (e.g. \mathbb, \langle) for JSON.
+    - Repair invalid backslash escapes (e.g. \mathbb, \text, \theta) for JSON.
     - Remove trailing commas before } or ].
     - Parse with json.loads.
 
-    NOTE: We no longer touch or normalize any math fences here.
+    NOTE: We do not touch or normalize any math fences here.
     Whatever the model outputs inside strings is preserved (up to the
     minimal escaping needed for valid JSON).
     """
@@ -61,7 +81,6 @@ def _parse_and_repair(raw_text: str):
         logger.warning("Validator: empty response.")
         return None
 
-    # Raw payloads can be huge: keep in file log only.
     logger.debug("Validator: attempting parse. Raw (first 500 chars): %s", raw_text[:500])
 
     try:
@@ -97,11 +116,9 @@ def _parse_and_repair(raw_text: str):
         parsed_data = json.loads(json_str)
         logger.debug("Validator: JSON parsed successfully.")
 
-        # IMPORTANT: no further mutation here (no math fence rewriting).
         return parsed_data
 
     except Exception as e:
-        # Console gets a short, high-signal message; details go to file DEBUG.
         short = utils.truncate(str(e), limit=160)
         logger.warning("Validator: parse failed after repair attempts — %s", short)
         logger.debug("Validator: original raw (first 2000 chars): %s", raw_text[:2000])
@@ -116,7 +133,6 @@ def validate_and_correct_response(
     r"""
     The main 'Quality Inspector' function. Validates and optionally corrects the model response.
 
-    Still does:
     - First attempt: parse/repair.
     - If that fails: ask the model once to self-correct into valid JSON.
     - Second attempt: parse again.
@@ -139,7 +155,6 @@ def validate_and_correct_response(
 
         if attempt == 0:
             logger.debug("Validator: attempting AI self-correction…")
-            # Generic but effective error message for correction prompt
             error_message = "The previous response was not valid JSON."
             current_response_text = correction_func(
                 chat_session,
