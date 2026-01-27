@@ -124,6 +124,7 @@ def _normalize_choices(raw):
                 choices.append({"label": lab, "text": txt})
             else:
                 dropped += 1
+
         # de-dup by label, first win
         seen = set()
         norm = []
@@ -387,13 +388,11 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
     # ✅ Fix: remove comma between a number and a token inside math (e.g. "135, textMeV/c^2")
     out = re.sub(r"(\d)\s*,\s*(?=[A-Za-z])", r"\1 ", out)
 
-    # ✅ Collapse TeX newline form inside math:
-    # TeX treats "\\" as a newline. If the model outputs "\\in" or "\\mathbb{C}" (or even "\\\\in"),
-    # MathJax can render literal "in" / "mathbbC". Collapse any run of >=2 backslashes before letters
-    # down to a single macro backslash: "\\in" -> "\in", "\\\\mathbb" -> "\mathbb"
+    # ✅ CRITICAL FIX (your screenshot): TeX linebreak "\" sneaks into math.
+    # Collapse any run of >=2 backslashes before a macro/word OR spacing command
+    # down to a single macro backslash:
+    #   "\\in" -> "\in", "\\mathbb" -> "\mathbb", "\\cdot" -> "\cdot"
     out = re.sub(r"\\{2,}([A-Za-z]+)", r"\\\1", out)
-
-    # ✅ Collapse doubled TeX spacing commands: "\\," "\\;" "\\:" "\\!" -> "\," "\;" "\:" "\!"
     out = re.sub(r"\\{2,}([,;:!])", r"\\\1", out)
 
     # ✅ Fix: corrupted unit tokens like "textMeV", "textmus" inside math
@@ -409,8 +408,7 @@ def _repair_latex_inside_math_segment(seg: str) -> str:
         flags=re.IGNORECASE,
     )
 
-    # 1) Fix TeX-level double backslash before known macros: \\text -> \text
-    # (kept as an extra guard; the generic collapse above already handles this)
+    # 1) Extra guard: collapse double-backslash before known macros
     for m in _FIX_DOUBLE_SLASH_MACROS:
         out = re.sub(rf"\\{{2,}}{m}\b", rf"\\{m}", out)
 
