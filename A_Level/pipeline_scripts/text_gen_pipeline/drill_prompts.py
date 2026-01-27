@@ -58,10 +58,12 @@ def build_text_drill_prompt(
     else:
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
-    # Use RAW f-string so backslashes are shown literally to the model.
-    # Because this is an f-string, any literal { or } that should appear in the prompt
-    # must be written as {{ or }} in this file.
-    prompt = rf"""
+    # IMPORTANT:
+    # Do NOT use a raw string here (rf"...").
+    # Raw strings would show 4 backslashes (\\\\) to the model when we write "\\\\",
+    # encouraging the model to over-escape and output LaTeX commands that render as \\frac, \\sqrt, etc.
+    # We want the model to output JSON source with DOUBLE backslashes (\\) for LaTeX commands.
+    prompt = f"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
 --- SYSTEM CONTEXT (READ CAREFULLY) ---
@@ -149,7 +151,7 @@ B) LaTeX backslashes inside JSON strings (THIS IS THE MAIN RULE):
 
 WHY:
 - JSON treats \\t and \\f as valid escapes (TAB / formfeed).
-- So if you write "\text{{MeV}}" or "\frac{{dx}}{{dt}}" with a single backslash in JSON source,
+- So if you write "\\text{{MeV}}" or "\\frac{{dx}}{{dt}}" with a single backslash in JSON source,
   JSON will silently corrupt the string and MathJax will break.
 
 Correct JSON source examples (YOU MUST OUTPUT THESE FORMS):
