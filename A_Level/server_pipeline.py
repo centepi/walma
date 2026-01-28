@@ -3,6 +3,10 @@ import os
 import io
 import re
 import tempfile
+import time
+import uuid
+import threading
+import traceback
 from typing import List, Tuple, Dict, Any, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
@@ -34,6 +38,35 @@ app = FastAPI(title="Alma Pipeline Server", version="1.5.0")
 # ---- tunables / limits ----
 MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
 MAX_TOTAL_BYTES = int(os.getenv("UPLOAD_MAX_TOTAL_BYTES", str(25 * 1024 * 1024)))  # 25 MB default
+
+# ---- queue/worker toggles ----
+# ROLE:
+#   - "api"    -> only accepts HTTP and enqueues work
+#   - "worker" -> only runs the queue worker loop (no need to expose HTTP publicly)
+#   - "both"   -> does both (useful for local/dev; not ideal for scaling)
+ALMA_ROLE = (os.getenv("ALMA_ROLE", "both") or "both").strip().lower()
+
+# Enable Firestore-backed job queue.
+# If enabled, endpoints enqueue jobs; a worker loop claims and runs them.
+ALMA_QUEUE_ENABLED = (os.getenv("ALMA_QUEUE_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"})
+
+# Poll interval for worker loop
+JOB_POLL_SECONDS = float(os.getenv("ALMA_JOB_POLL_SECONDS", "1.5"))
+
+# Max jobs to claim per poll
+JOB_CLAIM_BATCH = int(os.getenv("ALMA_JOB_CLAIM_BATCH", "1"))
+
+# Collection name for jobs (Firestore)
+JOB_COLLECTION = os.getenv("ALMA_JOB_COLLECTION", "PipelineJobs")
+
+# Worker identity (visible in Firestore)
+WORKER_ID = os.getenv("ALMA_WORKER_ID", f"worker-{uuid.uuid4().hex[:8]}")
+
+# IMPORTANT NOTE:
+# - Text drills are safe to run in a separate worker service because payload is pure text.
+# - File uploads in this implementation store TEMP FILE PATHS in the job payload.
+#   That only works if the worker shares the same filesystem/container.
+#   For true multi-service scaling, upload files to Cloud Storage first, then enqueue GCS URLs.
 
 
 # ---- helpers ----
@@ -113,6 +146,223 @@ def _read_images_from_uploads(files: List[UploadFile]) -> Tuple[List[str], List[
                 # Ignore non-image non-pdf files silently
                 pass
     return pdf_paths, pil_images, total_bytes
+
+
+# -----------------------------
+# Firestore job queue (minimal)
+# -----------------------------
+
+def _db():
+    db_client = firebase_uploader.initialize_firebase()
+    if not db_client:
+        raise RuntimeError("Firestore client not available.")
+    return db_client
+
+
+def _jobs_col(db_client):
+    return db_client.collection(JOB_COLLECTION)
+
+
+def _enqueue_job(
+    *,
+    uid: str,
+    upload_id: str,
+    job_type: str,
+    payload: Dict[str, Any],
+) -> str:
+    """
+    Enqueue a job into Firestore.
+
+    Job schema (doc):
+      type: "files" | "text"
+      uid:  <uid>
+      upload_id: <upload_id>
+      status: "queued" | "processing" | "done" | "error"
+      created_at / updated_at: server timestamps (set by Firestore)
+      worker_id: set when claimed
+      payload: dict
+    """
+    db_client = _db()
+    job_id = uuid.uuid4().hex
+    doc = {
+        "type": job_type,
+        "uid": uid,
+        "upload_id": upload_id,
+        "status": "queued",
+        "worker_id": None,
+        "error": None,
+        "payload": payload or {},
+        # timestamps are best set server-side, but we keep it simple:
+        "created_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+        "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+    }
+    _jobs_col(db_client).document(job_id).set(doc, merge=True)
+    logger.info("Enqueued job %s (type=%s, uid=%s, upload=%s)", job_id, job_type, uid, upload_id)
+    return job_id
+
+
+def _claim_one_job(db_client) -> Optional[Tuple[str, Dict[str, Any]]]:
+    """
+    Claim ONE queued job (best-effort, concurrency-safe enough for small scale).
+    Uses a transaction to flip status queued->processing.
+    """
+    try:
+        # Query a small batch of queued jobs
+        q = (
+            _jobs_col(db_client)
+            .where("status", "==", "queued")
+            .limit(max(1, int(JOB_CLAIM_BATCH)))
+        )
+        docs = list(q.stream())
+        if not docs:
+            return None
+
+        for d in docs:
+            job_id = d.id
+            ref = _jobs_col(db_client).document(job_id)
+
+            def txn_fn(txn):
+                snap = ref.get(transaction=txn)
+                data = snap.to_dict() if snap.exists else {}
+                if (data or {}).get("status") != "queued":
+                    return None
+                txn.update(ref, {
+                    "status": "processing",
+                    "worker_id": WORKER_ID,
+                    "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+                })
+                return data
+
+            txn = db_client.transaction()
+            claimed = txn.call(txn_fn)
+            if claimed:
+                return job_id, claimed
+
+        return None
+    except Exception as e:
+        logger.error("Job claim failed: %s", e)
+        return None
+
+
+def _finish_job(db_client, job_id: str, *, ok: bool, error: Optional[str] = None) -> None:
+    try:
+        patch = {
+            "status": "done" if ok else "error",
+            "error": (error or None),
+            "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+        }
+        _jobs_col(db_client).document(job_id).set(patch, merge=True)
+    except Exception as e:
+        logger.error("Failed to finish job %s: %s", job_id, e)
+
+
+def _run_job_payload(job_id: str, job_doc: Dict[str, Any]) -> None:
+    """
+    Execute a claimed job.
+    """
+    db_client = _db()
+    job_type = (job_doc.get("type") or "").strip().lower()
+    uid = (job_doc.get("uid") or "").strip()
+    upload_id = (job_doc.get("upload_id") or "").strip()
+    payload = job_doc.get("payload") or {}
+
+    if not uid or not upload_id or job_type not in {"files", "text"}:
+        _finish_job(db_client, job_id, ok=False, error="invalid_job_doc")
+        return
+
+    try:
+        if job_type == "text":
+            # Payload-only job (safe for separate worker service)
+            drill_runner.run_text_drill_background(
+                uid=uid,
+                upload_id=upload_id,
+                topic=str(payload.get("topic") or ""),
+                course=str(payload.get("course") or ""),
+                difficulty=str(payload.get("difficulty") or ""),
+                quantity=int(payload.get("quantity") or 3),
+                additional_details=str(payload.get("additional_details") or ""),
+                folder_id=str(payload.get("folder_id") or ""),
+                unit_name=str(payload.get("unit_name") or ""),
+            )
+            _finish_job(db_client, job_id, ok=True)
+            return
+
+        # "files" job:
+        # NOTE: this uses local temp file paths in payload -> only valid if worker shares filesystem.
+        pdf_paths = list(payload.get("pdf_paths") or [])
+        image_paths = list(payload.get("image_paths") or [])
+        unit_name = str(payload.get("unit_name") or "My Upload")
+        section = str(payload.get("section") or "General")
+        folder_id = str(payload.get("folder_id") or "")
+
+        _run_pipeline_background(
+            uid=uid,
+            upload_id=upload_id,
+            unit_name=unit_name,
+            section=section,
+            folder_id=folder_id,
+            pdf_paths=pdf_paths,
+            image_paths=image_paths,
+        )
+        _finish_job(db_client, job_id, ok=True)
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error("Job %s failed: %s\n%s", job_id, e, tb)
+        _finish_job(db_client, job_id, ok=False, error=str(e)[:400])
+
+
+def _worker_loop_forever() -> None:
+    """
+    Minimal worker loop:
+      - poll for queued jobs
+      - claim transactionally
+      - run synchronously
+    """
+    logger.info("Worker loop starting (id=%s, collection=%s, poll=%.2fs)", WORKER_ID, JOB_COLLECTION, JOB_POLL_SECONDS)
+    db_client = _db()
+
+    while True:
+        try:
+            claimed = _claim_one_job(db_client)
+            if not claimed:
+                time.sleep(JOB_POLL_SECONDS)
+                continue
+
+            job_id, job_doc = claimed
+            logger.info("Worker claimed job %s (type=%s)", job_id, job_doc.get("type"))
+            _run_job_payload(job_id, job_doc)
+        except Exception as e:
+            logger.error("Worker loop error: %s", e)
+            time.sleep(max(0.5, JOB_POLL_SECONDS))
+
+
+def _start_worker_if_needed() -> None:
+    if not ALMA_QUEUE_ENABLED:
+        logger.info("Queue disabled (ALMA_QUEUE_ENABLED=0); worker will not start.")
+        return
+    if ALMA_ROLE not in {"worker", "both"}:
+        logger.info("Role=%s; worker will not start.", ALMA_ROLE)
+        return
+    t = threading.Thread(target=_worker_loop_forever, name="alma-worker", daemon=True)
+    t.start()
+t = None  # placeholder so linters don't complain (kept simple)
+
+
+@app.on_event("startup")
+def _on_startup():
+    # Ensure firebase init doesn't happen mid-request
+    try:
+        _ensure_firebase_initialized()
+    except Exception:
+        pass
+    # Start worker loop if configured
+    try:
+        if ALMA_QUEUE_ENABLED and ALMA_ROLE in {"worker", "both"}:
+            th = threading.Thread(target=_worker_loop_forever, name="alma-worker", daemon=True)
+            th.start()
+            logger.info("Worker thread started (id=%s).", WORKER_ID)
+    except Exception as e:
+        logger.error("Failed to start worker thread: %s", e)
 
 
 # ---------- leaf-only pseudo-pairs (skip parent/context stems) ----------
@@ -506,7 +756,15 @@ def _run_pipeline_background(
 def health():
     try:
         _ensure_firebase_initialized()
-        return {"ok": True, "service": "pipeline", "version": app.version}
+        return {
+            "ok": True,
+            "service": "pipeline",
+            "version": app.version,
+            "role": ALMA_ROLE,
+            "queue_enabled": bool(ALMA_QUEUE_ENABLED),
+            "worker_id": WORKER_ID if ALMA_ROLE in {"worker", "both"} else None,
+            "job_collection": JOB_COLLECTION if ALMA_QUEUE_ENABLED else None,
+        }
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
@@ -524,11 +782,16 @@ def process_user_upload(
     """
     Accept PDFs/images, enqueue processing, and immediately return 202.
 
-    The background task writes to:
-      - Users/{uid}/Uploads/{upload_id} (status, questionCount, folderId, labels)
-      - Users/{uid}/Uploads/{upload_id}/Questions/{questionIdString}
-      - Users/{uid}/Uploads/{upload_id}/events/{autoId}
+    If ALMA_QUEUE_ENABLED=1:
+      - Enqueue a Firestore job and return immediately.
+      - A worker loop claims the job and runs it.
+
+    Otherwise:
+      - Use FastAPI BackgroundTasks (runs inside the API worker).
     """
+    if ALMA_ROLE not in {"api", "both"}:
+        raise HTTPException(status_code=503, detail="Service is running in WORKER-only mode.")
+
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
     if len(files) > MAX_FILES:
@@ -551,7 +814,7 @@ def process_user_upload(
 
     # Persist in-memory PILs to temp files so we can use them after the HTTP returns
     image_paths: List[str] = []
-    for idx, pil in enumerate(pil_images):
+    for _, pil in enumerate(pil_images):
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
         pil.save(tmp.name, "JPEG", quality=90)
         tmp.flush()
@@ -564,12 +827,30 @@ def process_user_upload(
 
     # ---- Ensure parent Upload doc exists with 'processing' status (via tracker)
     tracker = UploadTracker(uid, upload_id)
-    tracker.start(folder_id=(folder_id or "").strip(),
-                  unit_name=(unit_name or "My Upload").strip(),
-                  section=(section or "General").strip())
+    tracker.start(
+        folder_id=(folder_id or "").strip(),
+        unit_name=(unit_name or "My Upload").strip(),
+        section=(section or "General").strip()
+    )
     tracker.event_note("Queued")
 
-    # ---- Kick off background processing and return immediately
+    # ---- Either enqueue to Firestore queue OR BackgroundTasks
+    if ALMA_QUEUE_ENABLED:
+        _enqueue_job(
+            uid=uid,
+            upload_id=upload_id,
+            job_type="files",
+            payload={
+                "pdf_paths": pdf_paths,
+                "image_paths": image_paths,
+                "unit_name": (unit_name or "My Upload").strip(),
+                "section": (section or "General").strip(),
+                "folder_id": (folder_id or "").strip(),
+            },
+        )
+        return JSONResponse({"created": [], "status": "queued", "upload_id": upload_id}, status_code=202)
+
+    # Fallback: in-process background task
     background_tasks.add_task(
         _run_pipeline_background,
         uid=uid,
@@ -580,8 +861,6 @@ def process_user_upload(
         pdf_paths=pdf_paths,
         image_paths=image_paths,
     )
-
-    # 202 with an empty 'created' list so the iOS client can decode PipelineResult safely
     return JSONResponse({"created": []}, status_code=202)
 
 
@@ -595,7 +874,6 @@ def process_text_drill(
     course: str = Form(..., description="Target course (A-Level, GCSE, etc)"),
     difficulty: str = Form(..., description="Difficulty level description"),
     count: int = Form(3, description="Number of questions to generate"),
-    # question_type removed
     additional_details: str = Form("", description="Extra instructions"),
     upload_id: Optional[str] = Form(None, description="Client-side upload id"),
     folder_id: Optional[str] = Form(None, description="Target folder id"),
@@ -605,8 +883,17 @@ def process_text_drill(
     """
     Phase 1: Text-to-Drill Endpoint.
     Generates questions directly from text parameters, skipping PDF analysis.
+
+    If ALMA_QUEUE_ENABLED=1:
+      - Enqueue a Firestore job and return immediately.
+      - A worker loop claims the job and runs it.
+
+    Otherwise:
+      - Use FastAPI BackgroundTasks.
     """
-    
+    if ALMA_ROLE not in {"api", "both"}:
+        raise HTTPException(status_code=503, detail="Service is running in WORKER-only mode.")
+
     # 1. Auth: Ensure the user is logged in
     uid = _require_uid_from_request(request)
 
@@ -615,17 +902,13 @@ def process_text_drill(
         raise HTTPException(status_code=400, detail="Max 10 questions per batch.")
 
     # 3. Setup IDs
-    # If the app didn't send an ID, make a timestamp one.
-    # Sanitize it so Firestore doesn't crash on slashes.
     raw_upload_id = upload_id or utils.make_timestamp()
     upload_id = _sanitize_doc_id(raw_upload_id)
-    
+
     # Default title if user didn't provide one
     safe_unit_name = (unit_name or f"{topic} Drill").strip()
 
     # 4. Initialize Tracker
-    # This creates the document in Firestore with status="processing"
-    # so the App sees the "Loading" bar immediately.
     tracker = UploadTracker(uid, upload_id)
     tracker.start(
         folder_id=(folder_id or "").strip(),
@@ -634,8 +917,24 @@ def process_text_drill(
     )
     tracker.event_note("Queued Drill...")
 
-    # 5. Start Background Job
-    # This runs the 'Manager' script we just made, without making the user wait.
+    if ALMA_QUEUE_ENABLED:
+        _enqueue_job(
+            uid=uid,
+            upload_id=upload_id,
+            job_type="text",
+            payload={
+                "topic": topic,
+                "course": course,
+                "difficulty": difficulty,
+                "quantity": int(count),
+                "additional_details": additional_details or "",
+                "folder_id": (folder_id or "").strip(),
+                "unit_name": safe_unit_name,
+            },
+        )
+        return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)
+
+    # Fallback: in-process background task
     background_tasks.add_task(
         drill_runner.run_text_drill_background,
         uid=uid,
@@ -644,12 +943,8 @@ def process_text_drill(
         course=course,
         difficulty=difficulty,
         quantity=count,
-        # question_type removed
         additional_details=additional_details,
         folder_id=folder_id or "",
         unit_name=safe_unit_name
     )
-
-    # 6. Return Success
-    # 202 Accepted means "We started working on it".
     return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)

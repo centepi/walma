@@ -28,4 +28,4 @@ RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
 # Start (use $PORT if provided by the platform)
-CMD ["sh", "-c", "uvicorn server_pipeline:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "uvicorn server_pipeline:app --host 0.0.0.0 --port ${PORT:-8080} --workers ${WEB_CONCURRENCY:-2}"]
