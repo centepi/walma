@@ -15,6 +15,7 @@ from PIL import Image
 
 # Firebase admin (for ID token verification)
 from firebase_admin import auth as firebase_auth
+from firebase_admin import firestore  # ✅ needed for @firestore.transactional + SERVER_TIMESTAMP
 
 # Local imports (A_Level project)
 from pipeline_scripts import document_analyzer, content_creator, content_checker, firebase_uploader, utils
@@ -192,9 +193,9 @@ def _enqueue_job(
         "worker_id": None,
         "error": None,
         "payload": payload or {},
-        # timestamps are best set server-side, but we keep it simple:
-        "created_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
-        "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+        # ✅ FIX: use real Firestore server timestamps (no utils.utcnow_iso / None)
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "updated_at": firestore.SERVER_TIMESTAMP,
     }
     _jobs_col(db_client).document(job_id).set(doc, merge=True)
     logger.info("Enqueued job %s (type=%s, uid=%s, upload=%s)", job_id, job_type, uid, upload_id)
@@ -204,10 +205,11 @@ def _enqueue_job(
 def _claim_one_job(db_client) -> Optional[Tuple[str, Dict[str, Any]]]:
     """
     Claim ONE queued job (best-effort, concurrency-safe enough for small scale).
-    Uses a transaction to flip status queued->processing.
+    Uses a Firestore transaction to flip status queued->processing.
+
+    ✅ FIX: google-cloud-firestore uses @firestore.transactional (no txn.call()).
     """
     try:
-        # Query a small batch of queued jobs
         q = (
             _jobs_col(db_client)
             .where("status", "==", "queued")
@@ -221,6 +223,7 @@ def _claim_one_job(db_client) -> Optional[Tuple[str, Dict[str, Any]]]:
             job_id = d.id
             ref = _jobs_col(db_client).document(job_id)
 
+            @firestore.transactional
             def txn_fn(txn):
                 snap = ref.get(transaction=txn)
                 data = snap.to_dict() if snap.exists else {}
@@ -229,12 +232,12 @@ def _claim_one_job(db_client) -> Optional[Tuple[str, Dict[str, Any]]]:
                 txn.update(ref, {
                     "status": "processing",
                     "worker_id": WORKER_ID,
-                    "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+                    "updated_at": firestore.SERVER_TIMESTAMP,
                 })
                 return data
 
             txn = db_client.transaction()
-            claimed = txn.call(txn_fn)
+            claimed = txn_fn(txn)
             if claimed:
                 return job_id, claimed
 
@@ -249,7 +252,7 @@ def _finish_job(db_client, job_id: str, *, ok: bool, error: Optional[str] = None
         patch = {
             "status": "done" if ok else "error",
             "error": (error or None),
-            "updated_at": utils.utcnow_iso() if hasattr(utils, "utcnow_iso") else None,
+            "updated_at": firestore.SERVER_TIMESTAMP,  # ✅ consistent server timestamp
         }
         _jobs_col(db_client).document(job_id).set(patch, merge=True)
     except Exception as e:
