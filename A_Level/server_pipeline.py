@@ -878,11 +878,17 @@ def process_text_drill(
     difficulty: str = Form(..., description="Difficulty level description"),
     count: int = Form(3, description="Number of questions to generate"),
     additional_details: str = Form("", description="Extra instructions"),
+
+    # ✅ Accept both snake_case and camelCase from the iOS client
     upload_id: Optional[str] = Form(None, description="Client-side upload id"),
-    folder_id: Optional[str] = Form(None, description="Target folder id"),
-    unit_name: Optional[str] = Form(None, description="Unit name"),
-    section: Optional[str] = Form(None, description="Section"),
+    folder_id: Optional[str] = Form(None, description="Target folder id (snake_case)"),
+    folderId: Optional[str] = Form(None, description="Target folder id (camelCase)"),
+    unit_name: Optional[str] = Form(None, description="Unit name (snake_case)"),
+    unitName: Optional[str] = Form(None, description="Unit name (camelCase)"),
+    section: Optional[str] = Form(None, description="Section (snake_case)"),
+    sectionName: Optional[str] = Form(None, description="Section (camelCase)"),
 ):
+    
     """
     Phase 1: Text-to-Drill Endpoint.
     Generates questions directly from text parameters, skipping PDF analysis.
