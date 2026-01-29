@@ -20,7 +20,7 @@ def send_welcome_email(to_email: str, first_name: str | None = None) -> None:
 
       <p>
         Alma is very new, and I’m actively building and improving it. There is still a lot to do,
-        and your experience really matters.
+        and learning about your experience and thoughts of the app would mean a lot to me.
       </p>
 
       <p>
