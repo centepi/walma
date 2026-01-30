@@ -19,6 +19,7 @@ from firebase_admin import firestore  # ✅ needed for @firestore.transactional 
 
 # Local imports (A_Level project)
 from pipeline_scripts import document_analyzer, content_creator, content_checker, firebase_uploader, utils
+from pipeline_scripts import entitlements  # ✅ NEW: server-side quota enforcement
 from pipeline_scripts.main_pipeline import (
     group_paired_items,                 # reuse grouping
     _build_parent_context_lookup,       # context lookups (numeric stem + mid-level parents)
@@ -888,7 +889,6 @@ def process_text_drill(
     section: Optional[str] = Form(None, description="Section (snake_case)"),
     sectionName: Optional[str] = Form(None, description="Section (camelCase)"),
 ):
-    
     """
     Phase 1: Text-to-Drill Endpoint.
     Generates questions directly from text parameters, skipping PDF analysis.
@@ -906,23 +906,54 @@ def process_text_drill(
     # 1. Auth: Ensure the user is logged in
     uid = _require_uid_from_request(request)
 
-    # 2. Safety Limit
-    if count > 10:
+    # 2. Safety clamp (server-side)
+    try:
+        requested = int(count or 0)
+    except Exception:
+        requested = 0
+    if requested < 1:
+        raise HTTPException(status_code=400, detail="Count must be at least 1.")
+    if requested > 10:
         raise HTTPException(status_code=400, detail="Max 10 questions per batch.")
+    effective_count = requested
+
+    # Normalize camelCase/snake_case inputs
+    effective_folder_id = (folder_id or folderId or "").strip()
+    effective_unit_name = (unit_name or unitName or f"{topic} Drill").strip()
+    effective_section = (section or sectionName or "General").strip()
 
     # 3. Setup IDs
     raw_upload_id = upload_id or utils.make_timestamp()
     upload_id = _sanitize_doc_id(raw_upload_id)
 
-    # Default title if user didn't provide one
-    safe_unit_name = (unit_name or f"{topic} Drill").strip()
+    # 3.5 Server-side quota enforcement (consume credits BEFORE enqueuing / creating shell)
+    db_client = firebase_uploader.initialize_firebase()
+    if not db_client:
+        raise HTTPException(status_code=500, detail="Firestore client not available.")
 
-    # 4. Initialize Tracker
+    ok, info = entitlements.try_consume_question_credit(
+        db_client,
+        uid=uid,
+        n=effective_count,
+        default_free_cap=30,
+    )
+    if not ok:
+        # Do NOT create upload shell. Do NOT enqueue. Just reject cleanly.
+        return JSONResponse(
+            {
+                "status": "quota_exceeded",
+                "message": f"You’ve used all free questions (cap {info.get('cap')}). Subscribe to continue.",
+                "entitlements": info,
+            },
+            status_code=402,
+        )
+
+    # 4. Initialize Tracker (only after quota is OK)
     tracker = UploadTracker(uid, upload_id)
     tracker.start(
-        folder_id=(folder_id or "").strip(),
-        unit_name=safe_unit_name,
-        section=(section or "General").strip()
+        folder_id=effective_folder_id,
+        unit_name=effective_unit_name,
+        section=effective_section,
     )
     tracker.event_note("Queued Drill...")
 
@@ -935,10 +966,11 @@ def process_text_drill(
                 "topic": topic,
                 "course": course,
                 "difficulty": difficulty,
-                "quantity": int(count),
+                "quantity": int(effective_count),
                 "additional_details": additional_details or "",
-                "folder_id": (folder_id or "").strip(),
-                "unit_name": safe_unit_name,
+                "folder_id": effective_folder_id,
+                "unit_name": effective_unit_name,
+                "section": effective_section,
             },
         )
         return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)
@@ -951,9 +983,9 @@ def process_text_drill(
         topic=topic,
         course=course,
         difficulty=difficulty,
-        quantity=count,
+        quantity=effective_count,
         additional_details=additional_details,
-        folder_id=folder_id or "",
-        unit_name=safe_unit_name
+        folder_id=effective_folder_id,
+        unit_name=effective_unit_name,
     )
     return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)
