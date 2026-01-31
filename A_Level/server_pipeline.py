@@ -19,7 +19,7 @@ from firebase_admin import firestore  # ✅ needed for @firestore.transactional 
 
 # Local imports (A_Level project)
 from pipeline_scripts import document_analyzer, content_creator, content_checker, firebase_uploader, utils
-from pipeline_scripts import entitlements  # ✅ NEW: server-side quota enforcement
+from pipeline_scripts import entitlements  # ✅ server-side quota enforcement
 from pipeline_scripts.main_pipeline import (
     group_paired_items,                 # reuse grouping
     _build_parent_context_lookup,       # context lookups (numeric stem + mid-level parents)
@@ -33,9 +33,15 @@ from config import settings
 # --- NEW IMPORT: Text-to-Drill Manager ---
 from pipeline_scripts.text_gen_pipeline import drill_runner
 
+# ✅ NEW: lightweight router for entitlements read endpoint (keeps this file smaller)
+from routers.entitlements_router import router as entitlements_router
+
 logger = utils.setup_logger(__name__)
 
 app = FastAPI(title="Alma Pipeline Server", version="1.5.0")
+
+# ✅ NEW: exposes GET /api/entitlements (stable quota read from global ledger)
+app.include_router(entitlements_router)
 
 # ---- tunables / limits ----
 MAX_FILES = int(os.getenv("UPLOAD_MAX_FILES", "12"))
@@ -88,8 +94,49 @@ def _bearer_token_from_request(request: Request) -> Optional[str]:
     return x.strip() if x else None
 
 
-def _require_uid_from_request(request: Request) -> str:
-    """Verify Firebase ID token and return uid (401 on failure)."""
+def _provider_key_from_decoded(decoded: Dict[str, Any], uid: str) -> str:
+    """
+    Build a stable-ish provider key to anchor entitlements across account deletion/recreation.
+
+    Prefer (in order):
+      - apple.com subject id
+      - google.com subject id
+      - email address (lowercased) if present
+      - fallback: uid (keeps existing behavior if we can't derive anything better)
+
+    NOTE: This depends on how Firebase encodes identities in the ID token:
+      decoded["firebase"]["identities"] typically contains provider ids -> [provider_user_id]
+    """
+    try:
+        fb = decoded.get("firebase") or {}
+        identities = fb.get("identities") or {}
+
+        # Apple Sign In
+        apple_ids = identities.get("apple.com") or identities.get("apple") or []
+        if isinstance(apple_ids, list) and apple_ids:
+            return f"apple:{str(apple_ids[0])}"
+
+        # Google Sign In
+        google_ids = identities.get("google.com") or identities.get("google") or []
+        if isinstance(google_ids, list) and google_ids:
+            return f"google:{str(google_ids[0])}"
+
+        # Email fallback (not always present / stable depending on Apple hide-my-email)
+        email = decoded.get("email")
+        if isinstance(email, str) and email.strip():
+            return f"email:{email.strip().lower()}"
+    except Exception:
+        pass
+
+    return f"uid:{uid}"
+
+
+def _require_auth_context_from_request(request: Request) -> Tuple[str, str]:
+    """
+    Verify Firebase ID token and return (uid, provider_key) (401 on failure).
+
+    provider_key is used for entitlements so quota survives uid churn (account deletion/recreate).
+    """
     _ensure_firebase_initialized()
     token = _bearer_token_from_request(request)
     if not token:
@@ -99,7 +146,8 @@ def _require_uid_from_request(request: Request) -> str:
         uid = decoded.get("uid")
         if not uid:
             raise ValueError("token_has_no_uid")
-        return uid
+        provider_key = _provider_key_from_decoded(decoded, str(uid))
+        return str(uid), provider_key
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid ID token: {e}")
 
@@ -802,7 +850,7 @@ def process_user_upload(
         raise HTTPException(status_code=413, detail=f"Too many files (>{MAX_FILES}).")
 
     # ---- Auth: require valid Firebase ID token
-    uid = _require_uid_from_request(request)
+    uid, _provider_key = _require_auth_context_from_request(request)
 
     # ---- Read uploads + size guard
     pdf_paths, pil_images, total_bytes = _read_images_from_uploads(files)
@@ -904,7 +952,7 @@ def process_text_drill(
         raise HTTPException(status_code=503, detail="Service is running in WORKER-only mode.")
 
     # 1. Auth: Ensure the user is logged in
-    uid = _require_uid_from_request(request)
+    uid, provider_key = _require_auth_context_from_request(request)
 
     # 2. Safety clamp (server-side)
     try:
@@ -926,14 +974,15 @@ def process_text_drill(
     raw_upload_id = upload_id or utils.make_timestamp()
     upload_id = _sanitize_doc_id(raw_upload_id)
 
-    # 3.5 Server-side quota enforcement (consume credits BEFORE enqueuing / creating shell)
+    # 3.5 Server-side quota enforcement (consume credits BEFORE creating shell/enqueueing)
     db_client = firebase_uploader.initialize_firebase()
     if not db_client:
         raise HTTPException(status_code=500, detail="Firestore client not available.")
 
+    # ✅ IMPORTANT: entitlements should be keyed by provider_key (not uid) so quota survives uid churn.
     ok, info = entitlements.try_consume_question_credit(
         db_client,
-        uid=uid,
+        uid=provider_key,  # <-- keep param name for now; entitlements module will treat this as the key
         n=effective_count,
         default_free_cap=30,
     )
@@ -953,7 +1002,7 @@ def process_text_drill(
     tracker.start(
         folder_id=effective_folder_id,
         unit_name=effective_unit_name,
-        section=effective_section,
+        section=effective_section
     )
     tracker.event_note("Queued Drill...")
 
@@ -986,6 +1035,6 @@ def process_text_drill(
         quantity=effective_count,
         additional_details=additional_details,
         folder_id=effective_folder_id,
-        unit_name=effective_unit_name,
+        unit_name=effective_unit_name
     )
     return JSONResponse({"status": "queued", "upload_id": upload_id}, status_code=202)
