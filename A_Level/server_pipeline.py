@@ -100,7 +100,6 @@ def _ensure_firebase_initialized():
     """Initialize Firebase Admin once (via uploader helper)."""
     _ = firebase_uploader.initialize_firebase()
 
-
 def _bearer_token_from_request(request: Request) -> Optional[str]:
     """Extract Bearer token from Authorization or X-ID-Token header."""
     auth = request.headers.get("Authorization", "")
