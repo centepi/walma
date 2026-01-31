@@ -7,7 +7,25 @@ import time
 import uuid
 import threading
 import traceback
+import sys  # ✅ NEW
 from typing import List, Tuple, Dict, Any, Optional
+
+# ✅ NEW: make sure "routers" is importable on Railway
+# Your repo layout can be either:
+#   /app/server_pipeline.py + /app/A_Level/routers/...
+# or /app/A_Level/server_pipeline.py + /app/A_Level/routers/...
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# If routers/ is alongside this file
+if os.path.isdir(os.path.join(_THIS_DIR, "routers")):
+    if _THIS_DIR not in sys.path:
+        sys.path.insert(0, _THIS_DIR)
+
+# If routers/ is inside A_Level/ (common when server_pipeline.py is at repo root)
+elif os.path.isdir(os.path.join(_THIS_DIR, "A_Level", "routers")):
+    a_level_dir = os.path.join(_THIS_DIR, "A_Level")
+    if a_level_dir not in sys.path:
+        sys.path.insert(0, a_level_dir)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
@@ -69,7 +87,6 @@ JOB_COLLECTION = os.getenv("ALMA_JOB_COLLECTION", "PipelineJobs")
 
 # Worker identity (visible in Firestore)
 WORKER_ID = os.getenv("ALMA_WORKER_ID", f"worker-{uuid.uuid4().hex[:8]}")
-
 # IMPORTANT NOTE:
 # - Text drills are safe to run in a separate worker service because payload is pure text.
 # - File uploads in this implementation store TEMP FILE PATHS in the job payload.
