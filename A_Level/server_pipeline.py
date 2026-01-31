@@ -7,25 +7,7 @@ import time
 import uuid
 import threading
 import traceback
-import sys  # ✅ NEW
 from typing import List, Tuple, Dict, Any, Optional
-
-# ✅ NEW: make sure "routers" is importable on Railway
-# Your repo layout can be either:
-#   /app/server_pipeline.py + /app/A_Level/routers/...
-# or /app/A_Level/server_pipeline.py + /app/A_Level/routers/...
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# If routers/ is alongside this file
-if os.path.isdir(os.path.join(_THIS_DIR, "routers")):
-    if _THIS_DIR not in sys.path:
-        sys.path.insert(0, _THIS_DIR)
-
-# If routers/ is inside A_Level/ (common when server_pipeline.py is at repo root)
-elif os.path.isdir(os.path.join(_THIS_DIR, "A_Level", "routers")):
-    a_level_dir = os.path.join(_THIS_DIR, "A_Level")
-    if a_level_dir not in sys.path:
-        sys.path.insert(0, a_level_dir)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
@@ -51,14 +33,14 @@ from config import settings
 # --- NEW IMPORT: Text-to-Drill Manager ---
 from pipeline_scripts.text_gen_pipeline import drill_runner
 
-# ✅ NEW: lightweight router for entitlements read endpoint (keeps this file smaller)
-from routers.entitlements_router import router as entitlements_router
+# ✅ UPDATED: routers folder moved under pipeline_scripts/routers
+from pipeline_scripts.routers.entitlements_router import router as entitlements_router
 
 logger = utils.setup_logger(__name__)
 
 app = FastAPI(title="Alma Pipeline Server", version="1.5.0")
 
-# ✅ NEW: exposes GET /api/entitlements (stable quota read from global ledger)
+# ✅ exposes GET /api/entitlements (stable quota read from global ledger)
 app.include_router(entitlements_router)
 
 # ---- tunables / limits ----
@@ -84,7 +66,6 @@ JOB_CLAIM_BATCH = int(os.getenv("ALMA_JOB_CLAIM_BATCH", "1"))
 
 # Collection name for jobs (Firestore)
 JOB_COLLECTION = os.getenv("ALMA_JOB_COLLECTION", "PipelineJobs")
-
 # Worker identity (visible in Firestore)
 WORKER_ID = os.getenv("ALMA_WORKER_ID", f"worker-{uuid.uuid4().hex[:8]}")
 # IMPORTANT NOTE:
