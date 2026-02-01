@@ -50,13 +50,18 @@ def send_welcome_email(
       <p><b>Fellow mathematician,</b></p>
 
       <p>
-        Alma is very new, and I’m actively building and improving it. There is still a lot to do,
-        and learning about your experience and thoughts of the app would mean a lot to me.
+        I’m building Alma Math because I wanted something that doesn’t really exist yet:
+        an AI tutor that can actually read your work and respond to it.
       </p>
 
       <p>
-        If you notice anything confusing or not working as expected, or if you have ideas or feedback,
-        reply to this email. I read every message myself and will respond.
+        Alma is still early, and I’m improving it constantly. Learning about your experience
+        and thoughts on the app would genuinely mean a lot to me.
+      </p>
+
+      <p>
+        If you notice anything that feels wrong, confusing, or incomplete, or if you have
+        ideas or feedback, feel free to reply. I read every message myself and will respond.
       </p>
 
       <p>
