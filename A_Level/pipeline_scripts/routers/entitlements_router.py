@@ -1,6 +1,6 @@
 # A_Level/routers/entitlements_router.py
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -62,18 +62,39 @@ def _require_auth_context_from_request(request: Request) -> Tuple[str, str]:
         raise HTTPException(status_code=401, detail=f"Invalid ID token: {e}")
 
 
+def _storekit_jws_from_request(request: Request) -> str:
+    """
+    StoreKit 2 proof (signed transaction JWS) sent from iOS.
+    We accept it via header so it can be attached to ANY request easily.
+    """
+    v = request.headers.get("X-StoreKit-Transaction", "") or request.headers.get("X-StoreKit-JWS", "")
+    return v.strip()
+
+
 @router.get("/api/entitlements")
 def get_entitlements(request: Request):
     """
-    Read stable entitlements from the global ledger (NO consumption).
-    Uses the same provider_key logic as /process-text.
+    Read stable entitlements.
+
+    ✅ New (proper) model:
+      - Client may include a StoreKit 2 signed transaction JWS via:
+          X-StoreKit-Transaction: <JWS>
+      - Server verifies it (in entitlements module) and computes is_subscribed
+        from verifiable data (not from a client "sync").
+
+    Notes:
+      - Still uses provider_key to keep the free quota ledger stable.
+      - This endpoint does not consume credits.
     """
     _uid, provider_key = _require_auth_context_from_request(request)
 
-    # ✅ DIAGNOSTIC: log identity + env that influence entitlement hashing
+    storekit_jws = _storekit_jws_from_request(request)
+
     logger.info(
-        "[entitlements] provider_key=%s ENTITLEMENTS_SALT_len=%d LEDGER_COLLECTION=%s",
+        "[entitlements] provider_key=%s has_storekit_jws=%s jws_len=%d ENTITLEMENTS_SALT_len=%d LEDGER_COLLECTION=%s",
         provider_key,
+        bool(storekit_jws),
+        len(storekit_jws),
         len(os.getenv("ENTITLEMENTS_SALT", "")),
         os.getenv("ENTITLEMENTS_LEDGER_COLLECTION", "EntitlementLedger"),
     )
@@ -82,23 +103,37 @@ def get_entitlements(request: Request):
     if not db_client:
         raise HTTPException(status_code=500, detail="Firestore client not available.")
 
-    ok, info = entitlements.try_consume_question_credit(
-        db_client,
-        uid=provider_key,
-        n=0,  # ✅ read-only
-        default_free_cap=30,
-    )
+    # ✅ Prefer the new authoritative path (StoreKit proof -> server-verified subscription)
+    # while keeping a safe fallback during rollout.
+    if hasattr(entitlements, "get_effective_entitlements_snapshot"):
+        try:
+            info = entitlements.get_effective_entitlements_snapshot(
+                db_client,
+                uid=provider_key,
+                storekit_jws=storekit_jws or None,
+                default_free_cap=30,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to resolve entitlements: {e}")
+    else:
+        # Fallback (legacy): ledger-only, no StoreKit verification (temporary)
+        ok, info = entitlements.try_consume_question_credit(
+            db_client,
+            uid=provider_key,
+            n=0,  # read-only
+            default_free_cap=30,
+        )
+        _ = ok
 
-    # ✅ DIAGNOSTIC: log resolved ledger key + counters
     logger.info(
-        "[entitlements] ok=%s key_type=%s key=%s cap=%s used=%s remaining=%s",
-        ok,
+        "[entitlements] key_type=%s key=%s cap=%s used=%s remaining=%s is_subscribed=%s storekit_verified=%s",
         info.get("key_type"),
         (info.get("key") or "")[:12],
         info.get("cap"),
         info.get("used"),
         info.get("remaining"),
+        info.get("is_subscribed"),
+        info.get("storekit_verified"),
     )
 
-    # ok will be True for n=0; but we return info regardless.
     return JSONResponse(info, status_code=200)
