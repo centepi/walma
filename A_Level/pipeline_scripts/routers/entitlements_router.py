@@ -1,11 +1,16 @@
 # A_Level/routers/entitlements_router.py
+import os
 from typing import Any, Dict, Tuple
+
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from pipeline_scripts import firebase_uploader, entitlements
+from pipeline_scripts import firebase_uploader, entitlements, utils
 
 router = APIRouter()
+
+logger = utils.setup_logger(__name__)
+
 
 def _bearer_token_from_request(request: Request) -> str:
     auth = request.headers.get("Authorization", "")
@@ -13,6 +18,7 @@ def _bearer_token_from_request(request: Request) -> str:
         return auth.split(" ", 1)[1].strip()
     x = request.headers.get("X-ID-Token")
     return x.strip() if x else ""
+
 
 def _provider_key_from_decoded(decoded: Dict[str, Any], uid: str) -> str:
     try:
@@ -35,6 +41,7 @@ def _provider_key_from_decoded(decoded: Dict[str, Any], uid: str) -> str:
 
     return f"uid:{uid}"
 
+
 def _require_auth_context_from_request(request: Request) -> Tuple[str, str]:
     # Import firebase_auth lazily so this file doesn't force init at import time
     from firebase_admin import auth as firebase_auth
@@ -54,6 +61,7 @@ def _require_auth_context_from_request(request: Request) -> Tuple[str, str]:
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid ID token: {e}")
 
+
 @router.get("/api/entitlements")
 def get_entitlements(request: Request):
     """
@@ -61,6 +69,14 @@ def get_entitlements(request: Request):
     Uses the same provider_key logic as /process-text.
     """
     _uid, provider_key = _require_auth_context_from_request(request)
+
+    # ✅ DIAGNOSTIC: log identity + env that influence entitlement hashing
+    logger.info(
+        "[entitlements] provider_key=%s ENTITLEMENTS_SALT_len=%d LEDGER_COLLECTION=%s",
+        provider_key,
+        len(os.getenv("ENTITLEMENTS_SALT", "")),
+        os.getenv("ENTITLEMENTS_LEDGER_COLLECTION", "EntitlementLedger"),
+    )
 
     db_client = firebase_uploader.initialize_firebase()
     if not db_client:
@@ -72,5 +88,17 @@ def get_entitlements(request: Request):
         n=0,  # ✅ read-only
         default_free_cap=30,
     )
+
+    # ✅ DIAGNOSTIC: log resolved ledger key + counters
+    logger.info(
+        "[entitlements] ok=%s key_type=%s key=%s cap=%s used=%s remaining=%s",
+        ok,
+        info.get("key_type"),
+        (info.get("key") or "")[:12],
+        info.get("cap"),
+        info.get("used"),
+        info.get("remaining"),
+    )
+
     # ok will be True for n=0; but we return info regardless.
     return JSONResponse(info, status_code=200)

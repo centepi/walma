@@ -951,6 +951,14 @@ def process_text_drill(
     # 1. Auth: Ensure the user is logged in
     uid, provider_key = _require_auth_context_from_request(request)
 
+    # ✅ DIAGNOSTIC: log identity + env that influence entitlement hashing
+    logger.info(
+        "[process-text] provider_key=%s ENTITLEMENTS_SALT_len=%d LEDGER_COLLECTION=%s",
+        provider_key,
+        len(os.getenv("ENTITLEMENTS_SALT", "")),
+        os.getenv("ENTITLEMENTS_LEDGER_COLLECTION", "EntitlementLedger"),
+    )
+
     # 2. Safety clamp (server-side)
     try:
         requested = int(count or 0)
@@ -983,6 +991,18 @@ def process_text_drill(
         n=effective_count,
         default_free_cap=30,
     )
+
+    # ✅ DIAGNOSTIC: log resolved ledger key + counters
+    logger.info(
+        "[process-text] ok=%s key_type=%s key=%s cap=%s used=%s remaining=%s",
+        ok,
+        info.get("key_type"),
+        (info.get("key") or "")[:12],
+        info.get("cap"),
+        info.get("used"),
+        info.get("remaining"),
+    )
+
     if not ok:
         # Do NOT create upload shell. Do NOT enqueue. Just reject cleanly.
         return JSONResponse(
