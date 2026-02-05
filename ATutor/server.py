@@ -108,6 +108,39 @@ def _safe_parse_model_json(raw_text: str):
             print(f"❌ Second JSON parse error after repair: {e2}")
             raise
 
+
+def _safe_get_text_from_response(resp) -> str:
+    """
+    google-generativeai sometimes returns a candidate with no content parts.
+    Accessing resp.text (or chunk.text in streaming) can throw in that case.
+    This function NEVER throws and returns "" if no text exists.
+    """
+    # 1) Try the convenience accessor (but guard it)
+    try:
+        t = resp.text
+        if t:
+            return str(t)
+    except Exception:
+        pass
+
+    # 2) Fallback: manually walk candidates -> content -> parts -> text
+    try:
+        candidates = getattr(resp, "candidates", None) or []
+        out = []
+        for c in candidates:
+            content = getattr(c, "content", None)
+            if not content:
+                continue
+            parts = getattr(content, "parts", None) or []
+            for p in parts:
+                pt = getattr(p, "text", None)
+                if pt:
+                    out.append(pt)
+        return "".join(out)
+    except Exception:
+        return ""
+
+
 # --- Main analysis endpoint ---
 @app.post("/analyse-work")
 async def analyse_work(request: AnalysisRequest):
@@ -141,13 +174,16 @@ async def analyse_work(request: AnalysisRequest):
         model = genai.GenerativeModel("gemini-2.5-flash", generation_config=generation_config)
         gemini_response = model.generate_content(prompt)
 
+        # ✅ Guard .text access
+        raw_text = _safe_get_text_from_response(gemini_response)
+
         try:
-            analysis_data = _safe_parse_model_json(gemini_response.text)
+            analysis_data = _safe_parse_model_json(raw_text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
         except (json.JSONDecodeError, ValueError) as e:
             print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
+            print(f"Raw Gemini response: {raw_text}")
             return {"status": "error", "message": "AI response was malformed."}
 
         print(f"✅ Gemini Analysis: {analysis_data}")
@@ -199,15 +235,18 @@ async def stuck_at_question(request: AnalysisRequest):
         model = genai.GenerativeModel("gemini-2.5-flash", generation_config=generation_config)
         gemini_response = model.generate_content(prompt)
 
+        # ✅ Guard .text access
+        raw_text = _safe_get_text_from_response(gemini_response)
+
         try:
-            analysis_data = _safe_parse_model_json(gemini_response.text)
+            analysis_data = _safe_parse_model_json(raw_text)
             if "analysis" not in analysis_data or "reason" not in analysis_data:
                 raise ValueError("Missing 'analysis' or 'reason' key in Gemini response.")
             # Ensure is_complete exists (default False) for UI logic
             analysis_data["is_complete"] = bool(analysis_data.get("is_complete", False))
         except (json.JSONDecodeError, ValueError) as e:
             print(f"❌ Gemini response was not valid JSON or was missing keys: {e}")
-            print(f"Raw Gemini response: {gemini_response.text}")
+            print(f"Raw Gemini response: {raw_text}")
             return {"status": "error", "message": "AI response was malformed."}
 
         print(f"✅ Gemini Analysis: {analysis_data}")
@@ -247,7 +286,13 @@ async def chat(request: ChatRequest):
         model = genai.GenerativeModel("gemini-2.5-flash")
         gemini_response = model.generate_content(prompt)
 
-        ai_reply = gemini_response.text.strip()
+        # ✅ Guard .text access (same failure mode can happen here too)
+        ai_reply = _safe_get_text_from_response(gemini_response).strip()
+
+        # If Gemini returned no parts, don't crash; return a gentle fallback
+        if not ai_reply:
+            ai_reply = "Sorry — I didn’t get a usable response that time. Try sending that again.\n[[STATUS: CONTINUE]]"
+
         print(f"🤖 AI Reply (raw): {ai_reply}")
 
         # Safe, regex-free parsing of optional trailing [[STATUS: ...]] tag
@@ -287,16 +332,20 @@ async def chat_stream(request: ChatRequest):
             model = genai.GenerativeModel("gemini-2.5-flash")
             # Gemini supports streaming with stream=True
             stream = model.generate_content(prompt, stream=True)
+
             for chunk in stream:
-                if chunk.text:
-                    # send each chunk immediately
-                    yield chunk.text
+                # ✅ IMPORTANT: chunk.text can THROW if Gemini returned no valid Part
+                piece = _safe_get_text_from_response(chunk)
+                if piece:
+                    yield piece
                     # tiny pause helps some hosts flush output
                     await asyncio.sleep(0)
+
         except Exception as e:
             print(f"❌ Error in chat-stream endpoint: {e}")
-            # send some marker to the client
-            yield "\n[stream-error]\n"
+            # ✅ Do NOT leak internal markers like [stream-error] into the UI.
+            # Provide a user-readable fallback and a status token the client can strip.
+            yield "\nSorry — I hit a streaming glitch. Please send that again.\n[[STATUS: CONTINUE]]\n"
 
     # plain text streaming; client can rebuild and then strip [[STATUS: ...]] at the end
     return StreamingResponse(event_generator(), media_type="text/plain")
