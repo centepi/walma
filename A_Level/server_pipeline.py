@@ -662,6 +662,12 @@ def process_user_upload(
     if ALMA_ROLE not in {"api", "both"}:
         raise HTTPException(status_code=503, detail="Service is running in WORKER-only mode.")
 
+    # ✅ Upload-files generation disabled (drill is the only creation path)
+    raise HTTPException(
+        status_code=410,
+        detail="Upload-files generation is disabled. Use /api/user-uploads/process-text.",
+    )
+
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
     if len(files) > MAX_FILES:
@@ -679,7 +685,6 @@ def process_user_upload(
             except Exception:
                 pass
         raise HTTPException(status_code=413, detail=f"Total upload too large (> {MAX_TOTAL_BYTES // (1024*1024)} MB).")
-
     image_paths: List[str] = []
     for _, pil in enumerate(pil_images):
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
@@ -780,7 +785,7 @@ def process_text_drill(
                 db_client,
                 uid=provider_key,
                 storekit_jws=storekit_jws,
-                default_free_cap=30,
+                default_free_cap=6,  # ✅ was 30
             )
         except Exception as e:
             logger.warning("[process-text] entitlements snapshot failed: %s", e)
@@ -794,7 +799,7 @@ def process_text_drill(
             db_client,
             uid=provider_key,
             n=effective_count,
-            default_free_cap=30,
+            default_free_cap=6,  # ✅ was 30
         )
 
     logger.info(

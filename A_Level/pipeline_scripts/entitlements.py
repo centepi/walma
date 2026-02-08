@@ -53,6 +53,9 @@ from pipeline_scripts.storekit_verifier import (
 LEDGER_COLLECTION = os.getenv("ENTITLEMENTS_LEDGER_COLLECTION", "EntitlementLedger")
 ENTITLEMENTS_SALT = os.getenv("ENTITLEMENTS_SALT", "")
 
+# ✅ Single source of truth for default free cap (used only when callers don't pass one)
+DEFAULT_FREE_CAP = int(os.getenv("ALMA_FREE_QUESTION_CAP", "6"))
+
 # StoreKit verification config
 APPLE_BUNDLE_ID = (os.getenv("APPLE_BUNDLE_ID") or "").strip() or None
 STOREKIT_ENVIRONMENT = (os.getenv("STOREKIT_ENVIRONMENT") or "").strip() or None  # "Sandbox" | "Production"
@@ -293,7 +296,7 @@ def get_effective_entitlements_snapshot(
     *,
     uid: str,
     storekit_jws: Optional[str] = None,
-    default_free_cap: int = 30,
+    default_free_cap: int = DEFAULT_FREE_CAP,
 ) -> Dict[str, Any]:
     """
     Read entitlements snapshot WITHOUT consuming credits.
@@ -376,7 +379,7 @@ def upsert_subscription_state(
     *,
     uid: str,
     is_subscribed: bool,
-    default_free_cap: int = 30,
+    default_free_cap: int = DEFAULT_FREE_CAP,
     source: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -455,7 +458,7 @@ def try_consume_question_credit(
     *,
     uid: str,
     n: int = 1,
-    default_free_cap: int = 30,
+    default_free_cap: int = DEFAULT_FREE_CAP,
 ) -> Tuple[bool, Dict[str, Any]]:
     """
     Atomically consume n credits (question creations) for a user.
