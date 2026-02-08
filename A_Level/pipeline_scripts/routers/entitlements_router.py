@@ -111,7 +111,7 @@ def get_entitlements(request: Request):
                 db_client,
                 uid=provider_key,
                 storekit_jws=storekit_jws or None,
-                default_free_cap=30,
+                default_free_cap=6,   # ✅ was 30
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to resolve entitlements: {e}")
@@ -121,7 +121,7 @@ def get_entitlements(request: Request):
             db_client,
             uid=provider_key,
             n=0,  # read-only
-            default_free_cap=30,
+            default_free_cap=6,    # ✅ was 30
         )
         _ = ok
 

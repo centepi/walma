@@ -662,7 +662,6 @@ def process_user_upload(
     if ALMA_ROLE not in {"api", "both"}:
         raise HTTPException(status_code=503, detail="Service is running in WORKER-only mode.")
 
-    # ✅ Upload-files generation disabled (drill is the only creation path)
     raise HTTPException(
         status_code=410,
         detail="Upload-files generation is disabled. Use /api/user-uploads/process-text.",
