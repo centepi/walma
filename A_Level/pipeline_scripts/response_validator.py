@@ -76,6 +76,36 @@ def _escape_invalid_json_backslashes(s: str) -> str:
     return s
 
 
+def _replace_bs_tokens(obj):
+    """
+    Recursively replace the [[BS]] token with a single backslash in all strings.
+
+    This runs AFTER json.loads(), so it cannot break JSON validity.
+    It applies to all nested fields, including visual_data text labels, etc.
+    """
+    if obj is None:
+        return None
+
+    if isinstance(obj, str):
+        if _BS_TOKEN in obj:
+            return obj.replace(_BS_TOKEN, "\\")
+        return obj
+
+    if isinstance(obj, list):
+        return [_replace_bs_tokens(x) for x in obj]
+
+    if isinstance(obj, dict):
+        # ✅ Also sanitize keys (model shouldn't put LaTeX in keys, but this makes it bulletproof)
+        out = {}
+        for k, v in obj.items():
+            new_k = _replace_bs_tokens(k) if isinstance(k, str) else k
+            out[new_k] = _replace_bs_tokens(v)
+        return out
+
+    # numbers / bools / other types
+    return obj
+
+
 def _parse_and_repair(raw_text: str):
     r"""
     Takes a raw string from an AI, attempts to repair common errors,
@@ -87,6 +117,7 @@ def _parse_and_repair(raw_text: str):
     - Repair invalid backslash escapes (e.g. \mathbb, \text, \theta) for JSON.
     - Remove trailing commas before } or ].
     - Parse with json.loads.
+    - Replace [[BS]] tokens with real backslashes AFTER parsing.
 
     NOTE: We do not touch or normalize any math fences here.
     Whatever the model outputs inside strings is preserved (up to the
@@ -131,6 +162,9 @@ def _parse_and_repair(raw_text: str):
         # Step 4: Attempt to parse.
         parsed_data = json.loads(json_str)
         logger.debug("Validator: JSON parsed successfully.")
+
+        # Step 5: Replace [[BS]] tokens with real backslashes (safe: after parsing).
+        parsed_data = _replace_bs_tokens(parsed_data)
 
         return parsed_data
 

@@ -49,24 +49,44 @@ If your question text refers to multiple diagrams/graphs, you MUST include multi
 
 ---
 
-**JSON TECHNICAL RULES**:
+**GRAPH READABILITY REQUIREMENT (VERY IMPORTANT)**:
+If the question requires the student to read information from the graph (e.g. identify an interval from the diagram, read intercepts/turning points, read a domain/range from where the curve is drawn, read endpoints, read coordinates, or infer inequalities from the picture), then your `visual_data` MUST make that possible:
+- Axis numbers/ticks must be visible (do NOT hide values) for function/coordinate graphs.
+- Include an explicit `axes_range` so the scale is unambiguous.
+- Ensure the viewport includes all needed labels/text (no cropped labels).
+- If specific endpoints/points are required, include `labeled_points` or geometry `label` objects and set them to reveal.
 
-- **Backslashes & math fences for LaTeX (VERY IMPORTANT)**:
-  - You are writing a JSON object directly. Inside any JSON string, every backslash in a LaTeX command **must be escaped as `\\\\`** in the JSON source so that, after JSON parsing, the final string seen by the student has a **single** backslash.
-  - All LaTeX commands MUST still live **inside** `$...$` or `$$...$$` in the final string. The dollar signs are written literally in JSON; only the backslashes are doubled.
-  - For example, to produce the final text:
-    - `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`
-    your JSON must contain:
-    - `"question_stem": "Let $H = \\\\ell^2(\\\\mathbb{N})$ and $y \\\\in \\\\operatorname{Ran}(T)$."`
-    After JSON parsing, this becomes `Let $H = \\ell^2(\\mathbb{N})$ and $y \\in \\operatorname{Ran}(T)$.`, which MathJax renders correctly.
-  - Never output bare `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`, `\\|Ax_n\\|` with only a **single** backslash **in the JSON source** (for example `"x_n \\rightharpoonup 0"`). That is invalid JSON and will cause the entire response to be rejected with an `Invalid \\escape` error. In JSON, the source must be `\\\\mathbb{N}`, `\\\\infty`, `\\\\rightharpoonup`, etc., so that the parsed string has `\\mathbb{N}`, `\\infty`, `\\rightharpoonup`.
-- Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
+---
+
+**JSON TECHNICAL RULES (CRITICAL)**:
+
 - Output **ONLY** the JSON object — **no** markdown code fences, headings, or commentary.
-- If you need a line break inside a string, use the **normal JSON newline escape** (one backslash + `n` in the JSON source):
-  - ✅ CORRECT JSON: `"question_stem": "Sentence one.\\nSentence two."`  (after parsing, this becomes two lines.)
-  - ❌ INCORRECT JSON: `"question_stem": "Sentence one.\\\\nSentence two."`  (this produces the *visible* characters `\\n` in the final string.)
-- Never output the characters `\\n` or `\\\\n` as visible text in any field. Newlines must be represented only by JSON newline escapes that turn into real line breaks after parsing.
+
+- Newlines:
+  - To create a real line break inside a JSON string, use \\n (single backslash + n) in the JSON source.
+  - ✅ CORRECT JSON: "Line 1.\\nLine 2."
+  - ❌ INCORRECT JSON: "Line 1.\\\\nLine 2."  (shows \\n literally)
+  - Never output the characters \\n or \\\\n as visible text in any field.
+
+- **ABSOLUTE RULE: NEVER OUTPUT A RAW BACKSLASH FOR LATEX**:
+  - You MUST NOT output "\\" anywhere for LaTeX, in ANY string field (including visual_data text labels).
+  - Instead, use the token [[BS]] for EVERY LaTeX command backslash.
+  - The backend will convert [[BS]] -> "\\" AFTER JSON parsing, so MathJax receives normal LaTeX.
+
+Examples (copy exactly):
+- "$[[BS]]theta$", "$[[BS]]pi$", "$[[BS]]sqrt{...}$", "$[[BS]]frac{a}{b}$", "$30^{[[BS]]circ}$"
+- "$v [[BS]]in [[BS]]mathbb{C}^n$"
+- "$n [[BS]]times n$"
+
+IMPORTANT:
+- Do NOT output "[[BS]][[BS]]" inside $...$ or $$...$$.
+  That sequence is a TeX linebreak and will corrupt macros.
+  Always use a SINGLE [[BS]] before every LaTeX command.
+
+- Do **NOT** escape the `$` characters used for math fences (`$...$`, `$$...$$`).
+  (Write $ literally; only LaTeX commands use [[BS]].)
 """
+
 
 # ============================================================================
 # TYPE SNIPPETS (CALLER SHOULD SELECT ONE MOST OF THE TIME)
@@ -120,6 +140,12 @@ Structure:
 Notes:
 - hide_values (optional): if true, axis numbers are hidden
 - show_label (optional): if true, legend label may appear
+
+IMPORTANT:
+- If the student must read values from the graph (intervals/endpoints/coordinates), then:
+  1) set hide_values=false
+  2) include axes_range
+  3) include labeled_points for any required endpoints, with reveal=true
 """
 
 _VISUAL_RULES_TYPE_HISTOGRAM = r"""
@@ -346,7 +372,7 @@ Structure:
 }
 
 **Key Points for Parametric Curves:**
-- Use `t` as the parameter variable (do NOT use `x`/`u`/`\\\\theta` as the parameter name).
+- Use `t` as the parameter variable (do NOT use x/u/theta as the parameter name).
 - `parametric_function.x` and `parametric_function.y` must be expressions in terms of `t`.
 - Expressions must be Python-compatible / evaluable (e.g., `cos(t)`, `sin(t)`, `t**2`).
 """
@@ -458,7 +484,7 @@ Top-level structure:
   - They MUST NOT overlap the main diagram lines/graphs.
   - They MUST NOT be extremely far away from the arc/angle they describe.
   - Use small, consistent offsets (typically 6–14 "offset points" for point labels).
-  - For angle measures near an arc (e.g., "$60^\\\\circ$"), prefer a `text` object positioned near the mid-angle on the arc (see below).
+  - For angle measures near an arc (e.g., "$60^{[[BS]]circ}$"), prefer a `text` object positioned near the mid-angle on the arc (see below).
 
 **SUPPORTED GEOMETRY OBJECT TYPES** (inside `objects`):
 - point
@@ -607,8 +633,8 @@ RULES FOR POINT LABELS (label objects):
 - Do NOT use huge offsets (like 40+) unless absolutely necessary.
 - Ensure the label does not overlap a segment/arc passing through the point.
 
-Angle/arc measure label (e.g., "$60^\\\\circ$") — use a `text` object placed near the arc, NOT on top of lines:
-{"type":"text","x":4.2,"y":3.8,"text":"$60^\\\\circ$","fontsize":12}
+Angle/arc measure label (e.g., "$60^{[[BS]]circ}$") — use a `text` object placed near the arc, NOT on top of lines:
+{"type":"text","x":4.2,"y":3.8,"text":"$60^{[[BS]]circ}$","fontsize":12}
 
 RULES FOR ANGLE/ARC MEASURE TEXT (text objects):
 - Place it near the arc/angle it describes (close, but not touching the curve).
@@ -617,7 +643,7 @@ RULES FOR ANGLE/ARC MEASURE TEXT (text objects):
 - Keep the text position inside the axes_range with margin.
 
 Free text at coordinates (general):
-{"type":"text","x":2.5,"y":4.0,"text":"$\\\\angle ABC$","fontsize":12}
+{"type":"text","x":2.5,"y":4.0,"text":"$[[BS]]angle ABC$","fontsize":12}
 
 ---
 

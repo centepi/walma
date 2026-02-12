@@ -96,15 +96,19 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 5. No Drawing Requests: Do not ask the student to "sketch/draw/plot."
 6. Clean Answer: Choose values that lead to neat final results.
 7. No Phantom Diagrams: If you mention a diagram/figure/graph, you MUST supply visual_data.
+8. Graph-reading requirement (IMPORTANT): If the question requires reading values from a graph (e.g. domain/range using inequalities, intercepts/turning points from the graph, endpoints/interval limits from the graph), then the visual_data MUST make this possible:
+   - For function graphs, axis numbers/ticks must be visible (do NOT hide values).
+   - Include an explicit axes_range so the scale is unambiguous.
+   - Clearly indicate any required interval endpoints/limits on the graph (e.g. with labeled points).
 
-8. Piecewise / cases:
+9. Piecewise / cases:
 - If you use a piecewise definition, use ONLY [[BS]]begin{{cases}} ... [[BS]]end{{cases}}.
 
-9. No LaTeX list environments:
+10. No LaTeX list environments:
 - Do NOT use [[BS]]begin{{itemize}}, [[BS]]begin{{enumerate}}, [[BS]]begin{{description}}, or [[BS]]item.
 - If you need a list, use plain sentences separated by newlines.
 
-10. No LaTeX text-formatting commands in prose:
+11. No LaTeX text-formatting commands in prose:
 - Do not use [[BS]]textbf{{...}}, [[BS]]emph{{...}}, [[BS]]textit{{...}}.
 
 --- VISUAL_DATA GUIDE (SELECTED) ---
