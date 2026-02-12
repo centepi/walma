@@ -96,10 +96,16 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 5. No Drawing Requests: Do not ask the student to "sketch/draw/plot."
 6. Clean Answer: Choose values that lead to neat final results.
 7. No Phantom Diagrams: If you mention a diagram/figure/graph, you MUST supply visual_data.
-8. Graph-reading requirement (IMPORTANT): If the question requires reading values from a graph (e.g. domain/range using inequalities, intercepts/turning points from the graph, endpoints/interval limits from the graph), then the visual_data MUST make this possible:
-   - For function graphs, axis numbers/ticks must be visible (do NOT hide values).
+
+8. Graph-reading requirement (IMPORTANT):
+If the question requires reading values from a graph (e.g. domain/range using inequalities, intercepts/turning points from the graph, endpoints/interval limits from the graph), then the visual_data MUST make this possible:
+   - For function/coordinate graphs, axis numbers/ticks must be visible: set hide_values=false.
    - Include an explicit axes_range so the scale is unambiguous.
-   - Clearly indicate any required interval endpoints/limits on the graph (e.g. with labeled points).
+   - You MUST include labeled_points for every required endpoint and every required extremum/turning point used to infer the range.
+   - Each such labeled_points entry MUST have reveal=true.
+   - Each such labeled_points label MUST include the numeric coordinate in the label text (e.g. "(2, 3)" or "A(2, 3)"), not just letters A/B/C.
+   - Choose neat integer coordinates so the domain/range can be read cleanly.
+   - In the question text, refer to those endpoints/turning points consistently with the labels/coordinates shown.
 
 9. Piecewise / cases:
 - If you use a piecewise definition, use ONLY [[BS]]begin{{cases}} ... [[BS]]end{{cases}}.
