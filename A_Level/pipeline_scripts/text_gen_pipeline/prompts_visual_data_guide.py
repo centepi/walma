@@ -54,7 +54,18 @@ If the question requires the student to read information from the graph (e.g. id
 - Axis numbers/ticks must be visible (do NOT hide values) for function/coordinate graphs.
 - Include an explicit `axes_range` so the scale is unambiguous.
 - Ensure the viewport includes all needed labels/text (no cropped labels).
-- If specific endpoints/points are required, include `labeled_points` or geometry `label` objects and set them to reveal.
+
+- REQUIRED FOR DOMAIN/RANGE QUESTIONS (CRITICAL):
+  If you are asking for domain/range from the graph:
+  - You MUST include labeled_points for ALL required endpoints and any extremum/turning point used for the range.
+  - Each required labeled point MUST have "reveal": true.
+  - The label MUST contain the numeric coordinate (not just letters).
+    Examples of acceptable labels:
+      "(2, 3)"
+      "A(2, 3)"
+      "B(-1, 5)"
+  - Choose neat integer coordinates so the answer can be read cleanly.
+  - The question text must refer to the same points/coordinates shown.
 
 ---
 
@@ -125,7 +136,7 @@ Structure:
         }
     ],
     "labeled_points": [
-        {"label": "A", "x": 1.0, "y": 4.0, "reveal": false}
+        {"label": "(1, 4)", "x": 1.0, "y": 4.0, "reveal": true}
     ],
     "shaded_regions": [
         {
@@ -145,7 +156,8 @@ IMPORTANT:
 - If the student must read values from the graph (intervals/endpoints/coordinates), then:
   1) set hide_values=false
   2) include axes_range
-  3) include labeled_points for any required endpoints, with reveal=true
+  3) include labeled_points for any required endpoints/turning points, with reveal=true
+  4) labeled_points labels MUST include numeric coordinates (e.g. "(2, 3)" or "A(2, 3)")
 """
 
 _VISUAL_RULES_TYPE_HISTOGRAM = r"""
