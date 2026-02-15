@@ -36,6 +36,43 @@ def marks_to_difficulty(marks) -> int:
     return 8
 
 
+# ✅ NEW: accept both int difficulties and string labels from iOS ("easy"/"medium"/"hard")
+def _normalize_difficulty(value: Any, marks_fallback: Any) -> int:
+    """
+    Normalize difficulty to an int 1..8.
+
+    Accepts:
+    - int: clamped to 1..8
+    - str: "easy"/"medium"/"hard" (and a few common variants), or "1".."8"
+    Fallback:
+    - derived from marks via marks_to_difficulty(...)
+    """
+    try:
+        if isinstance(value, int):
+            return max(1, min(8, int(value)))
+
+        if isinstance(value, str):
+            s = value.strip().lower()
+
+            mapping = {
+                "very easy": 1,
+                "easy": 2,
+                "medium": 4,
+                "hard": 6,
+                "very hard": 8,
+
+                # allow numeric strings too
+                "1": 1, "2": 2, "3": 3, "4": 4,
+                "5": 5, "6": 6, "7": 7, "8": 8,
+            }
+            if s in mapping:
+                return mapping[s]
+    except Exception:
+        pass
+
+    return marks_to_difficulty(marks_fallback)
+
+
 def initialize_firebase():
     if not firebase_admin._apps:
         try:
@@ -624,20 +661,14 @@ def upload_content(db_client, collection_path, document_id, data):
             except Exception:
                 return default
 
-        def _clamp(v, lo, hi):
-            try:
-                vi = int(v)
-            except Exception:
-                vi = lo
-            return max(lo, min(hi, vi))
-
         if "total_marks" in payload:
             payload["total_marks"] = _as_int(payload.get("total_marks"), 0)
 
-        if "difficulty" not in payload or not isinstance(payload["difficulty"], int):
-            payload["difficulty"] = marks_to_difficulty(payload.get("total_marks", 0))
-        else:
-            payload["difficulty"] = _clamp(payload["difficulty"], 1, 8)
+        # ✅ FIX: accept string difficulty labels (easy/medium/hard) and numeric strings too
+        payload["difficulty"] = _normalize_difficulty(
+            payload.get("difficulty"),
+            payload.get("total_marks", 0)
+        )
 
         if "xp_base" not in payload or not isinstance(payload["xp_base"], int):
             diff = _as_int(payload.get("difficulty"), 1)
