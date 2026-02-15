@@ -63,6 +63,33 @@ def build_text_drill_prompt(
     else:
         visual_rules = get_visual_rules_snippet(only_types=["function"])
 
+    # ✅ Canonical difficulty (fixes missing/unknown difficulty chips in client)
+    # We force the model to output BOTH a string and an int (1..5) in the JSON.
+    # Client can show the string; server can later compute XP using the int if desired.
+    difficulty_norm = (difficulty or "").strip().lower()
+    difficulty_map = {
+        "intro": ("Introductory", 1),
+        "introductory": ("Introductory", 1),
+        "beginner": ("Introductory", 1),
+
+        "easy": ("Easy", 2),
+        "easier": ("Easy", 2),
+
+        "medium": ("Medium", 3),
+        "normal": ("Medium", 3),
+        "standard": ("Medium", 3),
+        "intermediate": ("Medium", 3),
+
+        "hard": ("Hard", 4),
+        "difficult": ("Hard", 4),
+        "advanced": ("Hard", 4),
+
+        "challenge": ("Challenge", 5),
+        "challenging": ("Challenge", 5),
+        "hardcore": ("Challenge", 5),
+    }
+    canonical_label, canonical_level = difficulty_map.get(difficulty_norm, ("Medium", 3))
+
     prompt = f"""
 You are an expert Mathematics Content Creator for the **{course}** curriculum.
 
@@ -84,6 +111,13 @@ Create a **{difficulty}** level question on the topic: "{topic}".
 - Course/Level: {course} (Ensure notation and scope match this level exactly).
 - Difficulty: {difficulty} (Scale: Introductory -> Easy -> Medium -> Hard -> Challenge).
 - Specific Details: "{additional_details}"
+
+--- DIFFICULTY OUTPUT (CRITICAL) ---
+You MUST include BOTH of these top-level fields in your JSON output:
+- "difficulty_label": "{canonical_label}"   (exactly one of: Introductory, Easy, Medium, Hard, Challenge)
+- "difficulty_level": {canonical_level}      (integer 1..5 matching the label above)
+
+Do NOT omit these fields. Do NOT invent other difficulty strings like "Challenging".
 
 --- CONTENT GUIDELINES ---
 1. Self-Contained: The question must be solvable with the information provided.
@@ -126,6 +160,8 @@ No markdown code fences. No commentary. No backticks.
 
 Example shape:
 {{
+  "difficulty_label": "{canonical_label}",
+  "difficulty_level": {canonical_level},
   "question_stem": "...",
   "parts": [
     {{

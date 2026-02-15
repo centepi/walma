@@ -106,6 +106,38 @@ def _replace_bs_tokens(obj):
     return obj
 
 
+# ✅ NEW: Fix literal "\n" / "\t" sequences that should have been real newlines/tabs.
+# This runs AFTER json.loads(), so it cannot break JSON validity.
+def _normalize_visible_escapes(obj):
+    """
+    Recursively converts literal escape sequences into real characters in all strings:
+      - "\\n" -> "\n"
+      - "\\t" -> "\t"
+
+    This prevents UI from showing "\n" when the model accidentally emitted "\\n" in JSON source.
+    Safe to run even if strings already contain real newlines/tabs (no-op).
+    """
+    if obj is None:
+        return None
+
+    if isinstance(obj, str):
+        if "\\n" in obj or "\\t" in obj:
+            return obj.replace("\\n", "\n").replace("\\t", "\t")
+        return obj
+
+    if isinstance(obj, list):
+        return [_normalize_visible_escapes(x) for x in obj]
+
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            new_k = _normalize_visible_escapes(k) if isinstance(k, str) else k
+            out[new_k] = _normalize_visible_escapes(v)
+        return out
+
+    return obj
+
+
 def _parse_and_repair(raw_text: str):
     r"""
     Takes a raw string from an AI, attempts to repair common errors,
@@ -165,6 +197,9 @@ def _parse_and_repair(raw_text: str):
 
         # Step 5: Replace [[BS]] tokens with real backslashes (safe: after parsing).
         parsed_data = _replace_bs_tokens(parsed_data)
+
+        # ✅ Step 6: Normalize accidental visible escapes (e.g. "\\n" showing as "\n" in UI).
+        parsed_data = _normalize_visible_escapes(parsed_data)
 
         return parsed_data
 

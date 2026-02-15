@@ -43,7 +43,7 @@ def _normalize_difficulty(value: Any, marks_fallback: Any) -> int:
 
     Accepts:
     - int: clamped to 1..8
-    - str: "easy"/"medium"/"hard" (and a few common variants), or "1".."8"
+    - str: "introductory"/"easy"/"medium"/"hard"/"challenge" (and common variants), or "1".."8"
     Fallback:
     - derived from marks via marks_to_difficulty(...)
     """
@@ -54,12 +54,27 @@ def _normalize_difficulty(value: Any, marks_fallback: Any) -> int:
         if isinstance(value, str):
             s = value.strip().lower()
 
+            # ✅ support the app’s canonical labels too (Introductory/Easy/Medium/Hard/Challenge)
             mapping = {
-                "very easy": 1,
+                # canonical / common words
+                "intro": 1,
+                "introductory": 1,
+                "beginner": 1,
+
                 "easy": 2,
+                "very easy": 1,
+
                 "medium": 4,
+                "normal": 4,
+                "intermediate": 4,
+
                 "hard": 6,
+                "difficult": 6,
+                "advanced": 6,
                 "very hard": 8,
+
+                "challenge": 8,
+                "challenging": 8,
 
                 # allow numeric strings too
                 "1": 1, "2": 2, "3": 3, "4": 4,
@@ -664,11 +679,18 @@ def upload_content(db_client, collection_path, document_id, data):
         if "total_marks" in payload:
             payload["total_marks"] = _as_int(payload.get("total_marks"), 0)
 
-        # ✅ FIX: accept string difficulty labels (easy/medium/hard) and numeric strings too
-        payload["difficulty"] = _normalize_difficulty(
-            payload.get("difficulty"),
-            payload.get("total_marks", 0)
-        )
+        # ✅ FIX: accept string difficulty labels (easy/medium/hard/challenge/introductory) and numeric strings too.
+        # Also accept the new fields from text-drill ("difficulty_label"/"difficulty_level").
+        if "difficulty" in payload:
+            raw = payload.get("difficulty")
+        elif "difficulty_level" in payload:
+            raw = payload.get("difficulty_level")
+        elif "difficulty_label" in payload:
+            raw = payload.get("difficulty_label")
+        else:
+            raw = None
+
+        payload["difficulty"] = _normalize_difficulty(raw, payload.get("total_marks", 0))
 
         if "xp_base" not in payload or not isinstance(payload["xp_base"], int):
             diff = _as_int(payload.get("difficulty"), 1)
